@@ -239,6 +239,10 @@ try {
     $addColumn($pdo,'projectdocuments','versionNo',"INT NOT NULL DEFAULT 1");
     $addColumn($pdo,'projectdocuments','createdBy',"BIGINT UNSIGNED NULL");
     $addColumn($pdo,'projectdocuments','updatedAt',"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+    $addColumn($pdo,'users','subscriptionPlan',"VARCHAR(32) NOT NULL DEFAULT 'free'");
+    $addColumn($pdo,'users','subscriptionStatus',"VARCHAR(32) NOT NULL DEFAULT 'active'");
+    $addColumn($pdo,'users','subscriptionStartedAt',"DATETIME NULL");
+    $addColumn($pdo,'users','subscriptionExpiresAt',"DATETIME NULL");
 } catch(Throwable $e) {}
 
 function e(?string $v):string{return htmlspecialchars($v??'',ENT_QUOTES,'UTF-8');}
