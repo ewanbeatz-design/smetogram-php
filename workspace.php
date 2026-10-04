@@ -474,7 +474,19 @@ require __DIR__ . '/includes/app_header.php';
             <div class="panel-heading"><div><h2>Документы проекта</h2><p>Договоры, счета и акты.</p></div><?php if ($project): ?><button class="primary-button" data-bs-toggle="modal" data-bs-target="#docModal"><i class="bi bi-plus-lg"></i> Создать документ</button><?php endif; ?></div>
             <?php if (!$documents): ?><div class="empty-state">Документов пока нет.</div><?php else: ?>
                 <?php foreach ($documents as $doc): ?>
-                    <div class="document-row"><div class="member-avatar"><i class="bi bi-file-earmark-text"></i></div><div><strong><?= e($doc['title']) ?></strong><span><?= e(mb_strtoupper($doc['type'])) ?></span></div><em><?= e($doc['status']) ?></em><span><?= e($doc['createdAt'] ?? '') ?></span></div>
+                    <?php
+                    $fq=$pdo->prepare('SELECT * FROM smetogram_document_files WHERE documentId=? AND projectId=? ORDER BY createdAt DESC,id DESC');
+                    $fq->execute([(int)$doc['id'],$projectId]);
+                    $docFiles=$fq->fetchAll();
+                    $latestFile=$docFiles[0]??null;
+                    ?>
+                    <div class="document-row">
+                        <div class="member-avatar"><i class="bi bi-file-earmark-text"></i></div>
+                        <div><strong><?= e($doc['title']) ?></strong><span><?= e(mb_strtoupper($doc['type'])) ?> · <?= count($docFiles) ?> файл(ов)</span></div>
+                        <em><?= e($doc['status']) ?></em>
+                        <a class="outline-button" href="document.php?id=<?= (int)$doc['id'] ?>"><i class="bi bi-eye"></i> Открыть</a>
+                        <?php if ($latestFile): ?><a class="icon-button subtle" target="_blank" href="document_file.php?id=<?= (int)$latestFile['id'] ?>" title="Открыть файл"><i class="bi bi-box-arrow-up-right"></i></a><?php endif; ?>
+                    </div>
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>
