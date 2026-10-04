@@ -288,6 +288,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($projectId > 0) {
             $target .= '&id=' . $projectId;
         }
+        if ($view === 'chat') {
+            $target .= '&channel=' . rawurlencode($channel);
+        }
         redirect($target);
     }
 }
@@ -319,7 +322,7 @@ require __DIR__ . '/includes/app_header.php';
         <div class="module-icon"><i class="bi bi-stars"></i></div>
     </div>
     <?php if ($project): ?>
-    <div class="project-context-bar">
+    <div class="project-workspace-head"><div class="project-workspace-top"><a href="dashboard.php" class="project-breadcrumb">Проекты</a><i class="bi bi-chevron-right"></i><a href="project.php?id=<?= $projectId ?>" class="project-current"><?= e($project['name']) ?></a><span class="project-meta"><?= e(($project['city'] ?? '') . ' · ' . ($project['clientName'] ?? '')) ?></span><a href="project.php?id=<?= $projectId ?>" class="project-open-estimate"><i class="bi bi-receipt"></i> Смета</a></div><div class="project-context-main" style="display:none"></div>
         <div class="project-context-main">
             <a href="project.php?id=<?= $projectId ?>" class="project-back"><i class="bi bi-arrow-left"></i></a>
             <div>
