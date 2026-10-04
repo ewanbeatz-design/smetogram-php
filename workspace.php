@@ -48,7 +48,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         check_csrf();
         $action = (string)($_POST['action'] ?? '');
 
-        if ($action === 'add_task') {
+        if ($action === 'add_payment') {
+            if (!$project) throw new RuntimeException('Сначала откройте проект.');
+            $title=trim((string)($_POST['title']??'Платёж'));
+            $amount=(float)str_replace(',', '.', (string)($_POST['amount']??'0'));
+            if($title==='' || $amount<=0) throw new RuntimeException('Укажите назначение и сумму платежа.');
+            $q=$pdo->prepare('INSERT INTO smetogram_payments(projectId,userId,type,title,amount,status) VALUES(?,?,?,?,?,?)');
+            $q->execute([$projectId,$user['id'],'payment',$title,$amount,'pending']);
+            $paymentId=(int)$pdo->lastInsertId();
+            $pdo->prepare('INSERT INTO smetogram_payment_events(paymentId,eventType,payloadJson) VALUES(?,?,?)')->execute([$paymentId,'created',json_encode(['amount'=>$amount],JSON_UNESCAPED_UNICODE)]);
+            $notice='Платёж добавлен.';
+        } elseif ($action === 'mark_payment') {
+            if (!$project) throw new RuntimeException('Сначала откройте проект.');
+            $paymentId=(int)($_POST['payment_id']??0);
+            $q=$pdo->prepare('UPDATE smetogram_payments SET status=\'paid\',paidAt=CURRENT_TIMESTAMP WHERE id=? AND projectId=? AND userId=?');
+            $q->execute([$paymentId,$projectId,$user['id']]);
+            $notice='Платёж отмечен как оплаченный.';
+        } elseif ($action === 'upload_document') {
+            if (!$project) throw new RuntimeException('Сначала откройте проект.');
+            $documentId=(int)($_POST['document_id']??0);
+            $q=$pdo->prepare('SELECT * FROM projectdocuments WHERE id=? AND projectId=?'); $q->execute([$documentId,$projectId]); $doc=$q->fetch();
+            if(!$doc) throw new RuntimeException('Документ не найден.');
+            if(empty($_FILES['document_file']) || $_FILES['document_file']['error']!==UPLOAD_ERR_OK) throw new RuntimeException('Не удалось загрузить файл.');
+            $file=$_FILES['document_file']; if((int)$file['size']>30*1024*1024) throw new RuntimeException('Максимальный размер файла — 30 МБ.');
+            $mime=(new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+            $allowed=['application/pdf','image/jpeg','image/png','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+            if(!in_array($mime,$allowed,true)) throw new RuntimeException('Формат файла не поддерживается.');
+            $dir=__DIR__.'/uploads/documents/'.$projectId; if(!is_dir($dir)) mkdir($dir,0755,true);
+            $stored=bin2hex(random_bytes(12)).'-'.preg_replace('/[^a-zA-Z0-9._-]/','_',basename($file['name'])); $path=$dir.'/'.$stored;
+            if(!move_uploaded_file($file['tmp_name'],$path)) throw new RuntimeException('Не удалось сохранить файл.');
+            $rel='uploads/documents/'.$projectId.'/'.$stored;
+            $q=$pdo->prepare('INSERT INTO smetogram_document_files(documentId,projectId,userId,originalName,storedName,mime,sizeBytes,path) VALUES(?,?,?,?,?,?,?,?)');
+            $q->execute([$documentId,$projectId,$user['id'],$file['name'],$stored,$mime,(int)$file['size'],$rel]);
+            $pdo->prepare('INSERT INTO smetogram_document_events(documentId,userId,eventType,comment) VALUES(?,?,?,?)')->execute([$documentId,$user['id'],'file_uploaded',$file['name']]);
+            $notice='Файл документа загружен.';
+        } elseif ($action === 'add_task') {
             if (!$project) {
                 throw new RuntimeException('Сначала откройте проект.');
             }
@@ -256,6 +290,7 @@ $titleMap = [
     'schedule' => 'График работ',
     'team' => 'Команда',
     'documents' => 'Документы',
+    'payments' => 'Оплаты',
     'chat' => 'Чат проекта',
     'acceptance' => 'Приёмка',
     'billing' => 'План использования',
@@ -419,6 +454,14 @@ require __DIR__ . '/includes/app_header.php';
             <div class="modal-footer"><button class="primary-button">Создать</button></div>
         </form></div></div></div>
         <?php endif; ?>
+
+    <?php elseif ($view === 'payments'): ?>
+        <?php $payments=[];$paid=0;$pending=0;if($project){$q=$pdo->prepare('SELECT * FROM smetogram_payments WHERE projectId=? ORDER BY id DESC');$q->execute([$projectId]);$payments=$q->fetchAll();foreach($payments as $pay){if($pay['status']==='paid')$paid+=(float)$pay['amount'];elseif($pay['status']==='pending')$pending+=(float)$pay['amount'];}} ?>
+        <div class="module-grid"><div class="module-panel"><div class="panel-heading"><div><h2>Оплаты проекта</h2><p>Платежи и контроль фактических оплат.</p></div><?php if($project): ?><button class="primary-button" data-bs-toggle="modal" data-bs-target="#paymentModal"><i class="bi bi-plus-lg"></i> Добавить оплату</button><?php endif; ?></div>
+        <div class="metric-grid"><div class="metric-card"><span>Оплачено</span><strong><?=number_format($paid,0,',',' ')?> ₽</strong></div><div class="metric-card"><span>Ожидает</span><strong><?=number_format($pending,0,',',' ')?> ₽</strong></div></div>
+        <?php foreach($payments as $pay): ?><div class="document-row"><div class="member-avatar"><i class="bi bi-credit-card"></i></div><div><strong><?=e($pay['title'])?></strong><span><?=number_format((float)$pay['amount'],0,',',' ')?> ₽</span></div><em><?=e($pay['status'])?></em><?php if($pay['status']==='pending'): ?><form method="post"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="mark_payment"><input type="hidden" name="payment_id" value="<?= (int)$pay['id']?>"><button class="outline-button">Оплачено</button></form><?php endif; ?></div><?php endforeach; ?>
+        </div><div class="module-panel"><h2>История платежей</h2><p class="panel-copy">Изменения сохраняются в журнале событий.</p></div></div>
+        <?php if($project): ?><div class="modal fade" id="paymentModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post"><div class="modal-header"><h5>Новая оплата</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="add_payment"><input class="form-control mb-3" name="title" required placeholder="Оплата этапа №1"><input class="form-control" name="amount" required placeholder="150000"></div><div class="modal-footer"><button class="primary-button">Сохранить</button></div></form></div></div></div><?php endif; ?>
 
     <?php elseif ($view === 'chat'): ?>
         <?php
