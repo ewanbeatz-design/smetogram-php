@@ -628,12 +628,15 @@ require __DIR__ . '/includes/app_header.php';
             'brigade' => ['Бригада','3 900 ₽','в месяц','До 5 объектов и командная работа'],
             'studio' => ['Студия','7 900 ₽','в месяц','Безлимитные объекты и расширенные функции']
         ];
-        $currentPlan = (string)($user['subscriptionPlan'] ?? 'free');
+        $uq = $pdo->prepare('SELECT subscriptionPlan,subscriptionStatus,subscriptionExpiresAt FROM users WHERE id=? LIMIT 1');
+        $uq->execute([$user['id']]);
+        $subscription = $uq->fetch() ?: [];
+        $currentPlan = (string)($subscription['subscriptionPlan'] ?? 'free');
         if (!isset($plans[$currentPlan])) $currentPlan = 'free';
         ?>
         <div class="billing-hero module-panel">
             <div><div class="eyebrow">ТАРИФ И ОПЛАТА</div><h2>Выберите режим работы</h2><p class="panel-copy">Тариф сохраняется в вашем аккаунте и применяется ко всем объектам.</p></div>
-            <div class="billing-current"><span>ТЕКУЩИЙ ТАРИФ</span><strong><?= e($plans[$currentPlan][0]) ?></strong><small>Активен<?= !empty($user['subscriptionExpiresAt']) ? ' · до '.date('d.m.Y',strtotime($user['subscriptionExpiresAt'])) : '' ?></small></div>
+            <div class="billing-current"><span>ТЕКУЩИЙ ТАРИФ</span><strong><?= e($plans[$currentPlan][0]) ?></strong><small>Активен<?= !empty($subscription['subscriptionExpiresAt']) ? ' · до '.date('d.m.Y',strtotime($subscription['subscriptionExpiresAt'])) : '' ?></small></div>
         </div>
         <div class="plans-grid billing-plans">
             <?php foreach ($plans as $id => $plan): ?>
