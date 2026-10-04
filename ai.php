@@ -116,7 +116,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         $pdo->beginTransaction();
         try{
             $q=$pdo->prepare("INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)");
-            $q->execute([$projectId,'ИИ — '.$data['room']??'Распознанные работы',999]);
+            $categoryName='ИИ — '.trim((string)($data['room']??'Распознанные работы')); if($categoryName==='ИИ —')$categoryName='ИИ — Распознанные работы';
+            $q->execute([$projectId,$categoryName,999]);
             $cat=(int)$pdo->lastInsertId();
             $qi=$pdo->prepare("INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source) VALUES(?,?,?,?,?,?)");
             foreach($tasks as $task){
