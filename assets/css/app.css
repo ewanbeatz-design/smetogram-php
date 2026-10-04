@@ -126,3 +126,24 @@
 .workspace-tabs a.active{color:var(--ink);font-weight:800}
 .workspace-tabs a.active:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--terra);border-radius:2px}
 @media(max-width:700px){.workspace-project-line{flex-wrap:wrap}.workspace-project-meta{width:100%;padding-left:78px}.workspace-tabs{gap:18px;margin-bottom:25px}.workspace-tabs a{font-size:9px}.workspace-tabs a i{display:none}}
+
+/* Tariff / billing */
+.billing-hero{display:flex;justify-content:space-between;gap:30px;align-items:center;margin-bottom:15px;padding:24px 26px}
+.billing-hero h2{margin:8px 0 4px;font-size:22px;letter-spacing:-.04em}
+.billing-current{min-width:210px;padding-left:22px;border-left:1px solid #E2E8F0}
+.billing-current span,.billing-current small{display:block;color:#94A3B8;font-size:9px}
+.billing-current strong{display:block;margin:7px 0;font-size:17px;color:var(--ink)}
+.billing-plans{grid-template-columns:repeat(4,1fr);margin-bottom:15px}
+.billing-card{position:relative;min-height:330px;display:flex;flex-direction:column}
+.billing-card strong{margin:12px 0 2px}
+.billing-card small{font-size:9px;color:#94A3B8}
+.billing-card p{min-height:38px;margin:12px 0;color:#64748B;font-size:10px;line-height:1.5}
+.billing-card ul{list-style:none;padding:0;margin:0 0 18px;display:grid;gap:8px;flex:1}
+.billing-card li{font-size:10px;color:#475569}.billing-card li:before{content:'✓';color:var(--terra);font-weight:800;margin-right:7px}
+.billing-card form{margin-top:auto}.billing-card button{width:100%}
+.plan-badge{position:absolute;top:14px;right:14px!important;color:var(--terra)!important;font-size:8px!important;font-weight:800;letter-spacing:.06em}
+.billing-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:15px}
+.billing-feature-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.billing-feature-list>div{padding:15px;background:#F8FAFC;border-radius:10px}.billing-feature-list i{font-size:18px;color:var(--terra)}.billing-feature-list b,.billing-feature-list small{display:block}.billing-feature-list b{font-size:11px;margin-top:10px}.billing-feature-list small{font-size:9px;color:#94A3B8;margin-top:4px;line-height:1.45}
+.billing-note{display:flex;gap:12px;padding:15px;background:#F8FAFC;border-radius:10px}.billing-note>i{font-size:21px;color:var(--terra)}.billing-note b,.billing-note span{display:block}.billing-note b{font-size:11px}.billing-note span{font-size:10px;color:#94A3B8;margin-top:4px;line-height:1.5}
+@media(max-width:1050px){.billing-plans{grid-template-columns:repeat(2,1fr)}.billing-feature-list{grid-template-columns:1fr}.billing-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.billing-hero{display:grid}.billing-current{border-left:0;border-top:1px solid #E2E8F0;padding:15px 0 0}.billing-plans{grid-template-columns:1fr}}
