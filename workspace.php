@@ -5,7 +5,12 @@ require __DIR__ . '/config/bootstrap.php';
 
 $user = require_auth();
 $view = (string)($_GET['view'] ?? 'schedule');
+$channel = (string)($_GET['channel'] ?? 'general');
+$allowedChannels = ['team','foreman_client','designer_client','general'];
+if (!in_array($channel, $allowedChannels, true)) $channel = 'general';
 $projectId = (int)($_GET['id'] ?? 0);
+$projectViews = ['schedule','team','documents','payments','chat','acceptance','scan','analytics','measurements'];
+if (in_array($view, $projectViews, true) && $projectId <= 0) redirect('dashboard.php');
 $project = null;
 $error = '';
 $notice = '';
@@ -170,6 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $q->execute([$stageId, $projectId]);
             $notice = 'Этап отправлен на приёмку.';
         } elseif ($action === 'add_room') {
+            if (!$project) throw new RuntimeException('Сначала откройте проект.');
             $name = trim((string)($_POST['name'] ?? 'Комната'));
             $length = (float)str_replace(',', '.', (string)($_POST['length'] ?? '0'));
             $width = (float)str_replace(',', '.', (string)($_POST['width'] ?? '0'));
@@ -184,8 +190,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $notice = 'Замер сохранён.';
         } elseif ($action === 'delete_room') {
             $roomId = (int)($_POST['room_id'] ?? 0);
-            $q = $pdo->prepare('DELETE FROM smetogram_rooms WHERE id=? AND user_id=?');
-            $q->execute([$roomId, $user['id']]);
+            $q = $pdo->prepare('DELETE FROM smetogram_rooms WHERE id=? AND user_id=? AND project_id=?');
+            $q->execute([$roomId, $user['id'], $projectId]);
             $notice = 'Замер удалён.';
         } elseif ($action === 'save_profile') {
             $name = trim((string)($_POST['name'] ?? ''));
@@ -467,15 +473,15 @@ require __DIR__ . '/includes/app_header.php';
         <?php
         $messages = [];
         if ($project) {
-            $q = $pdo->prepare('SELECT m.*,u.name AS authorName FROM projectmessages m LEFT JOIN users u ON u.id=m.authorId WHERE m.projectId=? ORDER BY m.createdAt ASC,m.id ASC');
-            $q->execute([$projectId]);
+            $q = $pdo->prepare('SELECT m.*,u.name AS authorName FROM projectmessages m LEFT JOIN users u ON u.id=m.authorId WHERE m.projectId=? AND m.channel=? ORDER BY m.createdAt ASC,m.id ASC');
+            $q->execute([$projectId,$channel]);
             $messages = $q->fetchAll();
         }
         ?>
         <div class="module-panel chat-panel">
             <div class="chat-tabs">
-                <?php foreach (['foreman_client'=>'Прораб — заказчик','team'=>'Бригада','designer_client'=>'Дизайнер — заказчик','general'=>'Общий'] as $channel => $channelName): ?>
-                    <span class="<?= $channel === 'general' ? 'active' : '' ?>"><?= e($channelName) ?></span>
+                <?php foreach (['foreman_client'=>'Прораб — заказчик','team'=>'Бригада','designer_client'=>'Дизайнер — заказчик','general'=>'Общий'] as $channelKey => $channelName): ?>
+                    <a href="workspace.php?view=chat&id=<?= $projectId ?>&channel=<?= rawurlencode($channelKey) ?>" class="<?= $channel === $channelKey ? 'active' : '' ?>"><?= e($channelName) ?></a>
                 <?php endforeach; ?>
             </div>
             <div class="chat-messages">
@@ -489,7 +495,7 @@ require __DIR__ . '/includes/app_header.php';
                 <?php endif; ?>
             </div>
             <?php if ($project): ?>
-            <form class="chat-compose" method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="send_message"><input type="hidden" name="channel" value="general"><input name="body" required placeholder="Напишите сообщение..."><button class="primary-button" type="submit"><i class="bi bi-send"></i></button></form>
+            <form class="chat-compose" method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="send_message"><input type="hidden" name="channel" value="<?= e($channel) ?>"><input name="body" required placeholder="Напишите сообщение..."><button class="primary-button" type="submit"><i class="bi bi-send"></i></button></form>
             <?php endif; ?>
         </div>
 
@@ -556,8 +562,8 @@ require __DIR__ . '/includes/app_header.php';
 
     <?php elseif ($view === 'measurements'): ?>
         <?php
-        $q = $pdo->prepare('SELECT * FROM smetogram_rooms WHERE user_id=? AND (project_id=? OR ?=0) ORDER BY id DESC');
-        $q->execute([$user['id'], $projectId, $projectId]);
+        $q = $pdo->prepare('SELECT * FROM smetogram_rooms WHERE user_id=? AND project_id=? ORDER BY id DESC');
+        $q->execute([$user['id'], $projectId]);
         $rooms = $q->fetchAll();
         ?>
         <div class="module-grid">
