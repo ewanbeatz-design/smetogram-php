@@ -49,8 +49,18 @@ if ($user && !empty($user['name'])) {
 <header class="topbar">
   <div class="breadcrumbs"><button class="mobile-menu" onclick="document.getElementById('appSidebar').classList.add('sidebar-open')"><i class="bi bi-list"></i></button><span>Рабочее пространство</span><span class="slash">/</span><strong><?=e($pageTitle)?></strong></div>
   <div class="topbar-actions">
-  <div class="global-search" id="globalSearch"><button class="icon-button search-toggle" type="button" title="Поиск"><i class="bi bi-search"></i></button><input id="globalSearchInput" autocomplete="off" placeholder="Поиск проекта..."><div class="search-results" id="searchResults"></div></div>
-  <div class="notifications" id="notifications"><button class="icon-button notification-toggle" type="button" title="Оповещения"><i class="bi bi-bell"></i><span class="notification-badge" id="notificationBadge" hidden>0</span></button><div class="notification-menu" id="notificationMenu"><div class="notification-head"><strong>Оповещения</strong><button type="button" id="readNotifications">Прочитать всё</button></div><div id="notificationList"><div class="notification-empty">Нет новых оповещений</div></div></div></div>
+  <button class="icon-button search-toggle" id="globalSearchToggle" type="button" title="Поиск"><i class="bi bi-search"></i></button>
+  <div class="notifications notification-wrap" id="notifications"><button class="icon-button notification-toggle" type="button" title="Оповещения"><i class="bi bi-bell"></i><span class="notification-badge" id="notificationBadge" hidden>0</span></button><div class="notifications-dropdown" id="notificationMenu"><div class="notifications-heading"><div><strong>Оповещения</strong><span>Изменения по вашим проектам</span></div><button class="notifications-read-all" type="button" id="readNotifications">Прочитать всё</button></div><div class="notifications-list" id="notificationList"><div class="notifications-empty"><strong>Нет новых оповещений</strong><span>Здесь появятся сообщения и изменения проекта.</span></div></div><div class="notifications-footer">Оповления обновляются автоматически</div></div></div>
+  <div class="top-avatar"><?=e($initials)?></div>
+</div>
+<div class="global-search-backdrop" id="globalSearchBackdrop" hidden>
+  <div class="global-search-panel" role="dialog" aria-modal="true" aria-labelledby="globalSearchTitle">
+    <div class="global-search-input-wrap"><i class="bi bi-search"></i><input id="globalSearchInput" autocomplete="off" placeholder="Поиск по проектам..." aria-label="Поиск"><button class="global-search-close" id="globalSearchClose" type="button" aria-label="Закрыть"><i class="bi bi-x-lg"></i></button></div>
+    <div class="global-search-hint" id="globalSearchHint">Начните вводить название проекта, город или имя заказчика.</div>
+    <div class="global-search-results" id="searchResults"></div>
+    <div class="global-search-footer"><span>Быстрый поиск</span><span><kbd>Esc</kbd> закрыть</span></div>
+  </div>
+</div>
   <div class="top-avatar"><?=e($initials)?></div>
 </div>
 </header>
