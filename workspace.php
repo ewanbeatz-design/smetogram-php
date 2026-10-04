@@ -149,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $channel = 'general';
             }
 
-            $q = $pdo->prepare('INSERT INTO projectmessages (projectId,authorId,channel,body) VALUES (?,?,?,?,?)');
+            $q = $pdo->prepare('INSERT INTO projectmessages (projectId,authorId,channel,body) VALUES (?,?,?,?)');
             $q->execute([$projectId, $user['id'], $channel, $body]);
             $notice = 'Сообщение отправлено.';
         } elseif ($action === 'add_stage') {
