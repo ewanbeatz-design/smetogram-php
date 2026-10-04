@@ -106,9 +106,18 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
      syncBadges(d.unread||0);
    }).catch(()=>{});
  }
+ function markAllRead(){
+   const csrf=document.querySelector('input[name=csrf]')?.value||'';
+   fetch('api.php?action=read_notifications',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded'},body:'csrf='+encodeURIComponent(csrf)}).then(()=>{
+     syncBadges(0);
+     list?.querySelectorAll('.notification-row').forEach(x=>x.classList.remove('unread'));
+     if(status)status.textContent='Всё прочитано';
+   }).catch(()=>{});
+ }
  toggles.forEach(t=>t.addEventListener('click',e=>{
    e.preventDefault();e.stopPropagation();
    menu?.classList.toggle('show');
+   if(menu?.classList.contains('show')) setTimeout(markAllRead,120);
  }));
  list?.addEventListener('click',e=>{
    const dismiss=e.target.closest('[data-dismiss-notification]');
