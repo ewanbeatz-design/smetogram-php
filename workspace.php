@@ -224,13 +224,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $q = $pdo->prepare('INSERT INTO smetogram_rooms (user_id,project_id,name,length_m,width_m,height_m) VALUES (?,?,?,?,?,?)');
             $q->execute([$user['id'], $projectId > 0 ? $projectId : null, $name !== '' ? $name : 'Комната', $length, $width, $height]);
             $notice = 'Замер сохранён.';
-            $notifyProject('project','Добавлен новый замер',$name,'workspace.php?view=measurements&id='.$projectId);
         } elseif ($action === 'delete_room') {
             $roomId = (int)($_POST['room_id'] ?? 0);
             $q = $pdo->prepare('DELETE FROM smetogram_rooms WHERE id=? AND user_id=? AND project_id=?');
             $q->execute([$roomId, $user['id'], $projectId]);
             $notice = 'Замер удалён.';
-            $notifyProject('project','Удалён замер','Комната #' . $roomId,'workspace.php?view=measurements&id='.$projectId);
         } elseif ($action === 'save_profile') {
             $name = trim((string)($_POST['name'] ?? ''));
             $email = strtolower(trim((string)($_POST['email'] ?? '')));
