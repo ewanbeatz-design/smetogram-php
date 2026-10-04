@@ -52,27 +52,38 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
    },180);
  });
 
- const bell=$('.notification-toggle'),menu=$('#notificationMenu'),list=$('#notificationList'),badge=$('#notificationBadge');
+ const toggles=document.querySelectorAll('.notification-toggle');
+ const menu=$('#notificationMenu'),list=$('#notificationList'),badge=$('#notificationBadge'),topBadge=$('#topNotificationBadge');
  let lastId=0;
+ function syncBadges(unread){
+   const has=Number(unread)>0;
+   [badge,topBadge].forEach(b=>{if(!b)return;b.hidden=!has;b.textContent=Number(unread)>99?'99+':String(unread)});
+ }
  function loadNotifications(){
    fetch('api.php?action=notifications&since='+lastId,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.json()).then(d=>{
      if(d.items&&d.items.length){
        d.items.forEach(n=>{if(Number(n.id)>lastId)lastId=Number(n.id)});
-       const html=d.items.map(n=>'<a class="notification-row '+(!Number(n.isRead)?'unread':'')+'" href="'+String(n.url||'#').replace(/"/g,'%22')+'"><span class="notification-main"><span class="notification-icon"><i class="bi '+(n.type==='message'?'bi-chat':n.type==='document'?'bi-file-earmark-text':n.type==='payment'?'bi-wallet2':'bi-bell')+'"></i></span><span class="notification-content"><strong>'+escapeHtml(n.title)+'</strong><span>'+escapeHtml(n.body||'')+'</span><small>'+escapeHtml(n.createdAt||'')+'</small></span></span><span class="notification-unread-dot"></span></a>').join('');
-       if(list.querySelector('.notifications-empty'))list.innerHTML='';
-       list.insertAdjacentHTML('afterbegin',html);
+       const html=d.items.map(n=>'<a class="notification-row '+(!Number(n.isRead)?'unread':'')+'" href="'+String(n.url||'#').replace(/"/g,'%22')+'"><span class="notification-main"><span class="notification-icon"><i class="bi '+(n.type==='message'?'bi-chat':n.type==='document'?'bi-file-earmark-text':n.type==='payment'?'bi-wallet2':n.type==='acceptance'?'bi-check2-square':n.type==='schedule'?'bi-calendar3':'bi-bell')+'"></i></span><span class="notification-content"><strong>'+escapeHtml(n.title)+'</strong><span>'+escapeHtml(n.body||'')+'</span><small>'+escapeHtml(n.createdAt||'')+'</small></span></span><span class="notification-unread-dot"></span></a>').join('');
+       if(list?.querySelector('.notifications-empty'))list.innerHTML='';
+       list?.insertAdjacentHTML('afterbegin',html);
      }
-     if(Number(d.unread)>0){badge.hidden=false;badge.textContent=Number(d.unread)>99?'99+':d.unread}else badge.hidden=true;
+     syncBadges(d.unread||0);
    }).catch(()=>{});
  }
- bell?.addEventListener('click',e=>{e.stopPropagation();menu?.classList.toggle('show')});
- document.addEventListener('click',e=>{if(!e.target.closest('#notifications'))menu?.classList.remove('show')});
+ toggles.forEach(t=>t.addEventListener('click',e=>{
+   e.preventDefault();e.stopPropagation();
+   document.querySelectorAll('.notifications-dropdown').forEach(x=>{if(x!==menu)x.classList.remove('show')});
+   menu?.classList.toggle('show');
+ }));
+ document.addEventListener('click',e=>{
+   if(!e.target.closest('.notification-toggle')&&!e.target.closest('.notifications-dropdown'))menu?.classList.remove('show');
+ });
  const read=$('#readNotifications');
  read?.addEventListener('click',()=>{
    const csrf=document.querySelector('input[name=csrf]')?.value||'';
    fetch('api.php?action=read_notifications',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded'},body:'csrf='+encodeURIComponent(csrf)}).then(()=>{
-     badge.hidden=true;badge.textContent='0';document.querySelectorAll('.notification-row').forEach(x=>x.classList.remove('unread'));
+     syncBadges(0);document.querySelectorAll('.notification-row').forEach(x=>x.classList.remove('unread'));
    });
  });
- if(bell){loadNotifications();setInterval(loadNotifications,10000)}
+ if(toggles.length){loadNotifications();setInterval(loadNotifications,10000)}
 })();
