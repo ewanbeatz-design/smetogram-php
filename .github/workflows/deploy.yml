@@ -13,12 +13,12 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.2
         with:
-          host: ${{secrets.REG_RU_HOST}
-          username: ${{secrets.REG_RU_USER}
-          key: ${{secrets.REG_RU_SSH_KEY}
+          host: ${{secrets.REG_RU_HOST}}
+          username: ${{secrets.REG_RU_USER}}
+          key: ${{secrets.REG_RU_SSH_KEY}}
           script: |
             set -e
-            cd ${{secrets.REG_RU_PATH}
+            cd ${{secrets.REG_RU_PATH}}
 
             if [ ! -d .git ]; then
               git init
@@ -41,7 +41,7 @@ jobs:
                     'port' => 3306,
                     'name' => 'u1027561_default',
                     'user' => 'u1027561_default',
-                    'password' => '${{secrets.REG_RU_DB_PASSWORD}',
+                    'password' => '${{secrets.REG_RU_DB_PASSWORD}}',
                     'charset' => 'utf8mb4',
                 ],
                 'app' => [
