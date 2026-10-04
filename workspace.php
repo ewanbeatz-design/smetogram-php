@@ -318,6 +318,41 @@ require __DIR__ . '/includes/app_header.php';
         </div>
         <div class="module-icon"><i class="bi bi-stars"></i></div>
     </div>
+    <?php if ($project): ?>
+    <div class="project-context-bar">
+        <div class="project-context-main">
+            <a href="project.php?id=<?= $projectId ?>" class="project-back"><i class="bi bi-arrow-left"></i></a>
+            <div>
+                <span>ПРОЕКТ</span>
+                <strong><?= e($project['name']) ?></strong>
+                <small><?= e(($project['city'] ?? '') . ' · ' . ($project['clientName'] ?? '')) ?></small>
+            </div>
+        </div>
+        <nav class="project-module-nav" aria-label="Разделы проекта">
+            <?php
+            $projectNav = [
+                'estimate' => ['Смета', 'project.php?id='.$projectId, 'bi-receipt'],
+                'schedule' => ['График', 'workspace.php?view=schedule&id='.$projectId, 'bi-calendar3'],
+                'measurements' => ['Замеры', 'workspace.php?view=measurements&id='.$projectId, 'bi-rulers'],
+                'team' => ['Команда', 'workspace.php?view=team&id='.$projectId, 'bi-people'],
+                'chat' => ['Чат', 'workspace.php?view=chat&id='.$projectId, 'bi-chat'],
+                'documents' => ['Документы', 'workspace.php?view=documents&id='.$projectId, 'bi-file-text'],
+                'payments' => ['Оплаты', 'workspace.php?view=payments&id='.$projectId, 'bi-credit-card'],
+                'acceptance' => ['Приёмка', 'workspace.php?view=acceptance&id='.$projectId, 'bi-check2-square'],
+                'analytics' => ['Аналитика', 'workspace.php?view=analytics&id='.$projectId, 'bi-bar-chart'],
+                'scan' => ['Импорт', 'workspace.php?view=scan&id='.$projectId, 'bi-file-earmark-arrow-up'],
+                'ai' => ['ИИ', 'ai.php?id='.$projectId, 'bi-stars'],
+            ];
+            foreach ($projectNav as $key => $item):
+                $active = ($key === 'estimate' && basename($_SERVER['PHP_SELF']) === 'project.php') || ($key !== 'estimate' && $view === $key);
+            ?>
+                <a class="<?= $active ? 'active' : '' ?>" href="<?= e($item[1]) ?>"><i class="bi <?= e($item[2]) ?>"></i><?= e($item[0]) ?></a>
+            <?php endforeach; ?>
+        </nav>
+    </div>
+    <?php else: ?>
+        <div class="alert alert-info project-required-note"><i class="bi bi-info-circle"></i> Сначала откройте проект — все рабочие модули Сметограма привязаны к конкретному объекту.</div>
+    <?php endif; ?>
 
     <?php if ($error !== ''): ?>
         <div class="alert alert-danger"><?= e($error) ?></div>
