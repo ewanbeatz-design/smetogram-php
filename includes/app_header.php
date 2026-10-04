@@ -36,7 +36,10 @@ if ($user && !empty($user['name'])) {
   <div class="trial-card"><div class="trial-icon"><i class="bi bi-stars"></i></div><div><strong>Первый проект бесплатно</strong><span>Без карты и обязательств</span></div><i class="bi bi-arrow-up-right"></i></div>
   <nav class="nav-list bottom-nav">
     <a class="nav-item <?=($view==='settings'?'active':'')?>" href="workspace.php?view=settings"><span class="nav-icon"><i class="bi bi-sliders2"></i></span><span class="nav-label">Настройки</span></a>
-    <button class="nav-item notification-nav" type="button" id="sidebarNotificationsToggle"><span class="nav-icon"><i class="bi bi-bell"></i></span><span class="nav-label">Уведомления</span><span class="notification-badge" id="sidebarNotificationBadge" hidden>0</span></button>
+    <div class="notifications notification-wrap sidebar-notifications" id="notifications">
+      <button class="nav-item notification-nav notification-toggle" type="button"><span class="nav-icon"><i class="bi bi-bell"></i></span><span class="nav-label">Уведомления</span><span class="notification-badge" id="notificationBadge" hidden>0</span></button>
+      <div class="notifications-dropdown" id="notificationMenu"><div class="notifications-heading"><div><strong>Оповещения</strong><span>Изменения по вашим проектам</span></div><button class="notifications-read-all" type="button" id="readNotifications">Прочитать всё</button></div><div class="notifications-list" id="notificationList"><div class="notifications-empty"><strong>Нет новых оповещений</strong><span>Здесь появятся сообщения и изменения проекта.</span></div></div><div class="notifications-footer">Оповещения обновляются автоматически</div></div>
+    </div>
   </nav>
   <div class="profile"><div class="avatar"><?=e($initials)?></div><div><strong><?=e($user['name']??'Пользователь')?></strong><span>Пользователь</span></div><a href="logout.php" class="muted-icon" title="Выйти"><i class="bi bi-box-arrow-right"></i></a></div>
 </aside>
@@ -46,7 +49,6 @@ if ($user && !empty($user['name'])) {
   <div class="breadcrumbs"><button class="mobile-menu" onclick="document.getElementById('appSidebar').classList.add('sidebar-open')"><i class="bi bi-list"></i></button><span>Рабочее пространство</span><span class="slash">/</span><strong><?=e($pageTitle)?></strong></div>
   <div class="topbar-actions"><input type="hidden" name="csrf" value="<?=e(csrf_token()) ?>">
   <button class="icon-button search-toggle" id="globalSearchToggle" type="button" title="Поиск"><i class="bi bi-search"></i></button>
-  <div class="notifications notification-wrap" id="notifications"><div class="notifications-dropdown" id="notificationMenu"><div class="notifications-heading"><div><strong>Оповещения</strong><span>Изменения по вашим проектам</span></div><button class="notifications-read-all" type="button" id="readNotifications">Прочитать всё</button></div><div class="notifications-list" id="notificationList"><div class="notifications-empty"><strong>Нет новых оповещений</strong><span>Здесь появятся сообщения и изменения проекта.</span></div></div><div class="notifications-footer">Оповещения обновляются автоматически</div></div></div>
   <div class="top-avatar"><?=e($initials)?></div>
 </div>
 <div class="global-search-backdrop" id="globalSearchBackdrop" hidden>
