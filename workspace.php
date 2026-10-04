@@ -34,6 +34,17 @@ if ($projectId > 0) {
     }
 }
 
+$notifyProject = function(string $type, string $title, string $body = '', ?string $url = null) use ($pdo, $projectId, $user, $project): void {
+    if ($projectId <= 0) return;
+    $recipients = [];
+    $ownerId = (int)($project['ownerId'] ?? 0);
+    if ($ownerId > 0 && $ownerId !== (int)$user['id']) $recipients[] = $ownerId;
+    $mq = $pdo->prepare('SELECT u.id FROM projectmembers m INNER JOIN users u ON LOWER(u.email)=LOWER(m.invitedEmail) WHERE m.projectId=? AND m.invitedEmail IS NOT NULL AND m.invitedEmail<>"" AND u.id<>?');
+    $mq->execute([$projectId, (int)$user['id']]);
+    foreach ($mq->fetchAll(PDO::FETCH_COLUMN) as $uid) $recipients[] = (int)$uid;
+    foreach (array_unique($recipients) as $uid) create_notification($pdo, $uid, $projectId, $type, $title, $body, $url);
+};
+
 /* Rooms are a PHP-only helper table and are safe to create on existing installations. */
 $pdo->exec("CREATE TABLE IF NOT EXISTS smetogram_rooms (
     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -70,12 +81,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $paymentId=(int)$pdo->lastInsertId();
             $pdo->prepare('INSERT INTO smetogram_payment_events(paymentId,eventType,payloadJson) VALUES(?,?,?)')->execute([$paymentId,'created',json_encode(['amount'=>$amount],JSON_UNESCAPED_UNICODE)]);
             $notice='Платёж добавлен.';
+            $notifyProject('payment','Новый платёж',$title.' · '.number_format($amount,0,',',' ').' ₽','workspace.php?view=payments&id='.$projectId);
         } elseif ($action === 'mark_payment') {
             if (!$project) throw new RuntimeException('Сначала откройте проект.');
             $paymentId=(int)($_POST['payment_id']??0);
             $q=$pdo->prepare('UPDATE smetogram_payments SET status=\'paid\',paidAt=CURRENT_TIMESTAMP WHERE id=? AND projectId=? AND userId=?');
             $q->execute([$paymentId,$projectId,$user['id']]);
             $notice='Платёж отмечен как оплаченный.';
+            $notifyProject('payment','Платёж отмечен как оплаченный','Изменение платежа по проекту.','workspace.php?view=payments&id='.$projectId);
         } elseif ($action === 'upload_document') {
             if (!$project) throw new RuntimeException('Сначала откройте проект.');
             $documentId=(int)($_POST['document_id']??0);
@@ -94,6 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $q->execute([$documentId,$projectId,$user['id'],$file['name'],$stored,$mime,(int)$file['size'],$rel]);
             $pdo->prepare('INSERT INTO smetogram_document_events(documentId,userId,eventType,comment) VALUES(?,?,?,?)')->execute([$documentId,$user['id'],'file_uploaded',$file['name']]);
             $notice='Файл документа загружен.';
+            $notifyProject('document','Загружен файл документа',(string)$file['name'],'document.php?id='.$documentId);
         } elseif ($action === 'add_task') {
             if (!$project) {
                 throw new RuntimeException('Сначала откройте проект.');
@@ -109,6 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $q = $pdo->prepare('INSERT INTO scheduletasks (projectId,title,startsAt,endsAt,status,paymentMilestone) VALUES (?,?,?,?,?,?)');
             $q->execute([$projectId, $title, $starts !== '' ? $starts . ' 00:00:00' : null, $ends !== '' ? $ends . ' 23:59:59' : null, 'planned', $payment]);
             $notice = 'Этап сохранён.';
+            $notifyProject('schedule','Добавлен этап',$title,'workspace.php?view=schedule&id='.$projectId);
         } elseif ($action === 'add_member') {
             if (!$project) {
                 throw new RuntimeException('Сначала откройте проект.');
@@ -127,6 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $q = $pdo->prepare('INSERT INTO projectmembers (projectId,invitedEmail,invitedPhone,role,inviteToken) VALUES (?,?,?,?,?)');
             $q->execute([$projectId, $email !== '' ? $email : null, $phone !== '' ? $phone : null, $role, bin2hex(random_bytes(12))]);
             $notice = 'Участник добавлен.';
+            $notifyProject('team','Изменена команда проекта',$email !== '' ? $email : $phone,'workspace.php?view=team&id='.$projectId);
         } elseif ($action === 'add_doc') {
             if (!$project) {
                 throw new RuntimeException('Сначала откройте проект.');
@@ -143,6 +159,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $q = $pdo->prepare('INSERT INTO projectdocuments (projectId,type,title,status) VALUES (?,?,?,?)');
             $q->execute([$projectId, $type, $title, 'draft']);
             $notice = 'Документ создан.';
+            $documentId=(int)$pdo->lastInsertId();
+            $notifyProject('document','Создан документ',$title,'document.php?id='.$documentId);
         } elseif ($action === 'send_message') {
             if (!$project) {
                 throw new RuntimeException('Сначала откройте проект.');
@@ -159,6 +177,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $q = $pdo->prepare('INSERT INTO projectmessages (projectId,authorId,channel,body) VALUES (?,?,?,?)');
             $q->execute([$projectId, $user['id'], $channel, $body]);
             $notice = 'Сообщение отправлено.';
+            $notifyProject('message','Новое сообщение','Новое сообщение в канале проекта.','workspace.php?view=chat&id='.$projectId.'&channel='.rawurlencode($channel));
         } elseif ($action === 'add_stage') {
             if (!$project) {
                 throw new RuntimeException('Сначала откройте проект.');
@@ -173,6 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $q = $pdo->prepare('INSERT INTO acceptancestages (projectId,title,amount,holdback,status) VALUES (?,?,?,?,?)');
             $q->execute([$projectId, $title, $amount, $holdback, 'pending']);
             $notice = 'Этап приёмки создан.';
+            $notifyProject('acceptance','Создан этап приёмки',$title,'workspace.php?view=acceptance&id='.$projectId);
         } elseif ($action === 'submit_stage') {
             if (!$project) {
                 throw new RuntimeException('Сначала откройте проект.');
@@ -181,6 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $q = $pdo->prepare("UPDATE acceptancestages SET status='submitted',submittedAt=CURRENT_TIMESTAMP WHERE id=? AND projectId=?");
             $q->execute([$stageId, $projectId]);
             $notice = 'Этап отправлен на приёмку.';
+            $notifyProject('acceptance','Этап отправлен на приёмку','Требуется проверка.','workspace.php?view=acceptance&id='.$projectId);
         } elseif ($action === 'add_room') {
             if (!$project) throw new RuntimeException('Сначала откройте проект.');
             $name = trim((string)($_POST['name'] ?? 'Комната'));
