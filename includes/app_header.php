@@ -59,6 +59,7 @@ if ($user && !empty($user['name'])) {
   <div class="breadcrumbs"><button class="mobile-menu" onclick="document.getElementById('appSidebar').classList.add('sidebar-open')"><i class="bi bi-list"></i></button><span>Рабочее пространство</span><span class="slash">/</span><strong><?=e($pageTitle)?></strong></div>
   <div class="topbar-actions"><input type="hidden" name="csrf" value="<?=e(csrf_token()) ?>">
   <button class="icon-button search-toggle" id="globalSearchToggle" type="button" title="Поиск"><i class="bi bi-search"></i></button>
+  <button class="icon-button notification-toggle top-notification-toggle" type="button" title="Оповещения"><i class="bi bi-bell"></i><span class="notification-badge" id="topNotificationBadge" hidden>0</span></button>
   <div class="top-avatar"><?=e($initials)?></div>
 </div>
 <div class="global-search-backdrop" id="globalSearchBackdrop" hidden>
