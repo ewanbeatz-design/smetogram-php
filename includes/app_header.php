@@ -48,5 +48,9 @@ if ($user && !empty($user['name'])) {
 <main class="main-content">
 <header class="topbar">
   <div class="breadcrumbs"><button class="mobile-menu" onclick="document.getElementById('appSidebar').classList.add('sidebar-open')"><i class="bi bi-list"></i></button><span>Рабочее пространство</span><span class="slash">/</span><strong><?=e($pageTitle)?></strong></div>
-  <div class="topbar-actions"><a href="dashboard.php" class="icon-button" title="Проекты"><i class="bi bi-search"></i></a><div class="top-avatar"><?=e($initials)?></div></div>
+  <div class="topbar-actions">
+  <div class="global-search" id="globalSearch"><button class="icon-button search-toggle" type="button" title="Поиск"><i class="bi bi-search"></i></button><input id="globalSearchInput" autocomplete="off" placeholder="Поиск проекта..."><div class="search-results" id="searchResults"></div></div>
+  <div class="notifications" id="notifications"><button class="icon-button notification-toggle" type="button" title="Оповещения"><i class="bi bi-bell"></i><span class="notification-badge" id="notificationBadge" hidden>0</span></button><div class="notification-menu" id="notificationMenu"><div class="notification-head"><strong>Оповещения</strong><button type="button" id="readNotifications">Прочитать всё</button></div><div id="notificationList"><div class="notification-empty">Нет новых оповещений</div></div></div></div>
+  <div class="top-avatar"><?=e($initials)?></div>
+</div>
 </header>
