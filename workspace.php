@@ -53,7 +53,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         check_csrf();
         $action = (string)($_POST['action'] ?? '');
 
-        if ($action === 'add_payment') {
+        if ($action === 'choose_plan') {
+            $plan = (string)($_POST['plan'] ?? 'free');
+            if (!in_array($plan, ['free','project','brigade','studio'], true)) throw new RuntimeException('Неизвестный тариф.');
+            $expires = $plan === 'free' ? null : date('Y-m-d H:i:s', strtotime('+1 month'));
+            $q = $pdo->prepare('UPDATE users SET subscriptionPlan=?,subscriptionStatus=?,subscriptionStartedAt=?,subscriptionExpiresAt=? WHERE id=?');
+            $q->execute([$plan,'active',date('Y-m-d H:i:s'),$expires,$user['id']]);
+            $notice = 'Тариф выбран.';
+        } elseif ($action === 'add_payment') {
             if (!$project) throw new RuntimeException('Сначала откройте проект.');
             $title=trim((string)($_POST['title']??'Платёж'));
             $amount=(float)str_replace(',', '.', (string)($_POST['amount']??'0'));
