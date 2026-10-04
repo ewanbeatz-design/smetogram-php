@@ -61,6 +61,4 @@ if ($user && !empty($user['name'])) {
     <div class="global-search-footer"><span>Быстрый поиск</span><span><kbd>Esc</kbd> закрыть</span></div>
   </div>
 </div>
-  <div class="top-avatar"><?=e($initials)?></div>
-</div>
 </header>
