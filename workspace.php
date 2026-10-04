@@ -622,6 +622,6 @@ require __DIR__ . '/includes/app_header.php';
     <?php else: ?>
         <div class="module-panel"><div class="empty-state">Раздел не найден.</div></div>
     <?php endif; ?>
-    <?php if ($project): ?></div><?php endif; ?>
+    <?php endif; ?>
 </section>
 <?php require __DIR__ . '/includes/app_footer.php'; ?>
