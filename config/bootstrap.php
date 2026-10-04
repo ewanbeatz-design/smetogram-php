@@ -13,37 +13,190 @@ $hasName=$pdo->query("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABL
 if(!$hasName)$pdo->exec("ALTER TABLE users ADD COLUMN name VARCHAR(255) NULL AFTER email");
 }catch(Throwable $e){}
 
-// Compatibility for installations where the original estimate item table was created
-// with snake_case names (estimate_items) instead of the legacy Smetogram name (estimateitems).
+// Runtime compatibility migration for the existing Smetogram database.
+// The PHP port uses the original camelCase column names from the old application.
+// Missing columns/tables are added automatically; existing data is never dropped.
 try {
     $tableExists = static function(PDO $pdo, string $table): bool {
-        $q = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?");
+        $q = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA=DATABASE() AND LOWER(TABLE_NAME)=LOWER(?)");
         $q->execute([$table]);
         return (bool)$q->fetchColumn();
     };
-    if (!$tableExists($pdo, 'estimateitems')) {
+    $columnExists = static function(PDO $pdo, string $table, string $column): bool {
+        $q = $pdo->prepare("SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND LOWER(TABLE_NAME)=LOWER(?) AND LOWER(COLUMN_NAME)=LOWER(?)");
+        $q->execute([$table, $column]);
+        return (bool)$q->fetchColumn();
+    };
+    $addColumn = static function(PDO $pdo, string $table, string $column, string $definition) use ($columnExists): void {
+        if (!$columnExists($pdo, $table, $column)) {
+            $pdo->exec("ALTER TABLE `$table` ADD COLUMN `$column` $definition");
+        }
+    };
+
+    if (!$tableExists($pdo, 'users')) {
+        $pdo->exec("CREATE TABLE users (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            openId VARCHAR(64) NOT NULL UNIQUE,
+            name VARCHAR(255) NULL,
+            email VARCHAR(320) NULL UNIQUE,
+            loginMethod VARCHAR(64) NULL,
+            role ENUM('user','admin') NOT NULL DEFAULT 'user',
+            password_hash VARCHAR(255) NULL,
+            createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            lastSignedIn TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    } else {
+        $addColumn($pdo,'users','openId',"VARCHAR(64) NULL");
+        $addColumn($pdo,'users','name',"VARCHAR(255) NULL");
+        $addColumn($pdo,'users','email',"VARCHAR(320) NULL");
+        $addColumn($pdo,'users','loginMethod',"VARCHAR(64) NULL");
+        $addColumn($pdo,'users','role',"VARCHAR(32) NOT NULL DEFAULT 'user'");
+        $addColumn($pdo,'users','password_hash',"VARCHAR(255) NULL");
+        $addColumn($pdo,'users','createdAt',"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP");
+        $addColumn($pdo,'users','updatedAt',"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+        $addColumn($pdo,'users','lastSignedIn',"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP");
+    }
+
+    if (!$tableExists($pdo,'projects')) {
+        $pdo->exec("CREATE TABLE projects (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            ownerId BIGINT UNSIGNED NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            city VARCHAR(120) NOT NULL DEFAULT '',
+            clientName VARCHAR(255) NOT NULL DEFAULT '',
+            clientEmail VARCHAR(320) NULL,
+            workType VARCHAR(120) NOT NULL DEFAULT 'Строительство',
+            status VARCHAR(32) NOT NULL DEFAULT 'draft',
+            deadline DATETIME NULL,
+            budget DECIMAL(14,2) NOT NULL DEFAULT 0,
+            createdAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+            updatedAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX(ownerId)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    } else {
+        $addColumn($pdo,'projects','ownerId',"BIGINT UNSIGNED NULL");
+        $addColumn($pdo,'projects','name',"VARCHAR(255) NOT NULL DEFAULT 'Новый проект'");
+        $addColumn($pdo,'projects','city',"VARCHAR(120) NOT NULL DEFAULT ''");
+        $addColumn($pdo,'projects','clientName',"VARCHAR(255) NOT NULL DEFAULT ''");
+        $addColumn($pdo,'projects','clientEmail',"VARCHAR(320) NULL");
+        $addColumn($pdo,'projects','workType',"VARCHAR(120) NOT NULL DEFAULT 'Строительство'");
+        $addColumn($pdo,'projects','status',"VARCHAR(32) NOT NULL DEFAULT 'draft'");
+        $addColumn($pdo,'projects','deadline',"DATETIME NULL");
+        $addColumn($pdo,'projects','budget',"DECIMAL(14,2) NOT NULL DEFAULT 0");
+        $addColumn($pdo,'projects','createdAt',"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP");
+        $addColumn($pdo,'projects','updatedAt',"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+    }
+
+    if (!$tableExists($pdo,'estimatecategories')) {
+        $pdo->exec("CREATE TABLE estimatecategories (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            projectId BIGINT UNSIGNED NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            sortOrder INT NOT NULL DEFAULT 0,
+            createdAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX(projectId)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    } else {
+        $addColumn($pdo,'estimatecategories','projectId',"BIGINT UNSIGNED NULL");
+        $addColumn($pdo,'estimatecategories','name',"VARCHAR(255) NOT NULL DEFAULT 'Раздел'");
+        $addColumn($pdo,'estimatecategories','sortOrder',"INT NOT NULL DEFAULT 0");
+        $addColumn($pdo,'estimatecategories','createdAt',"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP");
+    }
+
+    if (!$tableExists($pdo,'estimateitems')) {
         $pdo->exec("CREATE TABLE estimateitems (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             categoryId BIGINT UNSIGNED NOT NULL,
             name VARCHAR(255) NOT NULL,
-            quantity DECIMAL(14,3) NOT NULL DEFAULT 0,
+            quantity DECIMAL(14,3) NOT NULL DEFAULT 1,
             unit VARCHAR(40) NOT NULL DEFAULT 'шт.',
             price DECIMAL(14,2) NOT NULL DEFAULT 0,
             source VARCHAR(30) NOT NULL DEFAULT 'manual',
+            createdAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+            updatedAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX(categoryId)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-
-        if ($tableExists($pdo, 'estimate_items')) {
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        if ($tableExists($pdo,'estimate_items')) {
             try {
                 $pdo->exec("INSERT INTO estimateitems (id,categoryId,name,quantity,unit,price,source)
                     SELECT id,category_id,name,quantity,unit,price,source FROM estimate_items");
-            } catch (Throwable $e) {
-                // Keep the compatibility table usable even if the legacy/new schemas differ slightly.
-            }
+            } catch (Throwable $e) {}
         }
+    } else {
+        $addColumn($pdo,'estimateitems','categoryId',"BIGINT UNSIGNED NULL");
+        $addColumn($pdo,'estimateitems','name',"VARCHAR(255) NOT NULL DEFAULT 'Позиция'");
+        $addColumn($pdo,'estimateitems','quantity',"DECIMAL(14,3) NOT NULL DEFAULT 1");
+        $addColumn($pdo,'estimateitems','unit',"VARCHAR(40) NOT NULL DEFAULT 'шт.'");
+        $addColumn($pdo,'estimateitems','price',"DECIMAL(14,2) NOT NULL DEFAULT 0");
+        $addColumn($pdo,'estimateitems','source',"VARCHAR(30) NOT NULL DEFAULT 'manual'");
+        $addColumn($pdo,'estimateitems','createdAt',"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP");
+        $addColumn($pdo,'estimateitems','updatedAt',"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+    }
+
+    $simpleTables = [
+        'scheduletasks' => "CREATE TABLE scheduletasks (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, projectId BIGINT UNSIGNED NOT NULL,
+            title VARCHAR(255) NOT NULL, startsAt DATETIME NULL, endsAt DATETIME NULL,
+            status VARCHAR(32) NOT NULL DEFAULT 'planned', paymentMilestone DECIMAL(14,2) NOT NULL DEFAULT 0,
+            createdAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP, INDEX(projectId)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'projectmembers' => "CREATE TABLE projectmembers (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, projectId BIGINT UNSIGNED NOT NULL,
+            userId BIGINT UNSIGNED NULL, invitedEmail VARCHAR(320) NULL, invitedPhone VARCHAR(32) NULL,
+            role VARCHAR(32) NOT NULL DEFAULT 'client', inviteToken VARCHAR(80) NULL, joinedAt DATETIME NULL,
+            createdAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP, INDEX(projectId)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'projectdocuments' => "CREATE TABLE projectdocuments (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, projectId BIGINT UNSIGNED NOT NULL,
+            type VARCHAR(32) NOT NULL, title VARCHAR(255) NOT NULL, status VARCHAR(32) NOT NULL DEFAULT 'draft',
+            fileUrl TEXT NULL, signedAt DATETIME NULL, createdAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX(projectId)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'projectmessages' => "CREATE TABLE projectmessages (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, projectId BIGINT UNSIGNED NOT NULL,
+            authorId BIGINT UNSIGNED NOT NULL, channel VARCHAR(32) NOT NULL DEFAULT 'general',
+            body TEXT NOT NULL, createdAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP, INDEX(projectId)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'acceptancestages' => "CREATE TABLE acceptancestages (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, projectId BIGINT UNSIGNED NOT NULL,
+            scheduleTaskId BIGINT UNSIGNED NULL, title VARCHAR(255) NOT NULL, status VARCHAR(32) NOT NULL DEFAULT 'pending',
+            amount DECIMAL(14,2) NOT NULL DEFAULT 0, holdback DECIMAL(14,2) NOT NULL DEFAULT 0, comment TEXT NULL,
+            submittedAt DATETIME NULL, acceptedAt DATETIME NULL, createdAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX(projectId)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    ];
+    foreach ($simpleTables as $table=>$sql) {
+        if (!$tableExists($pdo,$table)) $pdo->exec($sql);
+    }
+
+    $columnSets = [
+        'scheduletasks'=>[
+            'projectId'=>"BIGINT UNSIGNED NULL",'title'=>"VARCHAR(255) NOT NULL DEFAULT 'Этап'",
+            'startsAt'=>"DATETIME NULL",'endsAt'=>"DATETIME NULL",'status'=>"VARCHAR(32) NOT NULL DEFAULT 'planned'",
+            'paymentMilestone'=>"DECIMAL(14,2) NOT NULL DEFAULT 0",'createdAt'=>"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP"
+        ],
+        'projectmembers'=>[
+            'projectId'=>"BIGINT UNSIGNED NULL",'userId'=>"BIGINT UNSIGNED NULL",'invitedEmail'=>"VARCHAR(320) NULL",
+            'invitedPhone'=>"VARCHAR(32) NULL",'role'=>"VARCHAR(32) NOT NULL DEFAULT 'client'",
+            'inviteToken'=>"VARCHAR(80) NULL",'joinedAt'=>"DATETIME NULL",'createdAt'=>"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP"
+        ],
+        'projectdocuments'=>[
+            'projectId'=>"BIGINT UNSIGNED NULL",'type'=>"VARCHAR(32) NOT NULL DEFAULT 'contract'",
+            'title'=>"VARCHAR(255) NOT NULL DEFAULT 'Документ'",'status'=>"VARCHAR(32) NOT NULL DEFAULT 'draft'",
+            'fileUrl'=>"TEXT NULL",'signedAt'=>"DATETIME NULL",'createdAt'=>"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP"
+        ],
+        'projectmessages'=>[
+            'projectId'=>"BIGINT UNSIGNED NULL",'authorId'=>"BIGINT UNSIGNED NULL",'channel'=>"VARCHAR(32) NOT NULL DEFAULT 'general'",
+            'body'=>"TEXT NULL",'createdAt'=>"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP"
+        ],
+        'acceptancestages'=>[
+            'projectId'=>"BIGINT UNSIGNED NULL",'scheduleTaskId'=>"BIGINT UNSIGNED NULL",'title'=>"VARCHAR(255) NOT NULL DEFAULT 'Этап'",
+            'status'=>"VARCHAR(32) NOT NULL DEFAULT 'pending'",'amount'=>"DECIMAL(14,2) NOT NULL DEFAULT 0",
+            'holdback'=>"DECIMAL(14,2) NOT NULL DEFAULT 0",'comment'=>"TEXT NULL",'submittedAt'=>"DATETIME NULL",
+            'acceptedAt'=>"DATETIME NULL",'createdAt'=>"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP"
+        ]
+    ];
+    foreach ($columnSets as $table=>$columns) {
+        foreach ($columns as $column=>$definition) $addColumn($pdo,$table,$column,$definition);
     }
 } catch (Throwable $e) {
-    // Do not break the application bootstrap because of a compatibility migration.
+    // Compatibility migration must never prevent the application from starting.
 }
 
 function e(?string $v):string{return htmlspecialchars($v??'',ENT_QUOTES,'UTF-8');}
