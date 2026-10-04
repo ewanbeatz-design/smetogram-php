@@ -10,7 +10,15 @@ $allowedChannels = ['team','foreman_client','designer_client','general'];
 if (!in_array($channel, $allowedChannels, true)) $channel = 'general';
 $projectId = (int)($_GET['id'] ?? 0);
 $projectViews = ['schedule','team','documents','payments','chat','acceptance','scan','analytics','measurements'];
-if (in_array($view, $projectViews, true) && $projectId <= 0) redirect('dashboard.php');
+
+if ($projectId > 0) {
+    // Запоминаем последний выбранный объект, чтобы нижнее меню
+    // (Документы / Чат / Приёмка) открывало именно его.
+    $_SESSION['last_project_id'] = $projectId;
+} elseif (in_array($view, $projectViews, true)) {
+    $projectId = (int)($_SESSION['last_project_id'] ?? 0);
+    if ($projectId <= 0) redirect('dashboard.php');
+}
 $project = null;
 $error = '';
 $notice = '';
