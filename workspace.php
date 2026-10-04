@@ -327,7 +327,17 @@ require __DIR__ . '/includes/app_header.php';
         <span class="workspace-project-name"><?= e($project['name']) ?></span>
         <span class="workspace-project-meta"><?= e(($project['city'] ?? '') . ' · ' . ($project['clientName'] ?? '')) ?></span>
     </div>
-    <div class="workspace-tabs" aria-label="Разделы проекта">   <?php if ($error !== ''): ?>
+    <div class="workspace-tabs" aria-label="Разделы проекта">
+        <a href="workspace.php?view=schedule&id=<?= $projectId ?>" class="<?= $view==='schedule'?'active':'' ?>"><i class="bi bi-calendar3"></i> График</a>
+        <a href="workspace.php?view=measurements&id=<?= $projectId ?>" class="<?= $view==='measurements'?'active':'' ?>"><i class="bi bi-rulers"></i> Замеры</a>
+        <a href="workspace.php?view=team&id=<?= $projectId ?>" class="<?= $view==='team'?'active':'' ?>"><i class="bi bi-people"></i> Команда</a>
+        <a href="workspace.php?view=chat&id=<?= $projectId ?>&channel=<?= e($channel) ?>" class="<?= $view==='chat'?'active':'' ?>"><i class="bi bi-chat"></i> Чат</a>
+        <a href="workspace.php?view=documents&id=<?= $projectId ?>" class="<?= $view==='documents'?'active':'' ?>"><i class="bi bi-file-earmark-text"></i> Документы</a>
+        <a href="workspace.php?view=payments&id=<?= $projectId ?>" class="<?= $view==='payments'?'active':'' ?>"><i class="bi bi-wallet2"></i> Оплаты</a>
+        <a href="workspace.php?view=acceptance&id=<?= $projectId ?>" class="<?= $view==='acceptance'?'active':'' ?>"><i class="bi bi-check2-circle"></i> Приёмка</a>
+        <a href="workspace.php?view=analytics&id=<?= $projectId ?>" class="<?= $view==='analytics'?'active':'' ?>"><i class="bi bi-bar-chart"></i> Аналитика</a>
+        <a href="workspace.php?view=scan&id=<?= $projectId ?>" class="<?= $view==='scan'?'active':'' ?>"><i class="bi bi-stars"></i> ИИ</a>
+    </div>   <?php if ($error !== ''): ?>
         <div class="alert alert-danger"><?= e($error) ?></div>
     <?php endif; ?>
     <?php if ($notice !== ''): ?>
@@ -612,5 +622,6 @@ require __DIR__ . '/includes/app_header.php';
     <?php else: ?>
         <div class="module-panel"><div class="empty-state">Раздел не найден.</div></div>
     <?php endif; ?>
+    <?php if ($project): ?></div><?php endif; ?>
 </section>
 <?php require __DIR__ . '/includes/app_footer.php'; ?>
