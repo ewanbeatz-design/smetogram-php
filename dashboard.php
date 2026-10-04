@@ -12,7 +12,6 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
    $q->execute([$user['id'],$name,$city,$client,$work,'in_progress',$deadline!==''?$deadline:null,0]);
    $pid=(int)$pdo->lastInsertId();
    $q=$pdo->prepare("INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)");$q->execute([$pid,'Общестроительные работы',1]);
-   create_notification($pdo,(int)$user['id'],$pid,'project','Создан новый проект','Проект «'.$name.'» успешно создан.','project.php?id='.$pid);
    redirect('project.php?id='.$pid);
   }
  }
