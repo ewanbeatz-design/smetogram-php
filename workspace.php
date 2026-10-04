@@ -10,6 +10,16 @@ $project = null;
 $error = '';
 $notice = '';
 
+// POST/Redirect/GET: повторная загрузка страницы не повторяет INSERT.
+if (isset($_SESSION['flash_notice'])) {
+    $notice = (string)$_SESSION['flash_notice'];
+    unset($_SESSION['flash_notice']);
+}
+if (isset($_SESSION['flash_error'])) {
+    $error = (string)$_SESSION['flash_error'];
+    unset($_SESSION['flash_error']);
+}
+
 if ($projectId > 0) {
     $q = $pdo->prepare('SELECT * FROM projects WHERE id = ? AND ownerId = ? LIMIT 1');
     $q->execute([$projectId, $user['id']]);
@@ -228,6 +238,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } catch (Throwable $e) {
         $error = $e->getMessage();
+    }
+
+    if ($error === '') {
+        if ($notice !== '') {
+            $_SESSION['flash_notice'] = $notice;
+        }
+        $target = 'workspace.php?view=' . rawurlencode($view);
+        if ($projectId > 0) {
+            $target .= '&id=' . $projectId;
+        }
+        redirect($target);
     }
 }
 
