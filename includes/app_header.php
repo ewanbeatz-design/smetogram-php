@@ -25,22 +25,18 @@ if ($user && !empty($user['name'])) {
   <button class="mobile-close" onclick="document.getElementById('appSidebar').classList.remove('sidebar-open')"><i class="bi bi-x-lg"></i></button>
   <div class="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
   <nav class="nav-list">
-    <a class="nav-item <?=($view==='projects'?'active':'')?>" href="dashboard.php"><span class="nav-icon"><i class="bi bi-grid-1x2"></i></span>Мои проекты</a>
-    <a class="nav-item <?=($view==='scan'?'active':'')?>" href="workspace.php?view=scan<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-file-earmark-arrow-up"></i></span>Смета из файла</a>
-    <a class="nav-item <?=($view==='ai'?'active':'')?>" href="ai.php<?=($projectId?'?id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-stars"></i></span>ИИ и распознавание</a>
-    <a class="nav-item <?=($view==='measurements'?'active':'')?>" href="workspace.php?view=measurements<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-rulers"></i></span>Замеры</a>
-    <a class="nav-item <?=($view==='schedule'?'active':'')?>" href="workspace.php?view=schedule<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-calendar3"></i></span>График работ</a>
-    <a class="nav-item <?=($view==='analytics'?'active':'')?>" href="workspace.php?view=analytics<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-bar-chart"></i></span>Графики</a>
-    <a class="nav-item <?=($view==='team'?'active':'')?>" href="workspace.php?view=team<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-people"></i></span>Команда</a>
+    <a class="nav-item <?=($view==='projects'?'active':'')?>" href="dashboard.php"><span class="nav-icon"><i class="bi bi-grid-1x2"></i></span><span class="nav-label">Мои проекты</span><span class="nav-count"><?= $projectCount ?? 0 ?></span></a>
+    <a class="nav-item <?=($view==='scan'?'active':'')?>" href="workspace.php?view=scan<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-file-earmark-arrow-up"></i></span><span class="nav-label">Смета из файла</span></a>
+    <a class="nav-item <?=($view==='measurements'?'active':'')?>" href="workspace.php?view=measurements<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-rulers"></i></span><span class="nav-label">Замеры</span></a>
+    <a class="nav-item <?=($view==='schedule'?'active':'')?>" href="workspace.php?view=schedule<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-calendar3"></i></span><span class="nav-label">График работ</span></a>
+    <a class="nav-item <?=($view==='analytics'?'active':'')?>" href="workspace.php?view=analytics<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-bar-chart"></i></span><span class="nav-label">Графики</span></a>
+    <a class="nav-item <?=($view==='team'?'active':'')?>" href="workspace.php?view=team<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-people"></i></span><span class="nav-label">Команда</span></a>
   </nav>
   <div class="sidebar-spacer"></div>
   <div class="trial-card"><div class="trial-icon"><i class="bi bi-stars"></i></div><div><strong>Первый проект бесплатно</strong><span>Без карты и обязательств</span></div><i class="bi bi-arrow-up-right"></i></div>
   <nav class="nav-list bottom-nav">
-    <a class="nav-item <?=($view==='settings'?'active':'')?>" href="workspace.php?view=settings"><span class="nav-icon"><i class="bi bi-sliders2"></i></span>Настройки</a>
-    <a class="nav-item <?=($view==='documents'?'active':'')?>" href="workspace.php?view=documents<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-file-text"></i></span>Документы</a>
-    <a class="nav-item <?=($view==='chat'?'active':'')?>" href="workspace.php?view=chat<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-chat"></i></span>Чат проекта</a>
-    <a class="nav-item <?=($view==='acceptance'?'active':'')?>" href="workspace.php?view=acceptance<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-check2-square"></i></span>Приёмка</a>
-    <a class="nav-item <?=($view==='billing'?'active':'')?>" href="workspace.php?view=billing"><span class="nav-icon"><i class="bi bi-credit-card"></i></span>Тариф</a>
+    <a class="nav-item <?=($view==='settings'?'active':'')?>" href="workspace.php?view=settings"><span class="nav-icon"><i class="bi bi-sliders2"></i></span><span class="nav-label">Настройки</span></a>
+    <button class="nav-item notification-nav" type="button" id="sidebarNotificationsToggle"><span class="nav-icon"><i class="bi bi-bell"></i></span><span class="nav-label">Уведомления</span><span class="notification-badge" id="sidebarNotificationBadge" hidden>0</span></button>
   </nav>
   <div class="profile"><div class="avatar"><?=e($initials)?></div><div><strong><?=e($user['name']??'Пользователь')?></strong><span>Пользователь</span></div><a href="logout.php" class="muted-icon" title="Выйти"><i class="bi bi-box-arrow-right"></i></a></div>
 </aside>
@@ -50,7 +46,7 @@ if ($user && !empty($user['name'])) {
   <div class="breadcrumbs"><button class="mobile-menu" onclick="document.getElementById('appSidebar').classList.add('sidebar-open')"><i class="bi bi-list"></i></button><span>Рабочее пространство</span><span class="slash">/</span><strong><?=e($pageTitle)?></strong></div>
   <div class="topbar-actions"><input type="hidden" name="csrf" value="<?=e(csrf_token()) ?>">
   <button class="icon-button search-toggle" id="globalSearchToggle" type="button" title="Поиск"><i class="bi bi-search"></i></button>
-  <div class="notifications notification-wrap" id="notifications"><button class="icon-button notification-toggle" type="button" title="Оповещения"><i class="bi bi-bell"></i><span class="notification-badge" id="notificationBadge" hidden>0</span></button><div class="notifications-dropdown" id="notificationMenu"><div class="notifications-heading"><div><strong>Оповещения</strong><span>Изменения по вашим проектам</span></div><button class="notifications-read-all" type="button" id="readNotifications">Прочитать всё</button></div><div class="notifications-list" id="notificationList"><div class="notifications-empty"><strong>Нет новых оповещений</strong><span>Здесь появятся сообщения и изменения проекта.</span></div></div><div class="notifications-footer">Оповещения обновляются автоматически</div></div></div>
+  <div class="notifications notification-wrap" id="notifications"><div class="notifications-dropdown" id="notificationMenu"><div class="notifications-heading"><div><strong>Оповещения</strong><span>Изменения по вашим проектам</span></div><button class="notifications-read-all" type="button" id="readNotifications">Прочитать всё</button></div><div class="notifications-list" id="notificationList"><div class="notifications-empty"><strong>Нет новых оповещений</strong><span>Здесь появятся сообщения и изменения проекта.</span></div></div><div class="notifications-footer">Оповещения обновляются автоматически</div></div></div>
   <div class="top-avatar"><?=e($initials)?></div>
 </div>
 <div class="global-search-backdrop" id="globalSearchBackdrop" hidden>
