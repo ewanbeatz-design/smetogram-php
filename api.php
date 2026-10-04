@@ -7,12 +7,17 @@ $action=$_GET['action']??'';
 if($action==='search'){
  $q=trim((string)($_GET['q']??''));
  if(mb_strlen($q)<2){echo json_encode(['items'=>[]],JSON_UNESCAPED_UNICODE);exit;}
- $like='%'.$q.'%';
- $s=$pdo->prepare("SELECT id,name,city,clientName,status FROM projects WHERE ownerId=? AND (name LIKE ? OR city LIKE ? OR clientName LIKE ?) ORDER BY updatedAt DESC LIMIT 8");
+ $like='%'.$q.'%'; $items=[];
+ $s=$pdo->prepare("SELECT id,name,city,clientName,status FROM projects WHERE ownerId=? AND (name LIKE ? OR city LIKE ? OR clientName LIKE ?) ORDER BY updatedAt DESC,id DESC LIMIT 8");
  $s->execute([$user['id'],$like,$like,$like]);
- $items=[];
- foreach($s->fetchAll() as $p){$items[]=['type'=>'project','title'=>$p['name'],'meta'=>trim(($p['city']??'').' · '.($p['clientName']??'')),'url'=>'project.php?id='.(int)$p['id']];}
- echo json_encode(['items'=>$items],JSON_UNESCAPED_UNICODE);exit;
+ foreach($s->fetchAll() as $p){$items[]=['type'=>'project','title'=>$p['name'],'meta'=>trim(($p['city']??'').' · '.($p['clientName']??'')),'group'=>'Проект','url'=>'project.php?id='.(int)$p['id']];}
+ $s=$pdo->prepare("SELECT d.id,d.title,d.type,d.projectId,p.name AS projectName FROM projectdocuments d INNER JOIN projects p ON p.id=d.projectId WHERE p.ownerId=? AND d.title LIKE ? ORDER BY d.createdAt DESC,d.id DESC LIMIT 6");
+ $s->execute([$user['id'],$like]);
+ foreach($s->fetchAll() as $d){$items[]=['type'=>'document','title'=>$d['title'],'meta'=>($d['projectName']??'').' · '.mb_strtoupper((string)$d['type']),'group'=>'Документ','url'=>'workspace.php?view=documents&id='.(int)$d['projectId']];}
+ $s=$pdo->prepare("SELECT i.id,i.name,i.unit,i.price,c.projectId,p.name AS projectName FROM estimateitems i INNER JOIN estimatecategories c ON c.id=i.categoryId INNER JOIN projects p ON p.id=c.projectId WHERE p.ownerId=? AND i.name LIKE ? ORDER BY i.id DESC LIMIT 6");
+ $s->execute([$user['id'],$like]);
+ foreach($s->fetchAll() as $i){$items[]=['type'=>'estimate','title'=>$i['name'],'meta'=>($i['projectName']??'').' · '.number_format((float)$i['price'],2,',',' ').' ₽/'.($i['unit']??'шт.'),'group'=>'Позиция сметы','url'=>'project.php?id='.(int)$i['projectId']];}
+ echo json_encode(['items'=>array_slice($items,0,15)],JSON_UNESCAPED_UNICODE);exit;
 }
 if($action==='notifications'){
  $since=max(0,(int)($_GET['since']??0));
