@@ -52,4 +52,6 @@ jobs:
             PHP
 
             chmod 640 config/config.php
+
+            php -r '$c=require "config/config.php"; try { new PDO("mysql:host=".$c["db"]["host"].";port=".$c["db"]["port"].";dbname=".$c["db"]["name"].";charset=".$c["db"]["charset"], $c["db"]["user"], $c["db"]["password"], [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]); echo "DB_CONNECTION_OK\\n"; } catch (Throwable $e) { echo "DB_CONNECTION_ERROR: ".$e->getMessage()."\\n"; exit(1); }'
             echo "SMETOGRAM_DEPLOY_OK"
