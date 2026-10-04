@@ -621,10 +621,33 @@ require __DIR__ . '/includes/app_header.php';
         </div></div>
 
     <?php elseif ($view === 'billing'): ?>
-        <div class="plans-grid">
-            <?php foreach ([['free','Первый проект','0 ₽','Полный проект без карты'],['project','Проект','1 490 ₽','Смета + дорожная карта + документы'],['brigade','Бригада','3 900 ₽ / мес','До 5 проектов в месяц'],['studio','Студия','7 900 ₽ / мес','Безлимит и расширенные функции']] as $plan): ?>
-                <div class="plan-card <?= $plan[0] === 'free' ? 'selected' : '' ?>"><span><?= e($plan[1]) ?></span><strong><?= e($plan[2]) ?></strong><p><?= e($plan[3]) ?></p><button class="outline-button" type="button"><?= $plan[0] === 'free' ? 'Текущий план' : 'Выбрать план' ?></button></div>
+        <?php
+        $plans = [
+            'free' => ['Первый проект','0 ₽','навсегда','Один полноценный объект без карты'],
+            'project' => ['Проект','1 490 ₽','в месяц','Смета + дорожная карта + документы'],
+            'brigade' => ['Бригада','3 900 ₽','в месяц','До 5 объектов и командная работа'],
+            'studio' => ['Студия','7 900 ₽','в месяц','Безлимитные объекты и расширенные функции']
+        ];
+        $currentPlan = (string)($user['subscriptionPlan'] ?? 'free');
+        if (!isset($plans[$currentPlan])) $currentPlan = 'free';
+        ?>
+        <div class="billing-hero module-panel">
+            <div><div class="eyebrow">ТАРИФ И ОПЛАТА</div><h2>Выберите режим работы</h2><p class="panel-copy">Тариф сохраняется в вашем аккаунте и применяется ко всем объектам.</p></div>
+            <div class="billing-current"><span>ТЕКУЩИЙ ТАРИФ</span><strong><?= e($plans[$currentPlan][0]) ?></strong><small>Активен<?= !empty($user['subscriptionExpiresAt']) ? ' · до '.date('d.m.Y',strtotime($user['subscriptionExpiresAt'])) : '' ?></small></div>
+        </div>
+        <div class="plans-grid billing-plans">
+            <?php foreach ($plans as $id => $plan): ?>
+                <div class="plan-card billing-card <?= $id === $currentPlan ? 'selected' : '' ?>">
+                    <?php if ($id === $currentPlan): ?><span class="plan-badge">ТЕКУЩИЙ</span><?php endif; ?>
+                    <span><?= e($plan[0]) ?></span><strong><?= e($plan[1]) ?></strong><small><?= e($plan[2]) ?></small><p><?= e($plan[3]) ?></p>
+                    <ul><li>Смета и рабочее пространство</li><li>Команда и документы</li><li>Чат и приёмка</li></ul>
+                    <form method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="choose_plan"><input type="hidden" name="plan" value="<?= e($id) ?>"><button class="<?= $id === $currentPlan ? 'outline-button' : 'primary-button' ?>" type="submit"><?= $id === $currentPlan ? 'Текущий тариф' : 'Выбрать тариф' ?></button></form>
+                </div>
             <?php endforeach; ?>
+        </div>
+        <div class="billing-grid">
+            <div class="module-panel"><div class="panel-heading"><div><h2>Состав тарифов</h2><p>Функции Сметограма развиваются внутри рабочего пространства.</p></div></div><div class="billing-feature-list"><div><i class="bi bi-calculator"></i><span><b>Смета</b><small>Разделы, позиции, цены, импорт и экспорт.</small></span></div><div><i class="bi bi-kanban"></i><span><b>Объект</b><small>График, замеры, команда, документы, чат и приёмка.</small></span></div><div><i class="bi bi-stars"></i><span><b>ИИ</b><small>Распознавание файлов и подготовка черновика.</small></span></div></div></div>
+            <div class="module-panel"><div class="panel-heading"><div><h2>Оплата</h2><p>Без фиктивных списаний.</p></div></div><div class="billing-note"><i class="bi bi-credit-card-2-front"></i><div><b>Онлайн-оплата</b><span>Выбор тарифа уже сохраняется. Эквайринг подключим отдельным шагом, когда будет выбран платёжный провайдер.</span></div></div></div>
         </div>
     <?php else: ?>
         <div class="module-panel"><div class="empty-state">Раздел не найден.</div></div>
