@@ -53,110 +53,37 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
  });
 
  const toggles=document.querySelectorAll('.notification-toggle');
- const menu=$('#notificationMenu'),list=$('#notificationList'),badge=$('#notificationBadge'),topBadge=$('#topNotificationBadge'),status=$('#notificationStatus');
+ const menu=$('#notificationMenu'),list=$('#notificationList'),badge=$('#notificationBadge'),topBadge=$('#topNotificationBadge');
  let lastId=0;
- const dismissedKey='smetogram.dismissedNotifications';
- function dismissedIds(){
-   try{return new Set(JSON.parse(localStorage.getItem(dismissedKey)||'[]').map(Number))}catch(e){return new Set()}
- }
- function saveDismissed(set){
-   try{localStorage.setItem(dismissedKey,JSON.stringify([...set].slice(-200)))}catch(e){}
- }
  function syncBadges(unread){
    const has=Number(unread)>0;
    [badge,topBadge].forEach(b=>{if(!b)return;b.hidden=!has;b.textContent=Number(unread)>99?'99+':String(unread)});
-   if(status)status.textContent=has?'Есть непрочитанные':'Всё прочитано';
- }
- function notificationIcon(type){
-   return type==='message'?'bi-chat':type==='document'?'bi-file-earmark-text':type==='payment'?'bi-wallet2':type==='acceptance'?'bi-check2-square':type==='schedule'?'bi-calendar3':type==='team'?'bi-people': 'bi-folder-kanban';
- }
- function notificationTime(value){
-   if(!value)return 'Только что';
-   const d=new Date(String(value).replace(' ','T'));
-   if(Number.isNaN(d.getTime()))return String(value);
-   const diff=Math.max(0,Date.now()-d.getTime());
-   if(diff<60000)return 'Только что';
-   if(diff<3600000)return Math.floor(diff/60000)+' мин назад';
-   if(diff<86400000)return Math.floor(diff/3600000)+' ч назад';
-   if(diff<604800000)return Math.floor(diff/86400000)+' дн назад';
-   return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'});
- }
- function renderNotification(n){
-   const id=Number(n.id||0), icon=notificationIcon(n.type);
-   return '<div class="notification-row '+(!Number(n.isRead)?'unread':'')+'" data-notification-id="'+id+'">'+
-     '<button type="button" class="notification-main" data-notification-url="'+String(n.url||'#').replace(/"/g,'%22')+'">'+
-       '<div class="notification-icon notification-type-'+escapeHtml(n.type||'project')+'"><i class="bi '+icon+'"></i></div>'+
-       '<div class="notification-content"><strong>'+escapeHtml(n.title||'Новое событие')+'</strong><span>'+escapeHtml(n.body||'')+'</span><small>'+escapeHtml(notificationTime(n.createdAt))+'</small></div>'+
-     '</button>'+
-     '<div class="notification-actions"><button type="button" class="notification-dismiss" data-dismiss-notification="'+id+'" aria-label="Удалить уведомление" title="Удалить"><i class="bi bi-x-lg"></i></button></div>'+
-   '</div>';
- }
- let notificationPrimed=false;
- function showNotificationToast(n){
-   if(!notificationPrimed) return;
-   const old=document.querySelector('.notification-toast');
-   old?.remove();
-   const toast=document.createElement('button');
-   toast.type='button';
-   toast.className='notification-toast';
-   toast.innerHTML='<span class="notification-toast-icon"><i class="bi '+notificationIcon(n.type)+'"></i></span><span><strong>'+escapeHtml(n.title||'Новое событие')+'</strong><small>'+escapeHtml(n.body||'')+'</small></span>';
-   toast.addEventListener('click',()=>{const url=n.url||'#';if(url!=='#')window.location.href=url;toast.remove()});
-   document.body.appendChild(toast);
-   setTimeout(()=>toast.remove(),6000);
  }
  function loadNotifications(){
-   fetch('api.php?action=notifications&since='+lastId,{headers:{'X-Requested-With':'XMLHttpRequest'},cache:'no-store'}).then(r=>r.json()).then(d=>{
-     const dismissed=dismissedIds();
-     const incoming=Array.isArray(d.items)?d.items:[];
-     const fresh=incoming.filter(n=>Number(n.id)>lastId && !dismissed.has(Number(n.id)));
-     if(incoming.length){
-       const maxId=Math.max(...incoming.map(n=>Number(n.id)||0));
-       if(maxId>lastId) lastId=maxId;
-     }
-     if(fresh.length){
-       const html=fresh.map(renderNotification).join('');
+   fetch('api.php?action=notifications&since='+lastId,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.json()).then(d=>{
+     if(d.items&&d.items.length){
+       d.items.forEach(n=>{if(Number(n.id)>lastId)lastId=Number(n.id)});
+       const html=d.items.map(n=>'<a class="notification-row '+(!Number(n.isRead)?'unread':'')+'" href="'+String(n.url||'#').replace(/"/g,'%22')+'"><span class="notification-main"><span class="notification-icon"><i class="bi '+(n.type==='message'?'bi-chat':n.type==='document'?'bi-file-earmark-text':n.type==='payment'?'bi-wallet2':n.type==='acceptance'?'bi-check2-square':n.type==='schedule'?'bi-calendar3':'bi-bell')+'"></i></span><span class="notification-content"><strong>'+escapeHtml(n.title)+'</strong><span>'+escapeHtml(n.body||'')+'</span><small>'+escapeHtml(n.createdAt||'')+'</small></span></span><span class="notification-unread-dot"></span></a>').join('');
        if(list?.querySelector('.notifications-empty'))list.innerHTML='';
        list?.insertAdjacentHTML('afterbegin',html);
-       if(notificationPrimed) fresh.slice().reverse().forEach(showNotificationToast);
      }
      syncBadges(d.unread||0);
-     notificationPrimed=true;
-   }).catch(()=>{});
- }
- function markAllRead(){
-   const csrf=document.querySelector('input[name=csrf]')?.value||'';
-   fetch('api.php?action=read_notifications',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded'},body:'csrf='+encodeURIComponent(csrf)}).then(()=>{
-     syncBadges(0);
-     list?.querySelectorAll('.notification-row').forEach(x=>x.classList.remove('unread'));
-     if(status)status.textContent='Всё прочитано';
    }).catch(()=>{});
  }
  toggles.forEach(t=>t.addEventListener('click',e=>{
    e.preventDefault();e.stopPropagation();
+   document.querySelectorAll('.notifications-dropdown').forEach(x=>{if(x!==menu)x.classList.remove('show')});
    menu?.classList.toggle('show');
-   if(menu?.classList.contains('show')) setTimeout(markAllRead,120);
  }));
- list?.addEventListener('click',e=>{
-   const dismiss=e.target.closest('[data-dismiss-notification]');
-   if(dismiss){
-     e.preventDefault();e.stopPropagation();
-     const id=Number(dismiss.dataset.dismissNotification||0);
-     const set=dismissedIds();set.add(id);saveDismissed(set);
-     dismiss.closest('.notification-row')?.remove();
-     if(!list.querySelector('.notification-row')) list.innerHTML='<div class="notifications-empty"><strong>Пока нет уведомлений</strong><span>Здесь появятся события по вашим проектам.</span></div>';
-     return;
-   }
-   const main=e.target.closest('[data-notification-url]');
-   if(main){
-     const url=main.dataset.notificationUrl||'#';
-     if(url&&url!=='#') window.location.href=url;
-   }
- });
  document.addEventListener('click',e=>{
    if(!e.target.closest('.notification-toggle')&&!e.target.closest('.notifications-dropdown'))menu?.classList.remove('show');
  });
  const read=$('#readNotifications');
- read?.addEventListener('click',()=>{});
- if(toggles.length){loadNotifications();setInterval(loadNotifications,2500)}
- })();
-.notification-toast{position:fixed;right:24px;bottom:24px;z-index:100002;width:min(370px,calc(100vw - 32px));display:flex;align-items:flex-start;gap:11px;padding:13px 14px;border:1px solid #e7e9e4;border-radius:15px;background:#fff;color:#252722;box-shadow:0 18px 45px rgba(15,23,42,.16);text-align:left;animation:notificationToastIn .2s ease}.notification-toast:hover{background:#fafbf8}.notification-toast-icon{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:10px;background:#f0f1ed;color:#4f46e5}.notification-toast span:last-child{min-width:0;display:flex;flex-direction:column;gap:3px}.notification-toast strong{font-size:12px;line-height:1.3}.notification-toast small{color:#777a73;font-size:10px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}@keyframes notificationToastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@media(max-width:760px){.notification-toast{right:12px;bottom:12px;width:calc(100vw - 24px)}}
+ read?.addEventListener('click',()=>{
+   const csrf=document.querySelector('input[name=csrf]')?.value||'';
+   fetch('api.php?action=read_notifications',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded'},body:'csrf='+encodeURIComponent(csrf)}).then(()=>{
+     syncBadges(0);document.querySelectorAll('.notification-row').forEach(x=>x.classList.remove('unread'));
+   });
+ });
+ if(toggles.length){loadNotifications();setInterval(loadNotifications,10000)}
+})();
