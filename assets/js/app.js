@@ -91,19 +91,36 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
      '<div class="notification-actions"><button type="button" class="notification-dismiss" data-dismiss-notification="'+id+'" aria-label="Удалить уведомление" title="Удалить"><i class="bi bi-x-lg"></i></button></div>'+
    '</div>';
  }
+ let notificationPrimed=false;
+ function showNotificationToast(n){
+   if(!notificationPrimed) return;
+   const old=document.querySelector('.notification-toast');
+   old?.remove();
+   const toast=document.createElement('button');
+   toast.type='button';
+   toast.className='notification-toast';
+   toast.innerHTML='<span class="notification-toast-icon"><i class="bi '+notificationIcon(n.type)+'"></i></span><span><strong>'+escapeHtml(n.title||'Новое событие')+'</strong><small>'+escapeHtml(n.body||'')+'</small></span>';
+   toast.addEventListener('click',()=>{const url=n.url||'#';if(url!=='#')window.location.href=url;toast.remove()});
+   document.body.appendChild(toast);
+   setTimeout(()=>toast.remove(),6000);
+ }
  function loadNotifications(){
-   fetch('api.php?action=notifications&since='+lastId,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.json()).then(d=>{
+   fetch('api.php?action=notifications&since='+lastId,{headers:{'X-Requested-With':'XMLHttpRequest'},cache:'no-store'}).then(r=>r.json()).then(d=>{
      const dismissed=dismissedIds();
-     if(d.items&&d.items.length){
-       d.items.forEach(n=>{if(Number(n.id)>lastId)lastId=Number(n.id)});
-       const fresh=d.items.filter(n=>!dismissed.has(Number(n.id)));
-       if(fresh.length){
-         const html=fresh.map(renderNotification).join('');
-         if(list?.querySelector('.notifications-empty'))list.innerHTML='';
-         list?.insertAdjacentHTML('afterbegin',html);
-       }
+     const incoming=Array.isArray(d.items)?d.items:[];
+     const fresh=incoming.filter(n=>Number(n.id)>lastId && !dismissed.has(Number(n.id)));
+     if(incoming.length){
+       const maxId=Math.max(...incoming.map(n=>Number(n.id)||0));
+       if(maxId>lastId) lastId=maxId;
+     }
+     if(fresh.length){
+       const html=fresh.map(renderNotification).join('');
+       if(list?.querySelector('.notifications-empty'))list.innerHTML='';
+       list?.insertAdjacentHTML('afterbegin',html);
+       if(notificationPrimed) fresh.slice().reverse().forEach(showNotificationToast);
      }
      syncBadges(d.unread||0);
+     notificationPrimed=true;
    }).catch(()=>{});
  }
  function markAllRead(){
@@ -140,5 +157,6 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
  });
  const read=$('#readNotifications');
  read?.addEventListener('click',()=>{});
- if(toggles.length){loadNotifications();setInterval(loadNotifications,10000)}
+ if(toggles.length){loadNotifications();setInterval(loadNotifications,2500)}
  })();
+.notification-toast{position:fixed;right:24px;bottom:24px;z-index:100002;width:min(370px,calc(100vw - 32px));display:flex;align-items:flex-start;gap:11px;padding:13px 14px;border:1px solid #e7e9e4;border-radius:15px;background:#fff;color:#252722;box-shadow:0 18px 45px rgba(15,23,42,.16);text-align:left;animation:notificationToastIn .2s ease}.notification-toast:hover{background:#fafbf8}.notification-toast-icon{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:10px;background:#f0f1ed;color:#4f46e5}.notification-toast span:last-child{min-width:0;display:flex;flex-direction:column;gap:3px}.notification-toast strong{font-size:12px;line-height:1.3}.notification-toast small{color:#777a73;font-size:10px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}@keyframes notificationToastIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@media(max-width:760px){.notification-toast{right:12px;bottom:12px;width:calc(100vw - 24px)}}
