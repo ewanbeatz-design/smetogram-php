@@ -243,6 +243,20 @@ try {
     $addColumn($pdo,'users','subscriptionStatus',"VARCHAR(32) NOT NULL DEFAULT 'active'");
     $addColumn($pdo,'users','subscriptionStartedAt',"DATETIME NULL");
     $addColumn($pdo,'users','subscriptionExpiresAt',"DATETIME NULL");
+    if (!$tableExists($pdo,'smetogram_notifications')) {
+        $pdo->exec("CREATE TABLE smetogram_notifications (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            userId BIGINT UNSIGNED NOT NULL,
+            projectId BIGINT UNSIGNED NULL,
+            type VARCHAR(32) NOT NULL DEFAULT 'info',
+            title VARCHAR(255) NOT NULL,
+            body TEXT NULL,
+            url VARCHAR(500) NULL,
+            isRead TINYINT(1) NOT NULL DEFAULT 0,
+            createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX(userId), INDEX(projectId), INDEX(isRead), INDEX(createdAt)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    }
 } catch(Throwable $e) {}
 
 function e(?string $v):string{return htmlspecialchars($v??'',ENT_QUOTES,'UTF-8');}
