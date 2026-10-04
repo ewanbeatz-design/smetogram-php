@@ -1,0 +1,37 @@
+name: Deploy to REG.RU
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.REG_RU_HOST }}
+          username: ${{ secrets.REG_RU_USER }}
+          key: ${{ secrets.REG_RU_SSH_KEY }}
+          script: |
+            set -e
+
+            cd ${{ secrets.REG_RU_PATH }}
+
+            if [ ! -d .git ]; then
+              git init
+              git remote add origin https://github.com/ewanbeatz-design/smetogram-php.git
+              git fetch origin main
+              git checkout -B main origin/main
+            else
+              git fetch origin main
+              git checkout main
+              git reset --hard origin/main
+            fi
+
+            rm -f index.html
+
+            echo "SMETOGRAM_DEPLOY_OK"
