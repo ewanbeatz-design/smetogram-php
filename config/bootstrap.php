@@ -264,4 +264,10 @@ function redirect(string $u):never{header('Location: '.$u);exit;}
 function csrf_token():string{if(empty($_SESSION['csrf']))$_SESSION['csrf']=bin2hex(random_bytes(32));return $_SESSION['csrf'];}
 function check_csrf():void{if(!hash_equals($_SESSION['csrf']??'',$_POST['csrf']??'')){http_response_code(419);exit('Сессия формы устарела. Обновите страницу.');}}
 function current_user():?array{return $_SESSION['user']??null;}
+function create_notification(PDO $pdo, int $userId, ?int $projectId, string $type, string $title, string $body = '', ?string $url = null): void {
+    if ($userId <= 0) return;
+    $q = $pdo->prepare('INSERT INTO smetogram_notifications (userId,projectId,type,title,body,url) VALUES (?,?,?,?,?,?)');
+    $q->execute([$userId, $projectId, $type, $title, $body, $url]);
+}
+
 function require_auth():array{if(!current_user())redirect('login.php');return current_user();}
