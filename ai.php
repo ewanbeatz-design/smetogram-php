@@ -5,6 +5,7 @@ require __DIR__.'/config/bootstrap.php';
 $user = require_auth();
 $projectId = (int)($_GET['id'] ?? $_POST['project_id'] ?? 0);
 $project = null;
+if ($projectId <= 0) redirect('dashboard.php');
 if ($projectId) {
     $q=$pdo->prepare("SELECT * FROM projects WHERE id=? AND ownerId=?");
     $q->execute([$projectId,$user['id']]);
@@ -75,6 +76,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     check_csrf();
     $action=$_POST['action']??'';
     if($action==='chat'){
+        if(!$project) ai_json_response(['ok'=>false,'error'=>'Сначала выберите проект'],422);
         $prompt=trim($_POST['prompt']??'');
         if($prompt==='') ai_json_response(['ok'=>false,'error'=>'Введите запрос'],422);
         $system='Ты — Сметограм AI, помощник прораба и сметчика. Отвечай на русском. Анализируй строительные работы, материалы, объёмы и сметы. Возвращай JSON с полями answer (string), suggestions (array of strings).';
@@ -83,6 +85,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         ai_json_response(['ok'=>true,'answer'=>$r['data']['answer']??'','suggestions'=>$r['data']['suggestions']??[]]);
     }
     if($action==='analyze_image'){
+        if(!$project) ai_json_response(['ok'=>false,'error'=>'Сначала выберите проект'],422);
         if(empty($_FILES['image']) || $_FILES['image']['error']!==UPLOAD_ERR_OK) ai_json_response(['ok'=>false,'error'=>'Не удалось загрузить изображение'],422);
         $file=$_FILES['image'];
         if((int)$file['size']>15*1024*1024) ai_json_response(['ok'=>false,'error'=>'Максимальный размер изображения — 15 МБ'],422);
@@ -106,8 +109,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
     if($action==='apply_scan'){
         $scanId=(int)($_POST['scan_id']??0);
-        $q=$pdo->prepare("SELECT * FROM smetogram_ai_scans WHERE id=? AND userId=?");
-        $q->execute([$scanId,$user['id']]);$scan=$q->fetch();
+        $q=$pdo->prepare("SELECT * FROM smetogram_ai_scans WHERE id=? AND userId=? AND projectId=?");
+        $q->execute([$scanId,$user['id'],$projectId]);$scan=$q->fetch();
         if(!$scan) ai_json_response(['ok'=>false,'error'=>'Результат не найден'],404);
         if(!$projectId) ai_json_response(['ok'=>false,'error'=>'Сначала выберите проект'],422);
         $data=json_decode((string)$scan['resultJson'],true) ?: [];
