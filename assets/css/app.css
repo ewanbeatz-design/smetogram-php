@@ -173,30 +173,13 @@
 .search-open{overflow:hidden}
 .topbar-actions{z-index:1000}.notification-wrap{position:relative;z-index:1002}.topbar-actions .icon-button{position:relative;z-index:1001;pointer-events:auto;cursor:pointer}
 
-/* Workspace must not grow with wide documents/tables */
-.main-content{min-width:0;overflow-x:hidden}.page-wrap{width:100%;max-width:1250px;min-width:0;overflow:hidden}.module-page,.module-grid,.module-panel,.wide-panel,.chat-panel,.document-list,.timeline,.table-responsive{min-width:0;max-width:100%}.module-grid{overflow:hidden}.module-panel{overflow:hidden}.document-row>*{min-width:0}.document-row>div:nth-child(2){overflow:hidden}.document-row strong,.document-row span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.chat-messages,.timeline,.module-panel{overflow-x:auto}
-@media(max-width:700px){.global-search-backdrop{padding:70px 12px 20px}.notifications-dropdown{position:fixed;top:70px;right:12px}}
 
-.document-page{overflow:visible}.document-detail-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(250px,.45fr);gap:14px}.document-detail-grid .module-panel{min-width:0}.document-meta-list{display:grid;gap:0;margin-top:20px}.document-meta-list span{display:flex;justify-content:space-between;gap:15px;padding:12px 0;border-top:1px solid #f0ede7}.document-meta-list small{color:#9b9991;font-size:9px}.document-meta-list b{font:500 10px 'IBM Plex Mono',monospace;text-align:right;color:var(--ink)}@media(max-width:850px){.document-detail-grid{grid-template-columns:1fr}}
-
-/* Hard width boundary: wide estimate content scrolls inside the estimate only */
-html,body{width:100%;max-width:100%;overflow-x:hidden}
-.app-shell{width:100%;max-width:100%;min-width:0}
-.main-content{width:0;flex:1 1 auto;min-width:0;max-width:100%;overflow-x:hidden}
-.page-wrap{width:100%;max-width:1250px;min-width:0;box-sizing:border-box;overflow:visible}
-.page-wrap>*{min-width:0;max-width:100%}
-.estimate-heading,.estimate-summary,.estimate-toolbar,.estimate-list,.estimate-group,.estimate-total{min-width:0;max-width:100%}
-.estimate-list{overflow:visible}
-.estimate-group{overflow:visible}
-.estimate-table{display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
-.estimate-table>.table-head,.estimate-table>.table-row{width:100%;min-width:780px}
-.estimate-table>.add-row{min-width:0}
-.group-heading{min-width:0;max-width:100%}
-.group-heading>div{min-width:0;overflow:hidden}
-.group-heading h3,.group-heading span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.workspace-tabs{min-width:0;max-width:100%}
-.module-grid,.document-detail-grid,.settings-layout,.room-measure-card{min-width:0;max-width:100%}
-.module-grid>*,.document-detail-grid>*{min-width:0;max-width:100%}
-@media(max-width:760px){
-  .estimate-table>.table-head,.estimate-table>.table-row{min-width:0;width:100%}
+/* Keep the application/workspace viewport fixed; long content scrolls inside the app */
+html,body{height:100%;min-height:100%;margin:0;overflow:hidden}
+.app-shell{height:100vh;min-height:0;max-height:100vh;overflow:hidden}
+.main-content{height:100vh;min-height:0;max-height:100vh;overflow-x:hidden;overflow-y:auto}
+@supports (height:100dvh){
+  .app-shell{height:100dvh;max-height:100dvh}
+  .main-content{height:100dvh;max-height:100dvh}
 }
+.page-wrap{min-height:0}
