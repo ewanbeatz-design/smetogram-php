@@ -13,25 +13,43 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.2
         with:
-          host: ${{ secrets.REG_RU_HOST }}
-          username: ${{ secrets.REG_RU_USER }}
-          key: ${{ secrets.REG_RU_SSH_KEY }}
+          host: ${{secrets.REG_RU_HOST}
+          username: ${{secrets.REG_RU_USER}
+          key: ${{secrets.REG_RU_SSH_KEY}
           script: |
             set -e
-
-            cd ${{ secrets.REG_RU_PATH }}
+            cd ${{secrets.REG_RU_PATH}
 
             if [ ! -d .git ]; then
               git init
               git remote add origin https://github.com/ewanbeatz-design/smetogram-php.git
-              git fetch origin main
-              git checkout -B main origin/main
-            else
-              git fetch origin main
-              git checkout main
-              git reset --hard origin/main
             fi
 
+            git fetch origin main
+            git checkout -B main origin/main
+            git reset --hard origin/main
             rm -f index.html
 
+            mkdir -p config
+            cat > config/config.php <<'PHP'
+            <?php
+            declare(strict_types=1);
+
+            return [
+                'db' => [
+                    'host' => 'localhost',
+                    'port' => 3306,
+                    'name' => 'u1027561_default',
+                    'user' => 'u1027561_default',
+                    'password' => '${{secrets.REG_RU_DB_PASSWORD}',
+                    'charset' => 'utf8mb4',
+                ],
+                'app' => [
+                    'name' => 'Сметограм',
+                    'url' => 'https://сметограм.рф',
+                ],
+            ];
+            PHP
+
+            chmod 640 config/config.php
             echo "SMETOGRAM_DEPLOY_OK"
