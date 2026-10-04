@@ -199,6 +199,48 @@ try {
     // Compatibility migration must never prevent the application from starting.
 }
 
+/* Smetogram business modules: payments, documents, audit and media. */
+try {
+    $moduleTables = [
+        'smetogram_payments' => "CREATE TABLE smetogram_payments (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            projectId BIGINT UNSIGNED NOT NULL, userId BIGINT UNSIGNED NOT NULL,
+            type VARCHAR(32) NOT NULL DEFAULT 'payment', title VARCHAR(255) NOT NULL,
+            amount DECIMAL(14,2) NOT NULL DEFAULT 0, status VARCHAR(32) NOT NULL DEFAULT 'pending',
+            provider VARCHAR(32) NULL, externalId VARCHAR(120) NULL, description TEXT NULL,
+            paidAt DATETIME NULL, createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updatedAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX(projectId), INDEX(userId), INDEX(status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'smetogram_document_files' => "CREATE TABLE smetogram_document_files (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            documentId BIGINT UNSIGNED NOT NULL, projectId BIGINT UNSIGNED NOT NULL,
+            userId BIGINT UNSIGNED NOT NULL, originalName VARCHAR(255) NOT NULL,
+            storedName VARCHAR(255) NOT NULL, mime VARCHAR(120) NOT NULL, sizeBytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            path VARCHAR(500) NOT NULL, createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX(documentId), INDEX(projectId)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'smetogram_document_events' => "CREATE TABLE smetogram_document_events (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            documentId BIGINT UNSIGNED NOT NULL, userId BIGINT UNSIGNED NOT NULL,
+            eventType VARCHAR(40) NOT NULL, comment TEXT NULL, createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX(documentId), INDEX(userId)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        'smetogram_payment_events' => "CREATE TABLE smetogram_payment_events (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            paymentId BIGINT UNSIGNED NOT NULL, eventType VARCHAR(40) NOT NULL,
+            payloadJson LONGTEXT NULL, createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX(paymentId)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+    ];
+    foreach($moduleTables as $table=>$sql) {
+        if(!$tableExists($pdo,$table)) $pdo->exec($sql);
+    }
+    $addColumn($pdo,'projectdocuments','versionNo',"INT NOT NULL DEFAULT 1");
+    $addColumn($pdo,'projectdocuments','createdBy',"BIGINT UNSIGNED NULL");
+    $addColumn($pdo,'projectdocuments','updatedAt',"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+} catch(Throwable $e) {}
+
 function e(?string $v):string{return htmlspecialchars($v??'',ENT_QUOTES,'UTF-8');}
 function redirect(string $u):never{header('Location: '.$u);exit;}
 function csrf_token():string{if(empty($_SESSION['csrf']))$_SESSION['csrf']=bin2hex(random_bytes(32));return $_SESSION['csrf'];}
