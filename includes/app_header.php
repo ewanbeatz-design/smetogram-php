@@ -27,6 +27,7 @@ if ($user && !empty($user['name'])) {
   <nav class="nav-list">
     <a class="nav-item <?=($view==='projects'?'active':'')?>" href="dashboard.php"><span class="nav-icon"><i class="bi bi-grid-1x2"></i></span>Мои проекты</a>
     <a class="nav-item <?=($view==='scan'?'active':'')?>" href="workspace.php?view=scan<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-file-earmark-arrow-up"></i></span>Смета из файла</a>
+    <a class="nav-item <?=($view==='ai'?'active':'')?>" href="ai.php<?=($projectId?'?id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-stars"></i></span>ИИ и распознавание</a>
     <a class="nav-item <?=($view==='measurements'?'active':'')?>" href="workspace.php?view=measurements<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-rulers"></i></span>Замеры</a>
     <a class="nav-item <?=($view==='schedule'?'active':'')?>" href="workspace.php?view=schedule<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-calendar3"></i></span>График работ</a>
     <a class="nav-item <?=($view==='analytics'?'active':'')?>" href="workspace.php?view=analytics<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-bar-chart"></i></span>Графики</a>
