@@ -7,7 +7,7 @@ $projectCount = $user ? user_project_count($pdo, (int)$user['id']) : 0;
 $subActive = $user ? subscription_is_active($user) : false;
 require __DIR__ . '/includes/header.php';
 ?>
-<section class="hero">
+<style id="home-page-style">`+css+`</style><div class="home-page"><section class="hero">
   <div class="container">
     <div class="row align-items-center g-5">
       <div class="col-lg-7">
@@ -46,5 +46,5 @@ require __DIR__ . '/includes/header.php';
   <div class="col-md-4"><div class="surface feature-card"><div class="feature-icon">02</div><h3>Смета</h3><p>Добавляйте материалы, работы и технику. Количество, цена и итог рассчитываются автоматически.</p></div></div>
   <div class="col-md-4"><div class="surface feature-card"><div class="feature-icon">03</div><h3>Подписка</h3><p>Нужно больше одной сметы? Подключаете подписку — и продолжаете создавать новые проекты без ограничения бесплатного тарифа.</p></div></div>
 </div></div></section>
-<section class="py-5"><div class="container"><div class="surface cta-block"><div><div class="eyebrow">СМЕТОГРАМ</div><h2>Первая смета — за несколько минут.</h2><p>Создайте проект и начните добавлять позиции.</p></div><a href="register.php" class="btn btn-primary btn-lg px-4">Начать работу</a></div></div></section>
-<?php require __DIR__ . '/includes/footer.php'; ?>
+<section class="pricing-section"><div class="container"><div class="text-center mb-5"><div class="eyebrow">ПОДПИСКА</div><h2 class="mt-2">Одна смета бесплатно. Дальше — без ограничений.</h2><p class="text-muted mx-auto" style="max-width:620px">Если работаете регулярно, подписка открывает создание новых проектов и снимает лимит бесплатного доступа.</p></div><div class="row g-4 justify-content-center"><div class="col-md-5"><div class="pricing-card"><div class="eyebrow">СТАРТ</div><h3 class="mt-3">Бесплатно</h3><div class="mt-3"><span class="price">0 ₽</span></div><ul class="pricing-list"><li>1 полноценная смета</li><li>Редактирование проекта</li><li>Расчёт стоимости</li><li>Работа в браузере</li></ul><a href="login.php" class="btn btn-light border w-100 mt-4">Начать бесплатно</a></div></div><div class="col-md-5"><div class="pricing-card featured"><div class="eyebrow">ДЛЯ РАБОТЫ</div><h3 class="mt-3">Подписка</h3><div class="mt-3"><span class="price">По тарифу</span></div><ul class="pricing-list"><li>Новые сметы без ограничения</li><li>Все возможности бесплатного доступа</li><li>Единое рабочее пространство</li><li>Доступ пока подписка активна</li></ul><a href="subscription.php" class="btn btn-primary w-100 mt-4">Выбрать тариф</a></div></div></div></div></section><section class="py-5"><div class="container"><div class="surface cta-block"><div><div class="eyebrow">СМЕТОГРАМ</div><h2>Первая смета — за несколько минут.</h2><p>Создайте проект и начните добавлять позиции.</p></div><a href="register.php" class="btn btn-primary btn-lg px-4">Начать работу</a></div></div></section>
+<?php require __DIR__ . '/includes/footer.php'; ?></div>
