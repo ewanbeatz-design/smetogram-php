@@ -41,8 +41,10 @@ try{
  if($clientId===''||$clientSecret==='')throw new RuntimeException('Telegram OAuth не настроен: нужен Client ID и Client Secret.');
  if(!empty($_GET['error']))throw new RuntimeException((string)($_GET['error_description']??$_GET['error']));
  $code=trim((string)($_GET['code']??''));$state=trim((string)($_GET['state']??''));
- $saved=(string)($_SESSION['telegram_oidc_state']??'');$verifier=(string)($_SESSION['telegram_oidc_verifier']??'');
+ $saved=(string)($_SESSION['telegram_oidc_state']??($_COOKIE['telegram_oidc_state']??''));$verifier=(string)($_SESSION['telegram_oidc_verifier']??($_COOKIE['telegram_oidc_verifier']??''));
  unset($_SESSION['telegram_oidc_state'],$_SESSION['telegram_oidc_verifier']);
+setcookie('telegram_oidc_state', '', ['expires'=>time()-3600,'path'=>'/','secure'=>true,'httponly'=>true,'samesite'=>'Lax']);
+setcookie('telegram_oidc_verifier', '', ['expires'=>time()-3600,'path'=>'/','secure'=>true,'httponly'=>true,'samesite'=>'Lax']);
  if($code===''||$state===''||$saved===''||!hash_equals($saved,$state)||$verifier==='')throw new RuntimeException('Сессия авторизации Telegram устарела. Повторите вход.');
  $tokens=tg_post('https://oauth.telegram.org/token',['grant_type'=>'authorization_code','code'=>$code,'redirect_uri'=>$redirectUri,'client_id'=>$clientId,'code_verifier'=>$verifier],['Authorization: Basic '.base64_encode($clientId.':'.$clientSecret)]);
  $claims=tg_verify((string)($tokens['id_token']??''),$clientId);
