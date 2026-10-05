@@ -51,7 +51,7 @@ if ($user && !empty($user['name'])) {
       <div class="notifications-dropdown" id="notificationMenu"><div class="notifications-heading"><div><strong>Оповещения</strong><span>Изменения по вашим проектам</span></div><button class="notifications-read-all" type="button" id="readNotifications">Прочитать всё</button></div><div class="notifications-list" id="notificationList"><div class="notifications-empty"><strong>Нет новых оповещений</strong><span>Здесь появятся сообщения и изменения проекта.</span></div></div><div class="notifications-footer">Оповещения обновляются автоматически</div></div>
     </div>
   </nav>
-  <div class="profile"><div class="avatar"><?=e($initials)?></div><div><strong><?=e($user['name']??'Пользователь')?></strong><span><?=e($user['email']??'')?></span></div><a href="logout.php" class="profile-logout" title="Выйти"><i class="bi bi-box-arrow-right"></i><span>Выйти</span></a></div>
+  <div class="profile"><div class="avatar"><?=e($initials)?></div><div><strong><?=e($user['name']??'Пользователь')?></strong><span><?=e($user['email']??'')?></span></div><a href="logout.php" class="muted-icon" title="Выйти"><i class="bi bi-box-arrow-right"></i></a></div>
 </aside>
 <div class="sidebar-backdrop" onclick="document.getElementById('appSidebar').classList.remove('sidebar-open')"></div>
 <main class="main-content">
