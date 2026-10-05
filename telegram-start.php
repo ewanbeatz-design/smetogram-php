@@ -15,7 +15,7 @@ $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '
 $_SESSION['telegram_oidc_state'] = $state;
 $_SESSION['telegram_oidc_verifier'] = $verifier;
 
-$redirectUri = rtrim((string)($config['app']['url'] ?? 'https://сметограм.рф'), '/') . '/telegram-callback.php';
+$redirectUri = 'https://xn--80aagbdj2b0ad.xn--p1ai/telegram-callback.php';
 
 $params = [
     'client_id' => $clientId,
