@@ -41,8 +41,14 @@ if($action==='estimate_action'){
   $template=(int)($_POST['template_id']??0);$qty=(float)str_replace(',','.',(string)($_POST['template_quantity']??$_POST['quantity']??1));if($qty<=0)$qty=1;
   $q=$pdo->prepare("SELECT * FROM estimateitemtemplates WHERE id=? LIMIT 1");$q->execute([$template]);$it=$q->fetch();
   if(!$it){http_response_code(422);echo json_encode(['ok'=>false,'error'=>'Шаблон не найден'],JSON_UNESCAPED_UNICODE);exit;}
-  $q=$pdo->prepare("SELECT id FROM estimatecategories WHERE projectId=? AND name=? LIMIT 1");$q->execute([$id,$it['categoryName']]);$cat=$q->fetchColumn();
-  if(!$cat){$q=$pdo->prepare("SELECT COALESCE(MAX(sortOrder),0)+1 FROM estimatecategories WHERE projectId=?");$q->execute([$id]);$sort=(int)$q->fetchColumn();$q=$pdo->prepare("INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)");$q->execute([$id,$it['categoryName'],$sort]);$cat=$pdo->lastInsertId();}
+  $cat=(int)($_POST['category_id']??0);
+  if($cat>0){
+   $q=$pdo->prepare("SELECT id FROM estimatecategories WHERE id=? AND projectId=? LIMIT 1");$q->execute([$cat,$id]);$cat=$q->fetchColumn();
+   if(!$cat){http_response_code(422);echo json_encode(['ok'=>false,'error'=>'Раздел не найден'],JSON_UNESCAPED_UNICODE);exit;}
+  }else{
+   $q=$pdo->prepare("SELECT id FROM estimatecategories WHERE projectId=? AND name=? LIMIT 1");$q->execute([$id,$it['categoryName']]);$cat=$q->fetchColumn();
+   if(!$cat){$q=$pdo->prepare("SELECT COALESCE(MAX(sortOrder),0)+1 FROM estimatecategories WHERE projectId=?");$q->execute([$id]);$sort=(int)$q->fetchColumn();$q=$pdo->prepare("INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)");$q->execute([$id,$it['categoryName'],$sort]);$cat=$pdo->lastInsertId();}
+  }
   $q=$pdo->prepare("INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source) VALUES(?,?,?,?,?,?)");$q->execute([(int)$cat,$it['name'],$qty,$it['unit'],$it['price'],'template']);
  }elseif($op==='update_item'){
   $item=(int)($_POST['item_id']??0);$q=$pdo->prepare("SELECT i.id FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE i.id=? AND c.projectId=?");$q->execute([$item,$id]);
