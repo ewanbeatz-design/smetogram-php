@@ -7,7 +7,7 @@ $projectCount = $user ? user_project_count($pdo, (int)$user['id']) : 0;
 $subActive = $user ? subscription_is_active($user) : false;
 require __DIR__ . '/includes/header.php';
 ?>
-<style id="home-page-style">`+css+`</style><div class="home-page"><section class="hero">
+<div class="home-page"><style>.home-page{overflow:hidden}.home-page .hero{padding:104px 0 92px;background:linear-gradient(135deg,#fff,#f8fafc)}.home-page .hero-title{font-size:clamp(48px,6vw,82px);line-height:.95;letter-spacing:-.07em}.home-page .hero-title span{color:#4f46e5}.home-page .hero-copy{max-width:650px;color:#64748b;font-size:17px;line-height:1.75}.home-page .estimate-preview{border:1px solid #e2e8f0;border-radius:24px;background:#fff;padding:22px;box-shadow:0 30px 80px rgba(15,23,42,.1);transform:rotate(1deg)}.home-page .feature-card{height:100%;padding:28px;border-radius:18px}.home-page .feature-icon{width:38px;height:38px;display:grid;place-items:center;border-radius:11px;background:#eef2ff;color:#4f46e5;font:600 11px IBM Plex Mono,monospace;margin-bottom:28px}.home-page .pricing-section{padding:80px 0 110px}.home-page .pricing-card{height:100%;border:1px solid #e2e8f0;border-radius:20px;background:#fff;padding:30px}.home-page .pricing-card.featured{border-color:#818cf8;box-shadow:0 20px 55px rgba(79,70,229,.13)}.home-page .pricing-list{list-style:none;padding:0;margin:25px 0;display:grid;gap:12px;color:#64748b;font-size:12px}.home-page .pricing-list li:before{content:"✓";color:#4f46e5;font-weight:800;margin-right:8px}.home-page .price{font:600 34px IBM Plex Mono,monospace}</style><section class="hero">
   <div class="container">
     <div class="row align-items-center g-5">
       <div class="col-lg-7">
