@@ -24,7 +24,7 @@ $pageTitle=$project['name'];require __DIR__.'/includes/app_header.php';
 <section class="page-wrap estimate-page">
 <div class="estimate-heading"><div><a href="dashboard.php" class="back-button"><i class="bi bi-arrow-left"></i> Все проекты</a><div class="estimate-title-row"><div class="project-symbol"><i class="bi bi-house"></i><i class="bi bi-check2"></i></div><div><div class="eyebrow">ПРОЕКТ / СМЕТА</div><h1><?=e($project['name'])?></h1><p><?=e($project['city'])?> <b>·</b> <?=e($project['clientName'])?> <b>·</b> <?=e($project['workType'])?></p></div></div></div><div class="heading-actions"><form method="post" data-ajax-estimate><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="status"><select class="status-select" name="status" onchange="estimateStatus(this.form)"><?php foreach(['draft'=>'Черновик','in_progress'=>'В работе','review'=>'На согласовании','completed'=>'Завершён','archived'=>'Архив'] as $v=>$t):?><option value="<?=$v?>" <?=$project['status']===$v?'selected':''?>><?=$t?></option><?php endforeach;?></select></form><a class="outline-button" href="export.php?id=<?=$id?>"><i class="bi bi-file-earmark-text"></i> Экспорт сметы</a><button class="primary-button" type="button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-plus-lg"></i> Добавить</button></div></div>
 <div class="estimate-summary"><div><span>ИТОГО ПО СМЕТЕ</span><strong><?=number_format($estimateGrandTotal,0,',',' ')?> ₽</strong><small>включая НДС 20%</small></div><div class="summary-stats"><div><b><?=count($cats)?></b> категории</div><div><b><?=$itemsCount?></b> позиций</div><div><b><?=number_format(array_sum(array_map(fn($c)=>(float)$c['items']?0:0,$cats)),0)?></b> объём</div></div><div class="summary-actions"><button class="outline-button" type="button" onclick="document.querySelector('.estimate-controls').scrollIntoView({behavior:'smooth',block:'center'})"><i class="bi bi-calendar3"></i> Создать график</button><button class="icon-button darkish" type="button" title="Дополнительно"><i class="bi bi-three-dots"></i></button></div></div>
-<div class="estimate-controls"><div><span class="control-label">МЕТОД РАСЧЁТА</span><select class="status-select"><option>Ресурсный</option><option>Базисно-индексный</option><option>Ресурсно-индексный</option></select></div><label class="check-control"><input type="checkbox"> Зимнее удорожание <b>+12%</b></label><label class="check-control"><input type="checkbox"> Стеснённые условия <b>+8%</b></label><label class="custom-coeff">Свой коэффициент<input min="0.1" max="5" step="0.01" type="number" value="1"></label></div><div class="estimate-toolbar"><div class="toolbar-tabs"><button type="button" class="active">Смета</button><button type="button">График <span>скоро</span></button><button type="button">Документы <span>скоро</span></button></div><div class="estimate-actions"><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-plus-lg"></i> Добавить расценку</button><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#categoryModal"><i class="bi bi-plus-lg"></i> Добавить категорию</button></div></div>
+<div class="estimate-controls" id="estimateCalcControls"><div><span class="control-label">МЕТОД РАСЧЁТА</span><select class="status-select" id="estimateMethod"><option value="resource">Ресурсный</option><option value="base-index">Базисно-индексный</option><option value="resource-index">Ресурсно-индексный</option></select></div><label class="check-control"><input id="winterCoeff" type="checkbox"> Зимнее удорожание <b>+12%</b></label><label class="check-control"><input id="tightCoeff" type="checkbox"> Стеснённые условия <b>+8%</b></label><label class="custom-coeff">Свой коэффициент<input id="customCoeff" min="0.1" max="5" step="0.01" type="number" value="1"></label><span id="estimateCoeffResult" class="small text-muted align-self-center">Коэффициент: ×1,000</span></div><div class="estimate-toolbar"><div class="toolbar-tabs"><button type="button" class="active">Смета</button><button type="button">График <span>скоро</span></button><button type="button">Документы <span>скоро</span></button></div><div class="estimate-actions"><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-plus-lg"></i> Добавить расценку</button><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#categoryModal"><i class="bi bi-plus-lg"></i> Добавить категорию</button></div></div>
 <div class="estimate-list">
 <?php foreach($cats as $n=>$cat):?><div class="estimate-group"><div class="group-heading"><span class="group-number"><?=str_pad((string)($n+1),2,'0',STR_PAD_LEFT)?></span><h3><?=e($cat['name'])?></h3><span><?=$cat['item_count']?> позиций</span><strong><?=number_format((float)$cat['total'],0,',',' ')?> ₽</strong><button class="icon-button" title="Удалить раздел" onclick="if(confirm('Удалить раздел и его позиции?'))document.getElementById('delcat<?=$cat['id']?>').submit()"><i class="bi bi-three-dots"></i></button></div>
 <div class="estimate-table"><div class="table-head"><span>РАБОТА</span><span>ОБЪЁМ</span><span>ЕД.</span><span>ЦЕНА</span><span>СУММА</span><span></span></div>
@@ -191,5 +191,58 @@ document.addEventListener('DOMContentLoaded',()=>{
  add?.addEventListener('click',addCatalogWork);
  modal?.addEventListener('shown.bs.modal',()=>search?.focus());
  modal?.addEventListener('hidden.bs.modal',resetWorkCatalog);
-});</script>
+});
+// Расчётные коэффициенты сметы: пересчитываем итог без перезагрузки страницы.
+(function(){
+  const controls=document.getElementById('estimateCalcControls');
+  if(!controls) return;
+  const method=document.getElementById('estimateMethod');
+  const winter=document.getElementById('winterCoeff');
+  const tight=document.getElementById('tightCoeff');
+  const custom=document.getElementById('customCoeff');
+  const coeffOut=document.getElementById('estimateCoeffResult');
+  const summaryTotal=document.querySelector('.estimate-summary strong');
+  const totals=document.querySelector('.estimate-totals');
+  if(!summaryTotal||!totals) return;
+  const rows=[...document.querySelectorAll('.estimate-list .table-row')];
+  const baseTotal=rows.reduce((sum,row)=>{
+    const q=parseFloat(row.dataset.quantity||'');
+    const p=parseFloat(row.dataset.price||'');
+    if(Number.isFinite(q)&&Number.isFinite(p)) return sum+q*p;
+    return sum;
+  },0);
+  // Если data-атрибутов нет, берём текущую сумму из строки прямых затрат.
+  const directNode=totals.querySelector('div:first-child b');
+  const fallback=parseFloat((directNode?.textContent||'0').replace(/\\s/g,'').replace(',','.'))||0;
+  const base=baseTotal>0?baseTotal:fallback;
+  const money=v=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v)+' ₽';
+  function recalc(){
+    let k=parseFloat(custom.value);
+    if(!Number.isFinite(k)||k<0.1) k=1;
+    let coeff=1;
+    if(winter.checked) coeff+=0.12;
+    if(tight.checked) coeff+=0.08;
+    coeff*=k;
+    const direct=base*coeff;
+    const overhead=direct*.15;
+    const profit=direct*.08;
+    const vat=(direct+overhead+profit)*.20;
+    const grand=direct+overhead+profit+vat;
+    summaryTotal.textContent=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(grand)+' ₽';
+    const bs=totals.querySelectorAll(':scope > div');
+    if(bs[0]) bs[0].querySelector('b').textContent=money(direct);
+    if(bs[1]) bs[1].querySelector('b').textContent=money(overhead);
+    if(bs[2]) bs[2].querySelector('b').textContent=money(profit);
+    if(bs[3]) bs[3].querySelector('b').textContent='× '+coeff.toFixed(3);
+    if(bs[4]) bs[4].querySelector('b').textContent=money(vat);
+    const grandNode=totals.querySelector('.grand-total strong');
+    if(grandNode) grandNode.textContent=money(grand);
+    coeffOut.textContent='Коэффициент: ×'+coeff.toFixed(3);
+    localStorage.setItem('smetogram-estimate-calc-'+<?=json_encode((string)$id)?>,JSON.stringify({method:method.value,winter:winter.checked,tight:tight.checked,custom:k}));
+  }
+  try{const s=JSON.parse(localStorage.getItem('smetogram-estimate-calc-'+<?=json_encode((string)$id)?>)||'null');if(s){method.value=s.method||'resource';winter.checked=!!s.winter;tight.checked=!!s.tight;custom.value=s.custom??1;}}catch(e){}
+  [method,winter,tight,custom].forEach(el=>el.addEventListener(el.type==='number'?'input':'change',recalc));
+  recalc();
+})();
+</script>
 <?php require __DIR__.'/includes/app_footer.php';?>
