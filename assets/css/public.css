@@ -1,0 +1,10 @@
+/* Public pages: restore normal document scrolling. The workspace keeps its own scroll area. */
+body:has(.auth-page),
+body:has(.smeta-guide){
+  height:auto;
+  min-height:100vh;
+  overflow-x:hidden;
+  overflow-y:auto;
+}
+.auth-page{overflow:visible!important;}
+.smeta-guide{overflow:visible!important;}
