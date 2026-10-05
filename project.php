@@ -28,7 +28,7 @@ $pageTitle=$project['name'];require __DIR__.'/includes/app_header.php';
 <?php foreach($cats as $n=>$cat):?><div class="estimate-group"><div class="group-heading"><span class="group-number"><?=str_pad((string)($n+1),2,'0',STR_PAD_LEFT)?></span><h3><?=e($cat['name'])?></h3><span><?=$cat['item_count']?> позиций</span><strong><?=number_format((float)$cat['total'],0,',',' ')?> ₽</strong><button class="icon-button" title="Удалить раздел" onclick="if(confirm('Удалить раздел и его позиции?'))document.getElementById('delcat<?=$cat['id']?>').submit()"><i class="bi bi-three-dots"></i></button></div>
 <div class="estimate-table"><div class="table-head"><span>РАБОТА</span><span>ОБЪЁМ</span><span>ЕД.</span><span>ЦЕНА</span><span>СУММА</span><span></span></div>
 <?php foreach($cat['items'] as $item):$sum=(float)$item['quantity']*(float)$item['price'];?><div class="table-row" onclick="event.stopPropagation();editRow(<?=$item['id']?>)"><div class="work-name"><i class="work-dot"></i><?=e($item['name'])?></div><span><?=rtrim(rtrim(number_format((float)$item['quantity'],3,',',' '),'0'),',')?></span><span><?=e($item['unit'])?></span><span><?=number_format((float)$item['price'],2,',',' ')?> ₽</span><strong><?=number_format($sum,2,',',' ')?> ₽</strong><div class="row-actions"><button class="edit-label" type="button" title="Редактировать" onclick="editRow(<?=$item['id']?>)">Изменить</button><form id="edit<?=$item['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="update_item"><input type="hidden" name="item_id" value="<?=$item['id']?>"><input name="name" value="<?=e($item['name'])?>"><input name="quantity" value="<?=e((string)$item['quantity'])?>"><input name="unit" value="<?=e($item['unit'])?>"><input name="price" value="<?=e((string)$item['price'])?>"></form><button type="button" title="Удалить" onclick="if(confirm('Удалить позицию?'))document.getElementById('delete<?=$item['id']?>').submit()"><i class="bi bi-trash3"></i></button><form id="delete<?=$item['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_item"><input type="hidden" name="item_id" value="<?=$item['id']?>"></form></div></div><?php endforeach;?>
-<button class="add-row" data-bs-toggle="modal" data-bs-target="#item<?=$cat['id']?>"><i class="bi bi-plus-lg"></i> Добавить работу</button></div></div>
+<button class="add-row" type="button" data-work-catalog data-category-id="<?=$cat['id']?>" data-bs-toggle="modal" data-bs-target="#workCatalogModal"><i class="bi bi-plus-lg"></i> Добавить работу</button></div></div>
 <form id="delcat<?=$cat['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_category"><input type="hidden" name="category_id" value="<?=$cat['id']?>"></form>
 <div class="modal fade" id="item<?=$cat['id']?>" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form method="post" data-ajax-estimate><div class="modal-header"><h5 class="modal-title">Добавить позицию</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="item"><input type="hidden" name="category_id" value="<?=$cat['id']?>"><label class="form-label">Наименование</label><input class="form-control mb-3" name="name" required placeholder="Штукатурка стен по маякам"><div class="form-grid"><div><label class="form-label">Количество</label><input class="form-control" name="quantity" value="1"></div><div><label class="form-label">Единица</label><input class="form-control" name="unit" value="м²"></div><div><label class="form-label">Цена</label><input class="form-control" name="price" value="0"></div></div></div><div class="modal-footer"><button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button><button class="primary-button">Добавить</button></div></form></div></div></div>
 <?php endforeach;?>
@@ -38,6 +38,38 @@ $pageTitle=$project['name'];require __DIR__.'/includes/app_header.php';
 </section>
 <div class="modal fade" id="categoryModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form method="post"><div class="modal-header"><h5 class="modal-title">Новый раздел</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="category"><label class="form-label">Название</label><input class="form-control" name="name" required placeholder="Материалы, Работы, Электрика..."></div><div class="modal-footer"><button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button><button class="primary-button">Создать</button></div></form></div></div></div>
 <div class="modal fade" id="templateModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><form method="post"><div class="modal-header"><div><h5 class="modal-title">Добавить из шаблонов</h5><small class="text-muted">Готовые позиции для текущего проекта</small></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="template"><div class="template-list"><?php foreach($templates as $tpl):?><label class="template-option"><input type="radio" name="template_id" value="<?=$tpl['id']?>" required><span class="template-info"><strong><?=e($tpl['name'])?></strong><small><?=e($tpl['categoryName'])?> · <?=e($tpl['unit'])?> · <?=number_format((float)$tpl['price'],0,',',' ')?> ₽</small></span><span class="template-check"><i class="bi bi-check-lg"></i></span></label><?php endforeach;?></div><div class="mt-3"><label class="form-label">Количество</label><input class="form-control" type="number" name="template_quantity" value="1" min="0.001" step="0.001" required></div></div><div class="modal-footer"><button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button><button class="primary-button"><i class="bi bi-plus-lg"></i> Добавить в смету</button></div></form></div></div></div>
+<div class="modal fade" id="workCatalogModal" tabindex="-1" aria-hidden="true">
+<div class="modal-dialog modal-dialog-centered modal-lg work-catalog-dialog">
+<div class="modal-content work-catalog-modal">
+<div class="modal-header">
+ <div><h5 class="modal-title">Добавить работу</h5><small class="text-muted">Все доступные работы и актуальные цены</small></div>
+ <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+ <input type="hidden" id="workCatalogCategory">
+ <div class="work-catalog-search"><i class="bi bi-search"></i><input id="workCatalogSearch" type="search" placeholder="Поиск работы..." autocomplete="off"></div>
+ <div class="work-catalog-list" id="workCatalogList">
+ <?php foreach($templates as $tpl):?>
+ <button type="button" class="work-catalog-item" data-template-id="<?=$tpl['id']?>" data-name="<?=e(mb_strtolower($tpl['name'].' '.$tpl['categoryName']))?>">
+  <span class="work-catalog-icon"><i class="bi bi-tools"></i></span>
+  <span class="work-catalog-info"><strong><?=e($tpl['name'])?></strong><small><?=e($tpl['categoryName'])?> · <?=e($tpl['unit'])?></small></span>
+  <span class="work-catalog-price"><?=number_format((float)$tpl['price'],0,',',' ')?> ₽</span>
+  <span class="work-catalog-check"><i class="bi bi-check-lg"></i></span>
+ </button>
+ <?php endforeach;?>
+ </div>
+ <div class="work-catalog-empty" id="workCatalogEmpty" hidden>По вашему запросу работы не найдены.</div>
+ <div class="work-catalog-selected" id="workCatalogSelected" hidden>
+  <div><span>Выбрано</span><strong id="workCatalogSelectedName">—</strong></div>
+  <label>Количество<input id="workCatalogQuantity" type="number" value="1" min="0.001" step="0.001"></label>
+ </div>
+</div>
+<div class="modal-footer">
+ <button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button>
+ <button class="primary-button" id="workCatalogAdd" type="button" disabled><i class="bi bi-plus-lg"></i> Добавить в смету</button>
+</div>
+</div></div></div>
+
 <script>
 const projectId=<?=json_encode($id)?>;
 async function estimateAjax(form){
@@ -108,5 +140,40 @@ function cancelInline(id){refreshEstimate().catch(()=>location.reload())}
 document.addEventListener('DOMContentLoaded',bindEstimateForms);
 const observer=new MutationObserver(bindEstimateForms);
 observer.observe(document.body,{childList:true,subtree:true});
-</script>
+
+const workCatalogState={templateId:0,categoryId:0};
+function resetWorkCatalog(){
+ workCatalogState.templateId=0;workCatalogState.categoryId=0;
+ const cat=document.getElementById('workCatalogCategory'), search=document.getElementById('workCatalogSearch'), qty=document.getElementById('workCatalogQuantity'), selected=document.getElementById('workCatalogSelected'), add=document.getElementById('workCatalogAdd');
+ if(cat)cat.value='';if(search)search.value='';if(qty)qty.value='1';if(selected)selected.hidden=true;if(add)add.disabled=true;
+ document.querySelectorAll('.work-catalog-item.is-selected').forEach(x=>x.classList.remove('is-selected'));
+ filterWorkCatalog();
+}
+function filterWorkCatalog(){
+ const input=document.getElementById('workCatalogSearch');if(!input)return;
+ const term=input.value.trim().toLowerCase();let visible=0;
+ document.querySelectorAll('.work-catalog-item').forEach(item=>{
+  const ok=!term||item.dataset.name.includes(term);item.hidden=!ok;if(ok)visible++;
+ });
+ const empty=document.getElementById('workCatalogEmpty');if(empty)empty.hidden=visible!==0;
+}
+function selectWorkCatalogItem(item){
+ document.querySelectorAll('.work-catalog-item.is-selected').forEach(x=>x.classList.remove('is-selected'));
+ item.classList.add('is-selected');workCatalogState.templateId=Number(item.dataset.templateId);
+ const selected=document.getElementById('workCatalogSelected'),name=document.getElementById('workCatalogSelectedName'),add=document.getElementById('workCatalogAdd');
+ if(selected)selected.hidden=false;if(name)name.textContent=item.querySelector('strong')?.textContent||'Работа';if(add)add.disabled=!workCatalogState.categoryId;
+}
+async function addCatalogWork(){
+ const add=document.getElementById('workCatalogAdd'),qty=document.getElementById('workCatalogQuantity');
+ if(!workCatalogState.templateId||!workCatalogState.categoryId)return;
+ add.disabled=true;
+ const fd=new FormData();fd.set('csrf',<?=json_encode(csrf_token())?>);fd.set('project_id',projectId);fd.set('op','template');fd.set('template_id',workCatalogState.templateId);fd.set('category_id',workCatalogState.categoryId);fd.set('template_quantity',qty?.value||'1');
+ try{const res=await fetch('api.php?action=estimate_action',{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}});const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||'Не удалось добавить работу');await refreshEstimate();const modal=document.getElementById('workCatalogModal');const instance=bootstrap.Modal.getInstance(modal);if(instance)instance.hide();}catch(err){alert(err.message||'Ошибка добавления');}finally{add.disabled=false;}
+}
+document.addEventListener('DOMContentLoaded',()=>{
+ const modal=document.getElementById('workCatalogModal'),search=document.getElementById('workCatalogSearch'),add=document.getElementById('workCatalogAdd');
+ document.querySelectorAll('[data-work-catalog]').forEach(btn=>btn.addEventListener('click',()=>{workCatalogState.categoryId=Number(btn.dataset.categoryId||0);document.getElementById('workCatalogCategory').value=workCatalogState.categoryId;document.querySelectorAll('.work-catalog-item.is-selected').forEach(x=>x.classList.remove('is-selected'));workCatalogState.templateId=0;document.getElementById('workCatalogSelected').hidden=true;add.disabled=true;}));
+ document.querySelectorAll('.work-catalog-item').forEach(item=>item.addEventListener('click',()=>selectWorkCatalogItem(item)));
+ search?.addEventListener('input',filterWorkCatalog);add?.addEventListener('click',addCatalogWork);modal?.addEventListener('shown.bs.modal',()=>search?.focus());modal?.addEventListener('hidden.bs.modal',resetWorkCatalog);
+});</script>
 <?php require __DIR__.'/includes/app_footer.php';?>
