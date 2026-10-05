@@ -366,3 +366,9 @@ html,body{height:100%;min-height:100%;margin:0;overflow:hidden}
  .estimate-controls .status-select{flex:1}
  .estimate-controls .check-control,.estimate-controls .custom-coeff{flex:1;justify-content:center}
 }
+
+
+/* Telegram login */
+.telegram-login-box{display:flex;justify-content:center;align-items:center;min-height:54px;margin:26px 0 14px}
+.telegram-login-box iframe{max-width:100%}
+.auth-error{width:100%;padding:12px 14px;border:1px solid #FECACA;border-radius:12px;background:#FEF2F2;color:#991B1B;font-size:13px;line-height:1.45}
