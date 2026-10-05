@@ -11,18 +11,29 @@ $pageTitle='Вход';
 require __DIR__.'/includes/header.php';
 ?>
 <div class="auth-page">
-  <div class="auth-login">
-    <div class="auth-login-brand">
-      <span class="brand-mark">S</span>
-      <span>Сметограм</span>
+  <div class="auth-login-shell">
+    <div class="auth-login-visual">
+      <div class="auth-visual-top"><span class="brand-mark">S</span><span>Сметограм</span></div>
+      <div class="auth-visual-copy">
+        <span class="auth-visual-kicker">УПРАВЛЕНИЕ СТРОЙКОЙ</span>
+        <h2>Всё по объекту.<br><em>В одном месте.</em></h2>
+        <p>Сметы, график, документы и приёмка — без лишних таблиц и переписок.</p>
+      </div>
+      <div class="auth-visual-points"><span>01&nbsp; Смета и расчёты</span><span>02&nbsp; График работ</span><span>03&nbsp; Документы и приёмка</span></div>
     </div>
 
-    <div class="auth-login-content">
-      <div class="eyebrow">ВХОД</div>
-      <h1>Войдите в Сметограм</h1>
-      <p class="auth-login-lead">Сметы, график работ, договоры и приёмка — по каждому объекту. Войдите, чтобы начать. <strong>Первый проект — бесплатно.</strong></p>
+    <div class="auth-login">
+      <div class="auth-login-brand">
+        <span class="brand-mark">S</span>
+        <span>Сметограм</span>
+      </div>
 
-      <div class="telegram-login-box">
+      <div class="auth-login-content">
+        <div class="eyebrow">ВХОД В АККАУНТ</div>
+        <h1>Войдите в Сметограм</h1>
+        <p class="auth-login-lead">Сметы, график работ, договоры и приёмка — по каждому объекту. <strong>Первый проект — бесплатно.</strong></p>
+
+        <div class="telegram-login-box">
         <?php if ($telegramReady): ?>
           <script async src="https://telegram.org/js/telegram-widget.js?22"
                   data-telegram-login="<?=e($telegramBotUsername)?>"
@@ -35,12 +46,13 @@ require __DIR__.'/includes/header.php';
         <?php endif; ?>
       </div>
 
-      <p class="auth-phone-note">Вход выполняется через Telegram. Пароль и SMS-коды не нужны — после подтверждения вы сразу попадёте в Сметограм.</p>
+      <div class="auth-login-security"><span class="auth-security-dot"></span><div><strong>Быстрый и безопасный вход</strong><small>Telegram подтверждает вашу личность без пароля и SMS-кода.</small></div></div>
+      <p class="auth-phone-note">Продолжая, вы входите в Сметограм через Telegram. Мы не получаем ваш пароль Telegram.</p>
     </div>
 
     <div class="auth-login-footer">
-      <span>Новый пользователь?</span>
-      <a href="register.php">Зарегистрироваться</a>
+      <span>Первый проект — бесплатно</span>
+      <a href="register.php">Создать аккаунт</a>
     </div>
   </div>
 </div>
