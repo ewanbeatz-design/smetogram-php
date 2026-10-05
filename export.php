@@ -1,9 +1,112 @@
 <?php
 declare(strict_types=1);
 require __DIR__.'/config/bootstrap.php';
-$user=require_auth();$id=(int)($_GET['id']??0);$format=$_GET['format']??'print';
-$q=$pdo->prepare("SELECT * FROM projects WHERE id=? AND ownerId=?");$q->execute([$id,$user['id']]);$p=$q->fetch();if(!$p)redirect('dashboard.php');
-$q=$pdo->prepare("SELECT c.name category,i.name,i.quantity,i.unit,i.price,(i.quantity*i.price) total FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=? ORDER BY c.sortOrder,c.id,i.id");$q->execute([$id]);$rows=$q->fetchAll();
-if($format==='csv'){header('Content-Type:text/csv; charset=UTF-8');header('Content-Disposition:attachment; filename="smetogram-'.$id.'.csv"');echo "\xEF\xBB\xBF";$out=fopen('php://output','w');fputcsv($out,['Раздел','Наименование','Количество','Ед.','Цена','Сумма'],';');foreach($rows as $r)fputcsv($out,[$r['category'],$r['name'],$r['quantity'],$r['unit'],$r['price'],$r['total']],';');fclose($out);exit;}
+
+$user=require_auth();
+$id=(int)($_GET['id']??0);
+$format=(string)($_GET['format']??'print');
+
+$q=$pdo->prepare("SELECT * FROM projects WHERE id=? AND ownerId=? LIMIT 1");
+$q->execute([$id,$user['id']]);
+$p=$q->fetch();
+if(!$p) redirect('dashboard.php');
+
+$q=$pdo->prepare("SELECT c.name category,i.id,i.name,i.quantity,i.unit,i.price,(i.quantity*i.price) total
+FROM estimateitems i
+JOIN estimatecategories c ON c.id=i.categoryId
+WHERE c.projectId=? ORDER BY c.sortOrder,c.id,i.id");
+$q->execute([$id]);
+$rows=$q->fetchAll();
+
 $total=array_sum(array_map(fn($r)=>(float)$r['total'],$rows));
-?><!doctype html><html lang="ru"><head><meta charset="utf-8"><title><?=e($p['name'])?> — Смета</title><style>@page{size:A4;margin:14mm}body{font-family:Arial,sans-serif;color:#172554;font-size:11px}h1{font-size:25px;margin:0 0 5px}p{color:#64748B;margin:0 0 22px}.head{display:flex;justify-content:space-between;border-bottom:2px solid #4F46E5;padding-bottom:14px;margin-bottom:20px}.total{font-size:18px;font-weight:bold}.section{margin:18px 0 7px;font-weight:bold;color:#3730A3}table{width:100%;border-collapse:collapse}th,td{padding:7px;border-bottom:1px solid #E2E8F0;text-align:left}th{background:#F8FAFC;color:#64748B;font-size:9px}td.num,th.num{text-align:right}.print{position:fixed;right:20px;top:20px;background:#4F46E5;color:#fff;border:0;border-radius:7px;padding:10px 15px}@media print{.print{display:none}}</style></head><body><button class="print" onclick="window.print()">Печать / PDF</button><div class="head"><div><h1><?=e($p['name'])?></h1><p><?=e($p['city'])?> · <?=e($p['clientName'])?> · <?=e($p['workType'])?></p></div><div class="total"><?=number_format($total,2,',',' ')?> ₽</div></div><table><thead><tr><th>Раздел</th><th>Наименование</th><th class="num">Кол-во</th><th>Ед.</th><th class="num">Цена</th><th class="num">Сумма</th></tr></thead><tbody><?php foreach($rows as $r):?><tr><td><?=e($r['category'])?></td><td><?=e($r['name'])?></td><td class="num"><?=e($r['quantity'])?></td><td><?=e($r['unit'])?></td><td class="num"><?=number_format((float)$r['price'],2,',',' ')?></td><td class="num"><?=number_format((float)$r['total'],2,',',' ')?></td></tr><?php endforeach;?></tbody></table></body></html>
+$vat=$total*0.20;
+$totalWithVat=$total+$vat;
+$docNo=(string)($_GET['no']??($id.'-'.date('Y')));
+$date=(string)($_GET['date']??date('d.m.Y'));
+$period=(string)($_GET['period']??date('m.Y'));
+
+function money(float $v): string { return number_format($v,2,',',' '); }
+function docHead(array $p,string $title,string $no,string $date): void {
+    echo '<div class="doc-head"><div><div class="doc-title">'.e($title).'</div><div class="doc-sub">по проекту: '.e($p['name']).'</div></div><div class="doc-meta">№ '.e($no).'<br>от '.e($date).'</div></div>';
+}
+
+if($format==='csv'){
+    header('Content-Type:text/csv; charset=UTF-8');
+    header('Content-Disposition:attachment; filename="smetogram-'.$id.'.csv"');
+    echo "ï»¿";
+    $out=fopen('php://output','w');
+    fputcsv($out,['Раздел','Наименование','Количество','Ед.','Цена','Сумма'],';');
+    foreach($rows as $r) fputcsv($out,[$r['category'],$r['name'],$r['quantity'],$r['unit'],$r['price'],$r['total']],';');
+    fclose($out); exit;
+}
+?>
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title><?=e($p['name'])?> — <?= $format==='ks2'?'КС-2':($format==='ks3'?'КС-3':'Смета') ?></title>
+<style>
+@page{size:<?= $format==='ks2'?'A4 landscape':'A4' ?>;margin:10mm}
+*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;font-size:10px;margin:0}
+.doc{width:100%}.doc-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px}.doc-title{font-size:18px;font-weight:700;text-transform:uppercase}.doc-sub{font-size:11px;margin-top:4px}.doc-meta{text-align:right;font-size:11px;line-height:1.6}
+.info{width:100%;border-collapse:collapse;margin-bottom:10px}.info td{padding:3px 5px;border:1px solid #999}.info .label{width:22%;font-weight:700;background:#f5f5f5}
+table.data{width:100%;border-collapse:collapse}table.data th,table.data td{border:1px solid #555;padding:4px 5px;vertical-align:middle}table.data th{text-align:center;font-size:8px;background:#f1f1f1}table.data td.num{text-align:right;white-space:nowrap}.center{text-align:center}.total-row{font-weight:700;background:#f5f5f5}.note{font-size:8px;color:#555;margin-top:7px}.sign{display:flex;gap:45px;margin-top:22px}.sign>div{flex:1}.line{border-bottom:1px solid #111;height:22px;margin-bottom:4px}.muted{font-size:8px;color:#555}.print{position:fixed;right:16px;top:16px;background:#111;color:#fff;border:0;padding:9px 13px;border-radius:5px;cursor:pointer}
+@media print{.print{display:none}.page-break{page-break-before:always}}
+</style>
+</head>
+<body>
+<button class="print" onclick="window.print()">Печать / PDF</button>
+<div class="doc">
+<?php if($format==='ks2'): ?>
+<?php docHead($p,'Акт о приемке выполненных работ',$docNo,$date); ?>
+<table class="info">
+<tr><td class="label">Инвестор</td><td></td><td class="label">Форма по ОКУД</td><td>0322005</td></tr>
+<tr><td class="label">Заказчик</td><td><?=e((string)$p['clientName'])?></td><td class="label">Проект</td><td><?=e((string)$p['name'])?></td></tr>
+<tr><td class="label">Подрядчик</td><td><?=e((string)$user['name'])?></td><td class="label">Место выполнения</td><td><?=e((string)$p['city'])?></td></tr>
+<tr><td class="label">Договор</td><td></td><td class="label">Отчетный период</td><td><?=e($period)?></td></tr>
+</table>
+<table class="data">
+<thead><tr>
+<th style="width:4%">№</th><th style="width:6%">Поз. сметы</th><th>Наименование работ</th><th style="width:7%">Ед.</th><th style="width:8%">Объем</th><th style="width:11%">Цена без НДС, ₽</th><th style="width:12%">Стоимость без НДС, ₽</th><th style="width:7%">НДС</th><th style="width:11%">НДС, ₽</th><th style="width:12%">Стоимость с НДС, ₽</th>
+</tr></thead>
+<tbody>
+<?php foreach($rows as $n=>$r): $line=(float)$r['total']; $lineVat=$line*.20; ?>
+<tr>
+<td class="center"><?=$n+1?></td><td class="center"><?=e((string)($n+1))?></td><td><?=e((string)$r['name'])?></td><td class="center"><?=e((string)$r['unit'])?></td><td class="num"><?=e((string)$r['quantity'])?></td><td class="num"><?=money((float)$r['price'])?></td><td class="num"><?=money($line)?></td><td class="center">20%</td><td class="num"><?=money($lineVat)?></td><td class="num"><?=money($line+$lineVat)?></td>
+</tr>
+<?php endforeach; ?>
+<tr class="total-row"><td colspan="6">ВСЕГО ПО АКТУ</td><td class="num"><?=money($total)?></td><td></td><td class="num"><?=money($vat)?></td><td class="num"><?=money($totalWithVat)?></td></tr>
+</tbody>
+</table>
+<div class="note">Документ сформирован на основании позиций сметы проекта. Объемы в текущей версии КС-2 принимаются равными объемам, указанным в смете; перед подписанием их следует проверить по фактически выполненным и принятым работам.</div>
+<div class="sign"><div><b>Подрядчик</b><div class="line"></div><span class="muted">должность, Ф.И.О., подпись</span></div><div><b>Заказчик</b><div class="line"></div><span class="muted">должность, Ф.И.О., подпись</span></div></div>
+
+<?php elseif($format==='ks3'): ?>
+<?php docHead($p,'Справка о стоимости выполненных работ и затрат',$docNo,$date); ?>
+<table class="info">
+<tr><td class="label">Инвестор</td><td></td><td class="label">Форма по ОКУД</td><td>0322001</td></tr>
+<tr><td class="label">Заказчик / Генподрядчик</td><td><?=e((string)$p['clientName'])?></td><td class="label">Проект</td><td><?=e((string)$p['name'])?></td></tr>
+<tr><td class="label">Подрядчик</td><td><?=e((string)$user['name'])?></td><td class="label">Место строительства</td><td><?=e((string)$p['city'])?></td></tr>
+<tr><td class="label">Договор</td><td></td><td class="label">Отчетный период</td><td><?=e($period)?></td></tr>
+</table>
+<table class="data">
+<thead><tr><th style="width:6%">№</th><th>Наименование работ / затрат</th><th style="width:18%">Стоимость без НДС, ₽</th><th style="width:18%">НДС 20%, ₽</th><th style="width:20%">Стоимость с НДС, ₽</th></tr></thead>
+<tbody>
+<?php foreach($rows as $n=>$r): $line=(float)$r['total']; $lineVat=$line*.20; ?>
+<tr><td class="center"><?=$n+1?></td><td><?=e((string)$r['name'])?></td><td class="num"><?=money($line)?></td><td class="num"><?=money($lineVat)?></td><td class="num"><?=money($line+$lineVat)?></td></tr>
+<?php endforeach; ?>
+<tr class="total-row"><td colspan="2">ВСЕГО</td><td class="num"><?=money($total)?></td><td class="num"><?=money($vat)?></td><td class="num"><?=money($totalWithVat)?></td></tr>
+</tbody>
+</table>
+<p><b>Стоимость выполненных работ и затрат за отчетный период:</b> <?=money($totalWithVat)?> руб., в том числе НДС 20% — <?=money($vat)?> руб.</p>
+<div class="sign"><div><b>Подрядчик</b><div class="line"></div><span class="muted">должность, Ф.И.О., подпись</span></div><div><b>Заказчик / Генподрядчик</b><div class="line"></div><span class="muted">должность, Ф.И.О., подпись</span></div></div>
+<div class="note">КС-3 формируется на основании КС-2. В данной адаптации строки группируются непосредственно из позиций сметы проекта.</div>
+
+<?php else: ?>
+<?php docHead($p,'Смета',$docNo,$date); ?>
+<table class="data"><thead><tr><th>Раздел</th><th>Наименование</th><th class="num">Кол-во</th><th>Ед.</th><th class="num">Цена</th><th class="num">Сумма</th></tr></thead><tbody>
+<?php foreach($rows as $r): ?><tr><td><?=e($r['category'])?></td><td><?=e($r['name'])?></td><td class="num"><?=e($r['quantity'])?></td><td><?=e($r['unit'])?></td><td class="num"><?=money((float)$r['price'])?></td><td class="num"><?=money((float)$r['total'])?></td></tr><?php endforeach; ?>
+<tr class="total-row"><td colspan="5">ИТОГО</td><td class="num"><?=money($total)?></td></tr></tbody></table>
+<?php endif; ?>
+</div>
+</body></html>
