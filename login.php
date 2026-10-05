@@ -44,7 +44,7 @@ require __DIR__.'/includes/header.php';
             <span>Войти через Telegram</span>
           </button>
           <div class="auth-error" id="telegramLoginError" hidden></div>
-          <script async src="https://oauth.telegram.org/js/telegram-login.js?3"></script>
+          <script src="https://oauth.telegram.org/js/telegram-login.js?3"></script>
           <script>
             (function () {
               const button = document.getElementById('telegramLoginButton');
