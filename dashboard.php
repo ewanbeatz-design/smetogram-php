@@ -19,6 +19,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   }
  }
  }
+ }
 $q=$pdo->prepare("SELECT p.*,COALESCE((SELECT SUM(i.quantity*i.price) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id),0) total,(SELECT COUNT(*) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id) item_count FROM projects p WHERE p.ownerId=? ORDER BY p.updatedAt DESC");
 $q->execute([$user['id']]);$all=$q->fetchAll();
 $query=trim($_GET['q']??'');$status=$_GET['status']??'all';
