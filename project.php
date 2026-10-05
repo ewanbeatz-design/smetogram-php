@@ -184,7 +184,8 @@ function bindEstimateCalculation(){
  });
  recalculateEstimate();
 }
-\ndocument.addEventListener('DOMContentLoaded',()=>{bindEstimateForms();bindEstimateCalculation();});
+
+document.addEventListener('DOMContentLoaded',()=>{bindEstimateForms();bindEstimateCalculation();});
 const observer=new MutationObserver(bindEstimateForms);
 observer.observe(document.body,{childList:true,subtree:true});
 
