@@ -5,7 +5,7 @@ require __DIR__.'/config/bootstrap.php';
 $telegram=$config['telegram']??[];
 $clientId=trim((string)($telegram['client_id']??''));
 $clientSecret=trim((string)($telegram['client_secret']??''));
-$redirectUri='https://xn--80aagbdj2b0ad.xn--p1ai/telegram-callback.php';
+$redirectUri='https://сметограм.рф/telegram-callback.php';
 
 function tg_post(string $url,array $data,array $headers=[]):array{
  $ch=curl_init($url); curl_setopt_array($ch,[CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>http_build_query($data,'','&',PHP_QUERY_RFC3986),CURLOPT_RETURNTRANSFER=>true,CURLOPT_HTTPHEADER=>array_merge(['Content-Type: application/x-www-form-urlencoded'],$headers),CURLOPT_TIMEOUT=>15]);
