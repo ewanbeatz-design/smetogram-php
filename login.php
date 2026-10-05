@@ -39,11 +39,6 @@ require __DIR__.'/includes/header.php';
 
         <div class="telegram-login-box">
         <?php if ($telegramReady): ?>
-          <button type="button" class="telegram-login-button" id="telegramLoginButton">
-            <i class="bi bi-telegram"></i>
-            <span>Войти через Telegram</span>
-          </button>
-          <div class="auth-error" id="telegramLoginError" hidden></div>
           <a href="telegram-start.php" class="telegram-login-button" id="telegramLoginButton">
             <i class="bi bi-telegram"></i>
             <span>Войти через Telegram</span>
