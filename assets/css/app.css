@@ -198,3 +198,14 @@ html,body{height:100%;min-height:100%;margin:0;overflow:hidden}
   .main-content{height:100dvh;max-height:100dvh}
 }
 .page-wrap{min-height:0}
+
+/* Estimate inline editing — parity with legacy Smetogram */
+.is-editing{background:#fffbf5!important}
+.cell-input{width:100%;border:1px solid #CBD5E1;border-radius:5px;padding:6px;color:var(--ink);font:11px IBM Plex Mono,monospace;background:#fff;box-sizing:border-box}
+.is-editing .work-name{min-width:0}
+.row-actions .save-row,.row-actions .cancel-row{display:grid;place-items:center;width:27px;height:27px;border-radius:6px;padding:4px!important}
+.row-actions .save-row{color:#65826c!important;background:#e4eee4!important}
+.row-actions .cancel-row{color:#9a9991!important;background:transparent!important}
+.row-actions .save-row:hover{background:#d9e8da!important;color:#4f6f57!important}
+.row-actions .cancel-row:hover{background:#f0eee9!important;color:#6f706a!important}
+@media(max-width:760px){.is-editing{grid-template-columns:1fr 55px!important}.is-editing .work-name{grid-column:1 / -1}.is-editing .js-qty{grid-column:1}.is-editing .js-unit{grid-column:2}.is-editing .js-price{grid-column:1}.is-editing .row-actions{grid-column:1 / -1}}
