@@ -39,7 +39,9 @@ require __DIR__.'/includes/header.php';
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
+  const form=document.getElementById('phoneLoginForm');
   const input=document.getElementById('phone');
+  form?.addEventListener('submit',function(e){e.preventDefault();});
   if(!input)return;
   input.addEventListener('input',function(){
     let v=this.value.replace(/\D/g,'').replace(/^7/,'').slice(0,10);
