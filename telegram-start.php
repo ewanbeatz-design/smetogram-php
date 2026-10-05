@@ -14,6 +14,20 @@ $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '
 
 $_SESSION['telegram_oidc_state'] = $state;
 $_SESSION['telegram_oidc_verifier'] = $verifier;
+setcookie('telegram_oidc_state', $state, [
+    'expires' => time() + 600,
+    'path' => '/',
+    'secure' => true,
+    'httponly' => true,
+    'samesite' => 'Lax',
+]);
+setcookie('telegram_oidc_verifier', $verifier, [
+    'expires' => time() + 600,
+    'path' => '/',
+    'secure' => true,
+    'httponly' => true,
+    'samesite' => 'Lax',
+]);
 
 $redirectUri = 'https://xn--80aff1adjpdl.xn--p1ai/telegram-callback.php';
 
