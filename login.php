@@ -44,66 +44,14 @@ require __DIR__.'/includes/header.php';
             <span>Войти через Telegram</span>
           </button>
           <div class="auth-error" id="telegramLoginError" hidden></div>
-          <script src="https://oauth.telegram.org/js/telegram-login.js?3"></script>
-          <script>
-            (function () {
-              const button = document.getElementById('telegramLoginButton');
-              const errorBox = document.getElementById('telegramLoginError');
-              if (!button || !window.Telegram || !Telegram.Login) return;
-
-              const telegramRedirectUri = window.location.origin + '/login.php';
-
-              function showError(message) {
-                errorBox.textContent = message || 'Не удалось выполнить вход через Telegram.';
-                errorBox.hidden = false;
-                button.disabled = false;
-              }
-
-              function onTelegramAuth(data) {
-                if (!data || data.error || !data.id_token) {
-                  showError(data && data.error ? data.error : 'Telegram не подтвердил авторизацию.');
-                  return;
-                }
-
-                button.disabled = true;
-                errorBox.hidden = true;
-
-                fetch('telegram-auth.php', {
-                  method: 'POST',
-                  headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
-                  credentials: 'same-origin',
-                  body: JSON.stringify({id_token: data.id_token})
-                })
-                .then(function (response) {
-                  return response.json().catch(function () { return {}; }).then(function (payload) {
-                    if (!response.ok) throw new Error(payload.error || 'Не удалось создать сессию.');
-                    return payload;
-                  });
-                })
-                .then(function (payload) {
-                  window.location.href = payload.redirect || 'dashboard.php';
-                })
-                .catch(function (error) {
-                  showError(error.message);
-                });
-              }
-
-              window.addEventListener('load', function () {
-                Telegram.Login.init({
-                  client_id: <?=json_encode((int)$telegramClientId)?>,
-                  redirect_uri: telegramRedirectUri,
-                  request_access: ['write'],
-                  lang: 'ru',
-                  nonce: <?=json_encode($telegramNonce)?>
-                }, onTelegramAuth);
-
-                button.addEventListener('click', function () {
-                  errorBox.hidden = true;
-                  Telegram.Login.open(onTelegramAuth);
-                });
-              });
-            })();
-          </script>
+          <a href="telegram-start.php" class="telegram-login-button" id="telegramLoginButton">
+            <i class="bi bi-telegram"></i>
+            <span>Войти через Telegram</span>
+          </a>
+          <?php if (!empty($_SESSION['telegram_login_error'])): ?>
+            <div class="auth-error"><?=htmlspecialchars((string)$_SESSION['telegram_login_error'])?></div>
+            <?php unset($_SESSION['telegram_login_error']); ?>
+          <?php endif; ?>
         <?php else: ?>
           <div class="auth-error">Telegram-вход пока не настроен. Добавьте TELEGRAM_CLIENT_ID в секреты GitHub Actions.</div>
         <?php endif; ?>
