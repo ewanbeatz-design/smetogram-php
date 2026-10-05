@@ -259,6 +259,40 @@ try {
     }
 } catch(Throwable $e) {}
 
+
+/* Reusable estimate position templates. */
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS estimateitemtemplates (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        categoryName VARCHAR(255) NOT NULL DEFAULT 'Работы',
+        name VARCHAR(255) NOT NULL,
+        unit VARCHAR(40) NOT NULL DEFAULT 'шт.',
+        price DECIMAL(14,2) NOT NULL DEFAULT 0,
+        createdAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX(categoryName)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    if ((int)$pdo->query("SELECT COUNT(*) FROM estimateitemtemplates")->fetchColumn() === 0) {
+        $templates = [
+            ['Демонтаж','Демонтаж плитки','м²',350],
+            ['Демонтаж','Удаление обоев','м²',120],
+            ['Черновые работы','Грунтовка стен','м²',80],
+            ['Черновые работы','Штукатурка стен по маякам','м²',650],
+            ['Черновые работы','Шпаклевка стен','м²',420],
+            ['Отделка','Покраска стен в два слоя','м²',350],
+            ['Отделка','Шпаклевка под покраску','м²',450],
+            ['Полы','Укладка ламината','м²',450],
+            ['Плитка','Укладка керамогранита','м²',1400],
+            ['Электрика','Монтаж розетки','шт',650],
+            ['Электрика','Прокладка кабеля','м.п.',120],
+            ['Сантехника','Монтаж смесителя','шт',1200],
+            ['Сантехника','Монтаж инсталляции','шт',4500],
+            ['Потолки','Монтаж натяжного потолка','м²',700]
+        ];
+        $st = $pdo->prepare("INSERT INTO estimateitemtemplates (categoryName,name,unit,price) VALUES (?,?,?,?)");
+        foreach ($templates as $tpl) $st->execute($tpl);
+    }
+} catch (Throwable $e) {}
+
 function e(?string $v):string{return htmlspecialchars($v??'',ENT_QUOTES,'UTF-8');}
 function redirect(string $u):never{header('Location: '.$u);exit;}
 function csrf_token():string{if(empty($_SESSION['csrf']))$_SESSION['csrf']=bin2hex(random_bytes(32));return $_SESSION['csrf'];}
