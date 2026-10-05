@@ -243,6 +243,8 @@ try {
     $addColumn($pdo,'users','subscriptionStatus',"VARCHAR(32) NOT NULL DEFAULT 'active'");
     $addColumn($pdo,'users','subscriptionStartedAt',"DATETIME NULL");
     $addColumn($pdo,'users','subscriptionExpiresAt',"DATETIME NULL");
+    $addColumn($pdo,'users','telegramId',"BIGINT UNSIGNED NULL");
+    $addColumn($pdo,'users','telegramUsername',"VARCHAR(255) NULL");
     if (!$tableExists($pdo,'smetogram_notifications')) {
         $pdo->exec("CREATE TABLE smetogram_notifications (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
