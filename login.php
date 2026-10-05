@@ -53,7 +53,7 @@ require __DIR__.'/includes/header.php';
       </div>
 
       <div class="auth-login-security"><span class="auth-security-dot"></span><div><strong>Быстрый и безопасный вход</strong><small>Telegram подтверждает вашу личность без пароля и SMS-кода.</small></div></div>
-      <p class="auth-phone-note">Продолжая, вы входите в Сметограм через Telegram. Мы не получаем ваш пароль Telegram.</p>
+      <p class="auth-phone-note">Продолжая, вы входите в Сметограм через Telegram. Мы не получаем ваш пароль Telegram.</p>\n      <a href="guide.php" class="auth-guide-button"><i class="bi bi-book"></i><span>Как пользоваться Сметограмом</span><i class="bi bi-arrow-up-right ms-auto"></i></a>
     </div>
 
     <div class="auth-login-footer">
