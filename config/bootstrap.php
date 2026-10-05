@@ -307,4 +307,23 @@ function create_notification(PDO $pdo, int $userId, ?int $projectId, string $typ
     $q->execute([$userId, $projectId, $type, $title, $body, $url]);
 }
 
+function subscription_is_active(array $user):bool{
+    $plan=trim((string)($user['subscriptionPlan']??'free'));
+    $status=trim((string)($user['subscriptionStatus']??'active'));
+    if($plan===''||$plan==='free'||$status!=='active')return false;
+    $expires=trim((string)($user['subscriptionExpiresAt']??''));
+    return $expires===''||strtotime($expires)===false||strtotime($expires)>=time();
+}
+function user_project_count(PDO $pdo,int $userId):int{
+    $q=$pdo->prepare('SELECT COUNT(*) FROM projects WHERE ownerId=?');
+    $q->execute([$userId]);
+    return (int)$q->fetchColumn();
+}
+function can_create_project(PDO $pdo,array $user):bool{
+    return subscription_is_active($user)||user_project_count($pdo,(int)($user['id']??0))<1;
+}
+function subscription_label(array $user):string{
+    return subscription_is_active($user)?'Подписка активна':'Бесплатный доступ';
+}
+
 function require_auth():array{if(!current_user())redirect('login.php');return current_user();}
