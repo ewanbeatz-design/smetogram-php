@@ -24,11 +24,11 @@ $pageTitle=$project['name'];require __DIR__.'/includes/app_header.php';
 <section class="page-wrap estimate-page">
 <div class="estimate-heading"><div><a href="dashboard.php" class="back-button"><i class="bi bi-arrow-left"></i> Все проекты</a><div class="estimate-title-row"><div class="project-symbol"><i class="bi bi-house"></i><i class="bi bi-check2"></i></div><div><div class="eyebrow">ПРОЕКТ / СМЕТА</div><h1><?=e($project['name'])?></h1><p><?=e($project['city'])?> <b>·</b> <?=e($project['clientName'])?> <b>·</b> <?=e($project['workType'])?></p></div></div></div><div class="heading-actions"><form method="post" data-ajax-estimate><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="status"><select class="status-select" name="status" onchange="estimateStatus(this.form)"><?php foreach(['draft'=>'Черновик','in_progress'=>'В работе','review'=>'На согласовании','completed'=>'Завершён','archived'=>'Архив'] as $v=>$t):?><option value="<?=$v?>" <?=$project['status']===$v?'selected':''?>><?=$t?></option><?php endforeach;?></select></form><a class="outline-button" href="export.php?id=<?=$id?>"><i class="bi bi-file-earmark-text"></i> Экспорт сметы</a><button class="primary-button" type="button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-plus-lg"></i> Добавить</button></div></div>
 <div class="estimate-summary"><div><span>ИТОГО ПО СМЕТЕ</span><strong><?=number_format($estimateGrandTotal,0,',',' ')?> ₽</strong><small>включая НДС 20%</small></div><div class="summary-stats"><div><b><?=count($cats)?></b> категории</div><div><b><?=$itemsCount?></b> позиций</div><div><b><?=number_format(array_sum(array_map(fn($c)=>(float)$c['items']?0:0,$cats)),0)?></b> объём</div></div><div class="summary-actions"><button class="outline-button" type="button" onclick="document.querySelector('.estimate-controls').scrollIntoView({behavior:'smooth',block:'center'})"><i class="bi bi-calendar3"></i> Создать график</button><button class="icon-button darkish" type="button" title="Дополнительно"><i class="bi bi-three-dots"></i></button></div></div>
-<div class="estimate-controls"><div><span class="control-label">МЕТОД РАСЧЁТА</span><select class="status-select"><option>Ресурсный</option><option>Базисно-индексный</option><option>Ресурсно-индексный</option></select></div><label class="check-control"><input type="checkbox"> Зимнее удорожание <b>+12%</b></label><label class="check-control"><input type="checkbox"> Стеснённые условия <b>+8%</b></label><label class="custom-coeff">Свой коэффициент<input min="0.1" max="5" step="0.01" type="number" value="1"></label></div><div class="estimate-toolbar"><div class="toolbar-tabs"><button type="button" class="active">Смета</button><button type="button">График <span>скоро</span></button><button type="button">Документы <span>скоро</span></button></div><div class="estimate-actions"><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-plus-lg"></i> Добавить расценку</button><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#categoryModal"><i class="bi bi-plus-lg"></i> Добавить категорию</button></div></div>
+<div class="estimate-controls" id="estimateCalcControls"><div><span class="control-label">МЕТОД РАСЧЁТА</span><select class="status-select" id="estimateMethod"><option value="resource">Ресурсный</option><option value="base-index">Базисно-индексный</option><option value="resource-index">Ресурсно-индексный</option></select></div><label class="check-control"><input id="winterCoeff" type="checkbox"> Зимнее удорожание <b>+12%</b></label><label class="check-control"><input id="tightCoeff" type="checkbox"> Стеснённые условия <b>+8%</b></label><label class="custom-coeff">Свой коэффициент<input id="customCoeff" min="0.1" max="5" step="0.01" type="number" value="1"></label></div><div class="estimate-toolbar"><div class="toolbar-tabs"><button type="button" class="active">Смета</button><button type="button">График <span>скоро</span></button><button type="button">Документы <span>скоро</span></button></div><div class="estimate-actions"><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-plus-lg"></i> Добавить расценку</button><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#categoryModal"><i class="bi bi-plus-lg"></i> Добавить категорию</button></div></div>
 <div class="estimate-list">
 <?php foreach($cats as $n=>$cat):?><div class="estimate-group"><div class="group-heading"><span class="group-number"><?=str_pad((string)($n+1),2,'0',STR_PAD_LEFT)?></span><h3><?=e($cat['name'])?></h3><span><?=$cat['item_count']?> позиций</span><strong><?=number_format((float)$cat['total'],0,',',' ')?> ₽</strong><button class="icon-button" title="Удалить раздел" onclick="if(confirm('Удалить раздел и его позиции?'))document.getElementById('delcat<?=$cat['id']?>').submit()"><i class="bi bi-three-dots"></i></button></div>
 <div class="estimate-table"><div class="table-head"><span>РАБОТА</span><span>ОБЪЁМ</span><span>ЕД.</span><span>ЦЕНА</span><span>СУММА</span><span></span></div>
-<?php foreach($cat['items'] as $item):$sum=(float)$item['quantity']*(float)$item['price'];?><div class="table-row" onclick="event.stopPropagation();editRow(<?=$item['id']?>)"><div class="work-name"><i class="work-dot"></i><?=e($item['name'])?></div><span><?=rtrim(rtrim(number_format((float)$item['quantity'],3,',',' '),'0'),',')?></span><span><?=e($item['unit'])?></span><span><?=number_format((float)$item['price'],2,',',' ')?> ₽</span><strong><?=number_format($sum,2,',',' ')?> ₽</strong><div class="row-actions"><button class="edit-label" type="button" title="Редактировать" onclick="editRow(<?=$item['id']?>)">Изменить</button><form id="edit<?=$item['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="update_item"><input type="hidden" name="item_id" value="<?=$item['id']?>"><input name="name" value="<?=e($item['name'])?>"><input name="quantity" value="<?=e((string)$item['quantity'])?>"><input name="unit" value="<?=e($item['unit'])?>"><input name="price" value="<?=e((string)$item['price'])?>"></form><button type="button" title="Удалить" onclick="if(confirm('Удалить позицию?'))document.getElementById('delete<?=$item['id']?>').submit()"><i class="bi bi-trash3"></i></button><form id="delete<?=$item['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_item"><input type="hidden" name="item_id" value="<?=$item['id']?>"></form></div></div><?php endforeach;?>
+<?php foreach($cat['items'] as $item):$sum=(float)$item['quantity']*(float)$item['price'];?><div class="table-row" data-quantity="<?=e((string)$item['quantity'])?>" data-price="<?=e((string)$item['price'])?>" onclick="event.stopPropagation();editRow(<?=$item['id']?>)"><div class="work-name"><i class="work-dot"></i><?=e($item['name'])?></div><span><?=rtrim(rtrim(number_format((float)$item['quantity'],3,',',' '),'0'),',')?></span><span><?=e($item['unit'])?></span><span><?=number_format((float)$item['price'],2,',',' ')?> ₽</span><strong><?=number_format($sum,2,',',' ')?> ₽</strong><div class="row-actions"><button class="edit-label" type="button" title="Редактировать" onclick="editRow(<?=$item['id']?>)">Изменить</button><form id="edit<?=$item['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="update_item"><input type="hidden" name="item_id" value="<?=$item['id']?>"><input name="name" value="<?=e($item['name'])?>"><input name="quantity" value="<?=e((string)$item['quantity'])?>"><input name="unit" value="<?=e($item['unit'])?>"><input name="price" value="<?=e((string)$item['price'])?>"></form><button type="button" title="Удалить" onclick="if(confirm('Удалить позицию?'))document.getElementById('delete<?=$item['id']?>').submit()"><i class="bi bi-trash3"></i></button><form id="delete<?=$item['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_item"><input type="hidden" name="item_id" value="<?=$item['id']?>"></form></div></div><?php endforeach;?>
 <button class="add-row" type="button" data-work-catalog data-category-id="<?=$cat['id']?>" data-bs-toggle="modal" data-bs-target="#workCatalogModal"><i class="bi bi-plus-lg"></i> Добавить работу</button></div></div>
 <form id="delcat<?=$cat['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_category"><input type="hidden" name="category_id" value="<?=$cat['id']?>"></form>
 <div class="modal fade" id="item<?=$cat['id']?>" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form method="post" data-ajax-estimate><div class="modal-header"><h5 class="modal-title">Добавить позицию</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="item"><input type="hidden" name="category_id" value="<?=$cat['id']?>"><label class="form-label">Наименование</label><input class="form-control mb-3" name="name" required placeholder="Штукатурка стен по маякам"><div class="form-grid"><div><label class="form-label">Количество</label><input class="form-control" name="quantity" value="1"></div><div><label class="form-label">Единица</label><input class="form-control" name="unit" value="м²"></div><div><label class="form-label">Цена</label><input class="form-control" name="price" value="0"></div></div></div><div class="modal-footer"><button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button><button class="primary-button">Добавить</button></div></form></div></div></div>
@@ -138,7 +138,53 @@ function saveInline(id){
  estimateAjax(f);
 }
 function cancelInline(id){refreshEstimate().catch(()=>location.reload())}
-document.addEventListener('DOMContentLoaded',bindEstimateForms);
+
+// Локальный пересчёт параметров сметы.
+// Базовый ресурсный итог берётся из фактических позиций сметы.
+// Базисно-индексный и ресурсно-индексный режимы пока не меняют сумму:
+// для них нужны реальные индексы, которых в проекте ещё нет.
+function recalculateEstimate(){
+ const controls=document.getElementById('estimateCalcControls');
+ if(!controls)return;
+ const rows=[...document.querySelectorAll('.estimate-list .table-row[data-quantity][data-price]')];
+ const base=rows.reduce((s,row)=>s+(parseFloat(String(row.dataset.quantity).replace(',','.'))||0)*(parseFloat(String(row.dataset.price).replace(',','.'))||0),0);
+ const winter=document.getElementById('winterCoeff')?.checked?1.12:1;
+ const tight=document.getElementById('tightCoeff')?.checked?1.08:1;
+ const customRaw=parseFloat(document.getElementById('customCoeff')?.value||'1');
+ const custom=Number.isFinite(customRaw)&&customRaw>0?customRaw:1;
+ const coeff=winter*tight*custom;
+ const direct=base*coeff;
+ const overhead=direct*.15;
+ const profit=direct*.08;
+ const vat=(direct+overhead+profit)*.20;
+ const grand=direct+overhead+profit+vat;
+ const fmt=(v,d=2)=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:d,maximumFractionDigits:d}).format(v)+' ₽';
+ const summary=document.querySelector('.estimate-summary strong');
+ if(summary)summary.textContent=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(grand)+' ₽';
+ const totals=document.querySelector('.estimate-totals');
+ if(!totals)return;
+ const blocks=totals.querySelectorAll(':scope > div');
+ if(blocks[0])blocks[0].querySelector('b').textContent=fmt(direct);
+ if(blocks[1])blocks[1].querySelector('b').textContent=fmt(overhead);
+ if(blocks[2])blocks[2].querySelector('b').textContent=fmt(profit);
+ if(blocks[3])blocks[3].querySelector('b').textContent='× '+coeff.toFixed(3);
+ if(blocks[4])blocks[4].querySelector('b').textContent=fmt(vat);
+ const grandNode=totals.querySelector('.grand-total strong');
+ if(grandNode)grandNode.textContent=fmt(grand);
+}
+function bindEstimateCalculation(){
+ const method=document.getElementById('estimateMethod');
+ const winter=document.getElementById('winterCoeff');
+ const tight=document.getElementById('tightCoeff');
+ const custom=document.getElementById('customCoeff');
+ [method,winter,tight,custom].forEach(el=>{
+  if(!el||el.dataset.calcBound)return;
+  el.dataset.calcBound='1';
+  el.addEventListener(el.type==='number'?'input':'change',recalculateEstimate);
+ });
+ recalculateEstimate();
+}
+\ndocument.addEventListener('DOMContentLoaded',()=>{bindEstimateForms();bindEstimateCalculation();});
 const observer=new MutationObserver(bindEstimateForms);
 observer.observe(document.body,{childList:true,subtree:true});
 
