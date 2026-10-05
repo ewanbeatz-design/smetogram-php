@@ -15,6 +15,20 @@ function tg_post(string $url,array $data,array $headers=[]):array{
  if($status<200||$status>=300)throw new RuntimeException((string)($json['error_description']??$json['error']??'Telegram отклонил авторизацию.'));
  return $json;
 }
+function tg_get(string $url):string{
+ $ch=curl_init($url);
+ curl_setopt_array($ch,[
+  CURLOPT_RETURNTRANSFER=>true,
+  CURLOPT_FOLLOWLOCATION=>true,
+  CURLOPT_CONNECTTIMEOUT=>5,
+  CURLOPT_TIMEOUT=>10,
+  CURLOPT_HTTPHEADER=>['Accept: application/json'],
+ ]);
+ $raw=curl_exec($ch);$err=curl_error($ch);$status=(int)curl_getinfo($ch,CURLINFO_RESPONSE_CODE);curl_close($ch);
+ if($raw===false||$err!=='')throw new RuntimeException('Не удалось получить данные Telegram: '.$err);
+ if($status<200||$status>=300)throw new RuntimeException('Telegram вернул ошибку при получении ключей (HTTP '.$status.').');
+ return (string)$raw;
+}
 function tg_b64(string $v):string{$v=strtr($v,'-_','+/');$v.=str_repeat('=',(4-strlen($v)%4)%4);$r=base64_decode($v,true);if($r===false)throw new RuntimeException('Некорректный Telegram token.');return $r;}
 function tg_len(int $n):string{if($n<128)return chr($n);$s='';while($n>0){$s=chr($n&255).$s;$n>>=8;}return chr(128|strlen($s)).$s;}
 function tg_pem(array $j):string{
@@ -28,7 +42,7 @@ function tg_verify(string $token,string $clientId):array{
  $p=explode('.',$token);if(count($p)!==3)throw new RuntimeException('Некорректный ID-токен Telegram.');
  $h=json_decode(tg_b64($p[0]),true);$c=json_decode(tg_b64($p[1]),true);$sig=tg_b64($p[2]);
  if(!is_array($h)||!is_array($c)||($h['alg']??'')!=='RS256')throw new RuntimeException('Неподдерживаемая подпись Telegram.');
- $keys=json_decode((string)@file_get_contents('https://oauth.telegram.org/.well-known/jwks.json'),true);$key=null;
+ $keys=json_decode(tg_get('https://oauth.telegram.org/.well-known/jwks.json'),true);$key=null;
  foreach(($keys['keys']??[]) as $k)if((string)($k['kid']??'')===(string)($h['kid']??'')){$key=$k;break;}
  if(!$key)throw new RuntimeException('Ключ подписи Telegram не найден.');
  $pk=openssl_pkey_get_public(tg_pem($key));if($pk===false||openssl_verify($p[0].'.'.$p[1],$sig,$pk,OPENSSL_ALGO_SHA256)!==1)throw new RuntimeException('Не удалось проверить подпись Telegram.');
