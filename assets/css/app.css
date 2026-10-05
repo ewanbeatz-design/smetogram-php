@@ -302,6 +302,10 @@ html,body{height:100%;min-height:100%;margin:0;overflow:hidden}
 .auth-login-content h1{margin:0;color:#111827;font-size:31px;line-height:1.08;letter-spacing:-.045em;font-weight:760}
 .auth-login-lead{margin:15px 0 28px;color:#64748b;font-size:13px;line-height:1.65}
 .auth-login-lead strong{color:#334155;font-weight:700}
+.telegram-login-button{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;height:48px;padding:0 18px;border:0;border-radius:12px;background:#229ED9;color:#fff;font:700 14px 'Manrope',sans-serif;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,opacity .15s ease;box-shadow:0 7px 18px rgba(34,158,217,.18)}
+.telegram-login-button:hover{transform:translateY(-1px);box-shadow:0 9px 22px rgba(34,158,217,.23)}
+.telegram-login-button:disabled{opacity:.65;cursor:wait;transform:none}
+.telegram-login-button i{font-size:18px}
 .telegram-login-box{display:flex;justify-content:center;align-items:center;min-height:52px;margin:24px 0 18px;padding:17px 14px;border:1px solid #e7e9ef;border-radius:15px;background:#fafbfe}
 .telegram-login-box iframe{max-width:100%}
 .auth-login-security{display:flex;align-items:flex-start;gap:11px;padding:13px 14px;border:1px solid #e8eaf0;border-radius:13px;background:#fafbfc}
