@@ -7,7 +7,7 @@ require __DIR__ . '/includes/header.php';
 ?>
 
 <style>
-.smeta-guide{--ink:#171923;--muted:#707786;--line:#e5e7ed;--soft:#f6f7fa;--accent:#635bff;color:var(--ink);overflow:hidden}
+.smeta-guide{--ink:#171923;--muted:#707786;--line:#e5e7ed;--soft:#f6f7fa;--accent:#635bff;color:var(--ink)}
 .smeta-guide .guide-hero{padding:90px 0 75px;background:linear-gradient(135deg,#f8f8ff,#fff)}
 .smeta-guide .eyebrow{font:700 10px "IBM Plex Mono",monospace;letter-spacing:.13em;text-transform:uppercase;color:#655ed5}
 .smeta-guide h1{font-size:clamp(45px,7vw,82px);line-height:.9;letter-spacing:-.07em;font-weight:700;margin:18px 0 25px}
