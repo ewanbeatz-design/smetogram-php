@@ -170,10 +170,25 @@ async function addCatalogWork(){
  const fd=new FormData();fd.set('csrf',<?=json_encode(csrf_token())?>);fd.set('project_id',projectId);fd.set('op','template');fd.set('template_id',workCatalogState.templateId);fd.set('category_id',workCatalogState.categoryId);fd.set('template_quantity',qty?.value||'1');
  try{const res=await fetch('api.php?action=estimate_action',{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}});const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||'Не удалось добавить работу');await refreshEstimate();const modal=document.getElementById('workCatalogModal');const instance=bootstrap.Modal.getInstance(modal);if(instance)instance.hide();}catch(err){alert(err.message||'Ошибка добавления');}finally{add.disabled=false;}
 }
+document.addEventListener('click',e=>{
+ const btn=e.target.closest('[data-work-catalog]');
+ if(btn){
+  workCatalogState.categoryId=Number(btn.dataset.categoryId||0);
+  document.getElementById('workCatalogCategory').value=workCatalogState.categoryId;
+  document.querySelectorAll('.work-catalog-item.is-selected').forEach(x=>x.classList.remove('is-selected'));
+  workCatalogState.templateId=0;
+  document.getElementById('workCatalogSelected').hidden=true;
+  const add=document.getElementById('workCatalogAdd');if(add)add.disabled=true;
+  return;
+ }
+ const item=e.target.closest('.work-catalog-item');
+ if(item){selectWorkCatalogItem(item);}
+});
 document.addEventListener('DOMContentLoaded',()=>{
  const modal=document.getElementById('workCatalogModal'),search=document.getElementById('workCatalogSearch'),add=document.getElementById('workCatalogAdd');
- document.querySelectorAll('[data-work-catalog]').forEach(btn=>btn.addEventListener('click',()=>{workCatalogState.categoryId=Number(btn.dataset.categoryId||0);document.getElementById('workCatalogCategory').value=workCatalogState.categoryId;document.querySelectorAll('.work-catalog-item.is-selected').forEach(x=>x.classList.remove('is-selected'));workCatalogState.templateId=0;document.getElementById('workCatalogSelected').hidden=true;add.disabled=true;}));
- document.querySelectorAll('.work-catalog-item').forEach(item=>item.addEventListener('click',()=>selectWorkCatalogItem(item)));
- search?.addEventListener('input',filterWorkCatalog);add?.addEventListener('click',addCatalogWork);modal?.addEventListener('shown.bs.modal',()=>search?.focus());modal?.addEventListener('hidden.bs.modal',resetWorkCatalog);
+ search?.addEventListener('input',filterWorkCatalog);
+ add?.addEventListener('click',addCatalogWork);
+ modal?.addEventListener('shown.bs.modal',()=>search?.focus());
+ modal?.addEventListener('hidden.bs.modal',resetWorkCatalog);
 });</script>
 <?php require __DIR__.'/includes/app_footer.php';?>
