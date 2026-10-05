@@ -51,6 +51,8 @@ require __DIR__.'/includes/header.php';
               const errorBox = document.getElementById('telegramLoginError');
               if (!button || !window.Telegram || !Telegram.Login) return;
 
+              const telegramRedirectUri = window.location.origin + '/login.php';
+
               function showError(message) {
                 errorBox.textContent = message || 'Не удалось выполнить вход через Telegram.';
                 errorBox.hidden = false;
@@ -89,6 +91,7 @@ require __DIR__.'/includes/header.php';
               window.addEventListener('load', function () {
                 Telegram.Login.init({
                   client_id: <?=json_encode((int)$telegramClientId)?>,
+                  redirect_uri: telegramRedirectUri,
                   request_access: ['write'],
                   lang: 'ru',
                   nonce: <?=json_encode($telegramNonce)?>
