@@ -1,110 +1,200 @@
-<?php
-declare(strict_types=1);
-require __DIR__.'/config/bootstrap.php';
-$user=require_auth();$id=(int)($_GET['id']??0);
-$q=$pdo->prepare("SELECT * FROM projects WHERE id=? AND ownerId=?");$q->execute([$id,$user['id']]);$project=$q->fetch();if(!$project)redirect('dashboard.php');
-$error='';
-if($_SERVER['REQUEST_METHOD']==='POST'){
- check_csrf();$action=$_POST['action']??'';
- if($action==='category'){ $name=trim($_POST['name']??'');if($name!==''){$q=$pdo->prepare("INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)");$q->execute([$id,$name,(int)$pdo->query("SELECT COALESCE(MAX(sortOrder),0)+1 FROM estimatecategories WHERE projectId=".(int)$id)->fetchColumn()]);}redirect('project.php?id='.$id);}
- if($action==='template'){ $template=(int)($_POST['template_id']??0);$qty=(float)str_replace(',','.',$_POST['template_quantity']??$_POST['quantity']??1);if($qty<=0)$qty=1;$q=$pdo->prepare("SELECT * FROM estimateitemtemplates WHERE id=? LIMIT 1");$q->execute([$template]);$it=$q->fetch();if($it){$q=$pdo->prepare("SELECT id FROM estimatecategories WHERE projectId=? AND name=? LIMIT 1");$q->execute([$id,$it['categoryName']]);$cat=$q->fetchColumn();if(!$cat){$q=$pdo->prepare("SELECT COALESCE(MAX(sortOrder),0)+1 FROM estimatecategories WHERE projectId=?");$q->execute([$id]);$sort=(int)$q->fetchColumn();$q=$pdo->prepare("INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)");$q->execute([$id,$it['categoryName'],$sort]);$cat=$pdo->lastInsertId();}$q=$pdo->prepare("INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source) VALUES(?,?,?,?,?,?)");$q->execute([(int)$cat,$it['name'],$qty,$it['unit'],$it['price'],'template']);}redirect('project.php?id='.$id);}
- if($action==='item'){ $cat=(int)($_POST['category_id']??0);$q=$pdo->prepare("SELECT id FROM estimatecategories WHERE id=? AND projectId=?");$q->execute([$cat,$id]);if($q->fetch()){ $name=trim($_POST['name']??'');$qty=(float)str_replace(',','.',$_POST['quantity']??0);$unit=trim($_POST['unit']??'шт');$price=(float)str_replace(',','.',$_POST['price']??0);if($name!==''){$q=$pdo->prepare("INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source) VALUES(?,?,?,?,?,?)");$q->execute([$cat,$name,$qty,$unit,$price,'manual']);}}redirect('project.php?id='.$id);}
- if($action==='update_item'){ $item=(int)$_POST['item_id'];$q=$pdo->prepare("SELECT i.id FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE i.id=? AND c.projectId=?");$q->execute([$item,$id]);if($q->fetch()){ $name=trim($_POST['name']??'');$qty=(float)str_replace(',','.',$_POST['quantity']??0);$unit=trim($_POST['unit']??'шт');$price=(float)str_replace(',','.',$_POST['price']??0);$q=$pdo->prepare("UPDATE estimateitems SET name=?,quantity=?,unit=?,price=? WHERE id=?");$q->execute([$name,$qty,$unit,$price,$item]);}redirect('project.php?id='.$id);}
- if($action==='delete_item'){ $q=$pdo->prepare("DELETE i FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE i.id=? AND c.projectId=?");$q->execute([(int)$_POST['item_id'],$id]);redirect('project.php?id='.$id);}
- if($action==='delete_category'){ $cat=(int)$_POST['category_id'];$q=$pdo->prepare("DELETE i FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.id=? AND c.projectId=?");$q->execute([$cat,$id]);$q=$pdo->prepare("DELETE FROM estimatecategories WHERE id=? AND projectId=?");$q->execute([$cat,$id]);redirect('project.php?id='.$id);}
- if($action==='status'){ $allowed=['draft','in_progress','review','completed','archived'];$st=$_POST['status']??'draft';if(in_array($st,$allowed,true)){$q=$pdo->prepare("UPDATE projects SET status=? WHERE id=? AND ownerId=?");$q->execute([$st,$id,$user['id']]);}redirect('project.php?id='.$id);}
- if($action==='delete_project'){ $q=$pdo->prepare("DELETE FROM projects WHERE id=? AND ownerId=?");$q->execute([$id,$user['id']]);redirect('dashboard.php');}
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap');
+:root{--terra:#4F46E5;--terra2:#4338CA;--ink:#172554;--muted:#64748B;--line:#E2E8F0;--paper:#fff;--bg:#FBFAFC;--sage:#ECFCCB;--green:#16A34A;--warn:#F59E0B}
+*{box-sizing:border-box}html,body{min-height:100%;margin:0}body{font-family:Manrope,sans-serif;background:var(--bg);color:var(--ink)}a{text-decoration:none;color:inherit}button,input,select,textarea{font:inherit}button{cursor:pointer}
+.app-shell{min-height:100vh;display:flex}.sidebar{width:252px;z-index:1000;flex:0 0 252px;background:#F8FAFC;border-right:1px solid var(--line);padding:26px 16px 18px;display:flex;flex-direction:column;position:relative;z-index:20}.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.05em;font-size:21px;padding:0 12px}.brand-mark{width:30px;height:30px;border-radius:10px;background:var(--terra);color:#fff;display:grid;place-items:center;font-weight:800}.workspace-label,.eyebrow{color:#94A3B8;font:600 10px/1 IBM Plex Mono,monospace;letter-spacing:.1em}.workspace-label{margin:56px 12px 15px}.nav-list{display:grid;gap:4px}.nav-item{color:#64748B;border-radius:10px;display:flex;align-items:center;gap:12px;padding:11px 12px;font-size:13px;font-weight:600}.nav-item:hover,.nav-item.active{background:#EEF2FF;color:#312E81}.nav-item.active .nav-icon{color:var(--terra)}.nav-icon{display:flex}.sidebar-spacer{flex:1;min-height:32px}.trial-card{display:flex;align-items:center;gap:9px;padding:13px 10px;background:var(--sage);border-radius:12px;color:#365314;margin:15px 3px 21px}.trial-card strong{display:block;font-size:10px;margin-bottom:3px}.trial-card span{font-size:9px;color:#65A30D}.trial-card>i:last-child{margin-left:auto}.trial-icon{width:26px;height:26px;border-radius:8px;background:#D9F99D;display:grid;place-items:center}.bottom-nav{border-top:1px solid #E2E8F0;padding-top:14px}.profile{margin:20px 6px 0;display:flex;align-items:center;gap:9px}.profile strong{display:block;font-size:11px}.profile span{display:block;color:#94A3B8;font-size:10px;margin-top:3px}.avatar,.top-avatar{display:grid;place-items:center;font-weight:800}.avatar{width:30px;height:30px;border-radius:10px;font-size:10px;background:#E0E7FF;color:#3730A3}.top-avatar{width:30px;height:30px;border-radius:50%;font-size:10px;background:#ECFCCB;color:#365314}.muted-icon{color:#94A3B8;margin-left:auto}.main-content{flex:1;min-width:0}.topbar{height:78px;position:sticky;top:0;z-index:900;flex:0 0 78px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 clamp(22px,4vw,62px);justify-content:space-between;background:rgba(251,250,252,.92)}.breadcrumbs{display:flex;align-items:center;gap:11px;color:#94A3B8;font-size:12px}.breadcrumbs strong{color:#475569}.slash{color:#CBD5E1}.topbar-actions{display:flex;align-items:center;gap:15px}.icon-button,.mobile-menu{background:transparent;color:#64748B;display:inline-grid;place-items:center;border:0;border-radius:8px;min-width:31px;height:31px}.icon-button:hover{background:#EEF2FF;color:var(--ink)}.mobile-close,.mobile-menu,.sidebar-backdrop{display:none}
+.page-wrap{max-width:1250px;padding:54px clamp(22px,4vw,62px) 70px;margin:0 auto}.page-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:24px}.page-heading h1,.module-heading h1{margin:14px 0 6px;letter-spacing:-.055em;font-size:clamp(29px,3vw,40px);line-height:1.08}.lede{margin:0;color:var(--muted);font-size:14px}.primary-button,.outline-button{border-radius:9px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 15px;font-size:12px;font-weight:700;transition:.18s;white-space:nowrap;border:1px solid transparent}.primary-button{background:var(--terra);color:#fff;box-shadow:0 5px 14px #4f46e52b}.primary-button:hover{background:var(--terra2);transform:translateY(-1px)}.outline-button{color:#475569;background:#fff;border-color:#CBD5E1}.outline-button:hover{background:#F8FAFC}.text-button{background:transparent;color:var(--terra);border:0;font-weight:700;font-size:12px}.metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:43px 0 53px}.metric-card{background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:17px 18px;display:flex;gap:14px}.metric-card span,.metric-card small{display:block;color:#94A3B8;font-size:11px}.metric-card strong{display:block;font:600 23px IBM Plex Mono,monospace;letter-spacing:-.06em;margin:6px 0}.metric-icon{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex:none}.metric-icon.terra{background:#EEF2FF;color:var(--terra)}.metric-icon.sage{background:var(--sage);color:#65A30D}.metric-icon.sand{background:#F1F5F9;color:#64748B}
+.section-title-row{border-top:1px solid #CBD5E1;padding-top:19px;display:flex;justify-content:space-between;align-items:center}.section-title-row h2{margin:0;font-size:18px}.section-title-row p{margin:5px 0 0;color:#94A3B8;font-size:11px}.filter-row{display:flex;gap:10px;align-items:center}.project-search{display:flex;align-items:center;gap:9px;min-width:260px;height:40px;padding:0 13px;border:1px solid var(--line);border-radius:12px;background:#fff}.project-search input{width:100%;border:0;outline:0;background:transparent}.filter-select{min-width:145px;height:40px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:0 10px;color:#64748B}.project-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}.project-card,.new-project-card{min-height:260px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;transition:.18s}.project-card:hover,.new-project-card:hover{box-shadow:0 10px 25px #0f172a10;transform:translateY(-2px)}.card-top,.card-footer,.progress-meta{display:flex;align-items:center;justify-content:space-between}.status{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700}.status i{width:6px;height:6px;border-radius:50%}.status-active{color:#16A34A}.status-active i{background:#84CC16}.status-review{color:#B45309}.status-review i{background:#F59E0B}.status-done{color:#64748B}.status-done i{background:#94A3B8}.project-info{margin:29px 0 17px}.project-info h3{margin:0 0 7px;font-size:16px;letter-spacing:-.035em}.project-info span{color:#94A3B8;font-size:10px}.client-line{display:flex;align-items:center;gap:8px;color:#64748B;font-size:11px}.mini-avatar{width:22px;height:22px;border-radius:50%;font-size:8px;background:#E0E7FF;color:#3730A3;display:grid;place-items:center}.progress-meta{color:#94A3B8;font-size:9px;margin-top:28px}.progress-track{height:4px;background:#E2E8F0;border-radius:4px;margin:7px 0 18px;overflow:hidden}.progress-track span{display:block;height:100%;border-radius:4px;background:var(--terra)}.card-footer{border-top:1px solid #F1F5F9;padding-top:13px;color:#94A3B8;font-size:9px}.card-footer strong{font:500 11px IBM Plex Mono,monospace;color:#475569}.new-project-card{border:1px dashed #CBD5E1;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#64748B}.new-project-card>span{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:#EEF2FF;color:var(--terra);margin-bottom:12px}.bottom-callout{margin-top:40px;padding:15px 18px;border:1px solid #E2E8F0;background:#EEF2FF;border-radius:12px;display:flex;align-items:center;gap:13px}.bottom-callout .text-button{margin-left:auto}
+.estimate-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:20px}.back-button{background:transparent;color:#94A3B8;border:0;display:inline-flex;gap:7px;font-size:11px;padding:0}.estimate-title-row{display:flex;gap:13px;align-items:center;margin-top:25px}.project-symbol{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:#EEF2FF;color:var(--terra)}.estimate-title-row h1{font-size:28px;letter-spacing:-.055em;margin:8px 0 4px}.estimate-title-row p{margin:0;color:#94A3B8;font-size:11px}.heading-actions{display:flex;gap:8px}.status-select{border:1px solid var(--line);border-radius:8px;background:#fff;color:#64748B;font-size:11px;font-weight:700;padding:10px}.estimate-summary{margin-top:45px;border-radius:14px;background:#312E81;color:#fff;padding:20px 23px;display:flex;align-items:center;gap:30px}.estimate-summary span,.estimate-summary small{display:block;color:#C7D2FE;font:500 9px IBM Plex Mono,monospace;letter-spacing:.06em}.estimate-summary strong{display:block;font:500 28px IBM Plex Mono,monospace;letter-spacing:-.06em;margin:8px 0 5px}.summary-stats{display:flex;gap:24px;padding-left:30px;border-left:1px solid #6366F1}.summary-stats span{font-family:Manrope;letter-spacing:0;font-size:10px}.summary-stats b{color:#fff;font:500 16px IBM Plex Mono,monospace;margin-right:4px}.summary-actions{margin-left:auto;display:flex;gap:8px}.estimate-summary .outline-button{background:transparent;color:#E0E7FF;border-color:#818CF8}.estimate-toolbar{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #CBD5E1;margin-top:40px;padding:0 3px 14px}.toolbar-tabs{display:flex;gap:25px}.toolbar-tabs a{color:#94A3B8;font-size:11px;position:relative}.toolbar-tabs a.active{color:var(--ink);font-weight:800}.estimate-list{margin-top:23px}.estimate-group{margin-bottom:21px}.group-heading{display:grid;grid-template-columns:30px 1fr auto auto 25px;align-items:center;gap:9px;padding:0 9px 10px}.group-number{font:500 10px IBM Plex Mono,monospace;color:var(--terra)}.group-heading h3{margin:0;font-size:13px}.group-heading>span{color:#94A3B8;font-size:10px}.group-heading>strong{color:#475569;font:500 11px IBM Plex Mono,monospace}.estimate-table{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}.table-head,.table-row{display:grid;grid-template-columns:minmax(200px,2fr) 85px 75px 120px 130px 78px;align-items:center;gap:13px;padding:0 15px}.table-head{height:34px;background:#F8FAFC;color:#94A3B8;font:500 9px IBM Plex Mono,monospace}.table-row{min-height:50px;border-top:1px solid #F1F5F9;color:#64748B;font:400 11px IBM Plex Mono,monospace}.work-name{display:flex;align-items:center;gap:8px;color:#334155;font:600 11px Manrope,sans-serif}.work-dot{width:5px;height:5px;border-radius:50%;background:#94A3B8}.row-actions{display:flex;justify-content:flex-end;gap:3px}.row-actions button{color:#94A3B8;background:transparent;border:0;padding:4px}.cell-input{width:100%;border:1px solid #CBD5E1;border-radius:5px;padding:6px;color:var(--ink);font:11px IBM Plex Mono,monospace;background:#fff}.add-row{display:flex;align-items:center;gap:7px;color:var(--terra);background:transparent;border:0;padding:13px 15px;font-size:11px;font-weight:700}.estimate-total{display:flex;justify-content:flex-end;align-items:center;gap:32px;border-top:2px solid #CBD5E1;padding:19px 17px;margin-top:5px}.estimate-total strong{font:600 18px IBM Plex Mono,monospace}.new-category-form{display:flex;gap:8px;align-items:center;background:#fff;border:1px solid var(--line);padding:12px;border-radius:10px;margin-bottom:20px}.new-category-form input{flex:1;border:1px solid #CBD5E1;border-radius:7px;padding:10px}
+.module-heading{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:34px}.module-icon{width:45px;height:45px;border-radius:13px;background:#EEF2FF;color:var(--terra);display:grid;place-items:center}.module-grid{display:grid;grid-template-columns:2fr 1fr;gap:15px}.module-panel{background:#fff;border:1px solid var(--line);border-radius:13px;padding:20px}.wide-panel{min-width:0}.panel-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;margin-bottom:20px}.panel-heading h2,.module-panel h2{margin:0;font-size:16px;letter-spacing:-.03em}.panel-heading p,.panel-copy{margin:5px 0 0;color:#94A3B8;font-size:11px}.timeline{display:grid;gap:18px}.timeline-row{display:grid;grid-template-columns:22px 1fr auto;gap:12px;align-items:center}.timeline-dot{width:22px;height:22px;border-radius:50%;background:#F1F5F9;color:#64748B;display:grid;place-items:center}.timeline-dot.done{background:#DCFCE7;color:#16A34A}.timeline-dot.active{background:#EEF2FF;color:var(--terra)}.timeline-content strong,.timeline-content span{display:block}.timeline-content strong{font-size:12px}.timeline-content span{color:#94A3B8;font-size:10px;margin-top:2px}.timeline-status{font-size:10px;color:#94A3B8}.milestone{display:flex;gap:10px;align-items:center;padding:15px 0;border-bottom:1px solid #F1F5F9}.milestone>div{flex:1}.milestone strong,.milestone span{display:block}.milestone strong{font-size:11px}.milestone span{font-size:9px;color:#94A3B8}.milestone b{font:500 11px IBM Plex Mono,monospace}.member-list,.document-list{display:grid}.member-row,.document-row{display:flex;align-items:center;gap:11px;padding:12px 0;border-top:1px solid #F1F5F9}.member-avatar{width:34px;height:34px;border-radius:10px;background:#EEF2FF;color:#3730A3;display:grid;place-items:center;font-size:9px;font-weight:800;flex:none}.member-row div:nth-child(2),.document-row div:nth-child(2){flex:1}.member-row strong,.member-row span,.document-row strong,.document-row span{display:block}.member-row strong,.document-row strong{font-size:11px}.member-row span,.document-row span{font-size:9px;color:#94A3B8;margin-top:2px}.member-row em,.document-row em{font-style:normal;font-size:9px;color:#16A34A}.chat-panel{min-height:520px}.chat-tabs{display:flex;gap:6px;overflow:auto;padding-bottom:12px;border-bottom:1px solid #F1F5F9}.chat-tabs a{padding:8px 10px;border-radius:8px;color:#64748B;font-size:10px;white-space:nowrap}.chat-tabs a.active{background:#EEF2FF;color:#3730A3}.chat-messages{display:grid;gap:18px;padding:20px 0;min-height:330px}.chat-message{display:flex;gap:9px;max-width:80%}.chat-message.mine{margin-left:auto;flex-direction:row-reverse;text-align:right}.chat-message p{margin:5px 0;padding:10px 12px;border-radius:10px;background:#F8FAFC;font-size:11px}.chat-message small{color:#94A3B8;font-size:8px}.chat-compose{display:flex;gap:8px;border-top:1px solid #F1F5F9;padding-top:14px}.chat-compose input{flex:1;border:1px solid #CBD5E1;border-radius:9px;padding:10px}.acceptance-card{display:grid;grid-template-columns:190px 1fr;gap:18px;padding:15px;border:1px solid var(--line);border-radius:12px}.acceptance-photo{min-height:145px;border:1px dashed #CBD5E1;border-radius:10px;background:#F8FAFC;display:grid;place-items:center;color:#94A3B8}.acceptance-photo img{width:100%;height:100%;min-height:145px;object-fit:cover;border-radius:9px}.acceptance-actions{display:flex;gap:8px;margin-top:18px}.plans-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.plan-card{border:1px solid var(--line);border-radius:12px;background:#fff;text-align:left;padding:18px}.plan-card.selected{border:2px solid var(--terra);background:#EEF2FF}.plan-card span,.plan-card strong,.plan-card p{display:block}.plan-card strong{font:500 19px IBM Plex Mono,monospace;margin:12px 0}.plan-card p{font-size:10px;color:#94A3B8}.upload-zone{min-height:260px;border:1px dashed #CBD5E1;border-radius:12px;background:#F8FAFC;display:grid;place-items:center;align-content:center;gap:8px;padding:30px;text-align:center;cursor:pointer}.upload-zone h2{font-size:14px}.upload-zone p{font-size:10px;color:#94A3B8}.upload-icon{width:44px;height:44px;border-radius:13px;background:#EEF2FF;color:var(--terra);display:grid;place-items:center}.generated-preview{margin-top:16px;border-top:1px solid #F1F5F9;padding-top:15px}.generated-row{display:flex;align-items:center;gap:7px;padding:8px 0;border-top:1px solid #F1F5F9;color:#64748B;font-size:10px}.generated-row i{color:#16A34A}.chart-area{height:280px;display:flex;align-items:flex-end;gap:8px;padding:20px 10px;border-top:1px solid #F1F5F9;border-bottom:1px solid #F1F5F9}.bars{display:flex;align-items:flex-end;justify-content:space-around;width:100%;height:100%;gap:7px}.bar-column{height:100%;display:flex;align-items:flex-end;flex:1}.bar-value{width:100%;max-width:30px;margin:auto;background:var(--terra);border-radius:5px 5px 0 0}.metric-stack{display:grid;gap:12px}.metric-mini span,.metric-mini strong,.metric-mini small{display:block}.metric-mini strong{font:500 23px IBM Plex Mono,monospace;margin:8px 0}.metric-mini small{font-size:9px;color:#94A3B8}.settings-layout{display:grid;grid-template-columns:220px 1fr;gap:15px}.settings-nav{padding:8px}.settings-nav a{display:block;padding:11px;border-radius:8px;font-size:11px;color:#64748B}.settings-nav a.active{background:#EEF2FF;color:#3730A3;font-weight:700}.settings-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:22px 0}.settings-fields label,.invite-form label{display:grid;gap:6px;color:#64748B;font-size:10px;font-weight:700}.settings-fields input,.settings-fields select,.invite-form input,.invite-form select{border:1px solid #CBD5E1;border-radius:7px;padding:10px;background:#fff;font-size:11px}.setting-toggle{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #F1F5F9;padding:15px 0}.setting-toggle strong,.setting-toggle span{display:block}.setting-toggle strong{font-size:11px}.setting-toggle span{font-size:9px;color:#94A3B8;margin-top:4px}.toggle{width:35px;height:20px;background:#CBD5E1;padding:2px;border-radius:20px;border:0}.toggle i{display:block;width:16px;height:16px;background:#fff;border-radius:50%;transition:.15s}.toggle.on{background:var(--terra)}.toggle.on i{transform:translateX(15px)}.room-measure-card{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:center}.room-sketch{display:grid;place-items:center;min-height:270px;background:#F8FAFC;border-radius:12px}.room-shape{width:190px;height:145px;border:2px solid #94A3B8;background:#fff;position:relative;display:grid;place-items:center}.measure-label{position:absolute;color:#64748B;font:10px IBM Plex Mono,monospace}.top-label{top:-23px;left:50%;transform:translateX(-50%)}.side-label{left:-38px;top:50%;transform:rotate(-90deg)}.empty-state{padding:60px;text-align:center}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.modal-content{border:1px solid var(--line);border-radius:15px}.form-control,.form-select{border-color:#CBD5E1}.form-control:focus,.form-select:focus{border-color:#818CF8;box-shadow:0 0 0 .2rem #4f46e51a}
+@media(max-width:1050px){.sidebar{width:220px;flex-basis:220px}.project-grid{grid-template-columns:repeat(2,1fr)}.table-head,.table-row{grid-template-columns:minmax(180px,2fr) 65px 60px 100px 110px 70px}.plans-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* Estimate position templates */
+.template-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:430px;overflow:auto;padding:2px}
+.template-option{position:relative;display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid #E2E8F0;border-radius:11px;background:#fff;cursor:pointer;transition:.16s}
+.template-option:hover{border-color:#C7D2FE;background:#FAFAFF}
+.template-option:has(input:checked){border-color:#6366F1;background:#F5F3FF;box-shadow:0 0 0 2px #E0E7FF}
+.template-option input{position:absolute;opacity:0;pointer-events:none}
+.template-info{min-width:0;display:flex;flex-direction:column;gap:4px}
+.template-info strong{font-size:12px;color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.template-info small{font-size:10px;color:#94A3B8}
+.template-check{margin-left:auto;flex:0 0 24px;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;background:#EEF2FF;color:#6366F1;opacity:0}
+.template-option:has(input:checked) .template-check{opacity:1}
+@media(max-width:760px){.template-list{grid-template-columns:1fr;max-height:360px}}
+@media(max-width:760px){.sidebar{position:fixed;z-index:1000;inset:0 auto 0 0;width:270px;transform:translateX(-100%);transition:.2s;box-shadow:12px 0 30px #0f172a30}.sidebar-open{transform:translateX(0)}.mobile-close{display:grid;place-items:center;position:absolute;right:12px;top:24px;background:transparent;color:#64748B;border:0}.sidebar-backdrop{display:block;position:fixed;inset:0;background:#0f172a66;z-index:5;pointer-events:none;opacity:0}.sidebar-open~.sidebar-backdrop{opacity:1;pointer-events:auto}.mobile-menu{display:inline-grid}.topbar{padding:0 20px;height:65px}.breadcrumbs span:first-child,.breadcrumbs .slash{display:none}.page-wrap{padding:35px 20px 50px}.page-heading,.estimate-heading,.module-heading{align-items:flex-start;flex-direction:column}.metric-grid,.project-grid,.module-grid,.settings-layout,.room-measure-card{grid-template-columns:1fr}.filter-row{width:100%;display:grid;grid-template-columns:1fr}.project-search{min-width:0}.estimate-summary{align-items:flex-start;flex-direction:column}.summary-stats{border-left:0;border-top:1px solid #6366F1;padding:15px 0 0;width:100%;justify-content:space-between}.summary-actions{margin-left:0;width:100%}.table-head{display:none}.table-row{grid-template-columns:1fr 55px 55px;gap:8px;padding:11px 12px}.table-row>span:nth-of-type(3),.table-row>span:nth-of-type(4),.table-row>strong{display:none}.table-row .work-name{grid-column:1}.table-row .row-actions{grid-column:1/-1;justify-content:flex-start}.form-grid,.settings-fields{grid-template-columns:1fr}.plans-grid{grid-template-columns:1fr}.acceptance-card{grid-template-columns:1fr}.acceptance-actions{flex-wrap:wrap}.toolbar-tabs{gap:14px}.group-heading{grid-template-columns:27px 1fr auto}.group-heading>span{grid-column:2}.group-heading>strong{grid-column:3;grid-row:1/span 2}.bottom-callout{align-items:flex-start;flex-wrap:wrap}.bottom-callout .text-button{margin-left:33px}}
+
+
+/* =========================================================
+   SMETOGRAM — LEGACY MODAL PARITY
+   The PHP build uses Bootstrap for behavior, but the visual
+   language matches the old React/Radix dialogs.
+   ========================================================= */
+.modal-backdrop.show {
+  opacity: 1;
+  background: rgba(43, 43, 38, .50);
 }
-$q=$pdo->prepare("SELECT c.*,COALESCE(SUM(i.quantity*i.price),0) total,COUNT(i.id) item_count FROM estimatecategories c LEFT JOIN estimateitems i ON i.categoryId=c.id WHERE c.projectId=? GROUP BY c.id ORDER BY c.sortOrder,c.id");$q->execute([$id]);$cats=$q->fetchAll();$total=0;$itemsCount=0;foreach($cats as &$cat){$q=$pdo->prepare("SELECT * FROM estimateitems WHERE categoryId=? ORDER BY id");$q->execute([$cat['id']]);$cat['items']=$q->fetchAll();$total+=(float)$cat['total'];$itemsCount+=(int)$cat['item_count'];}unset($cat);
-$q=$pdo->query("SELECT * FROM estimateitemtemplates ORDER BY categoryName,name");$templates=$q->fetchAll();
-$label=['draft'=>'Черновик','in_progress'=>'В работе','review'=>'На согласовании','completed'=>'Завершён','archived'=>'Архив'][$project['status']]??$project['status'];
-$pageTitle=$project['name'];require __DIR__.'/includes/app_header.php';
-?>
-<section class="page-wrap estimate-page">
-<div class="estimate-heading"><div><a href="dashboard.php" class="back-button"><i class="bi bi-arrow-left"></i> Все проекты</a><div class="estimate-title-row"><div class="project-symbol"><i class="bi bi-house"></i><i class="bi bi-check2"></i></div><div><div class="eyebrow">ПРОЕКТ / СМЕТА</div><h1><?=e($project['name'])?></h1><p><?=e($project['city'])?> <b>·</b> <?=e($project['clientName'])?> <b>·</b> <?=e($project['workType'])?></p></div></div></div><div class="heading-actions"><form method="post" data-ajax-estimate><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="status"><select class="status-select" name="status" onchange="estimateStatus(this.form)"><?php foreach(['draft'=>'Черновик','in_progress'=>'В работе','review'=>'На согласовании','completed'=>'Завершён','archived'=>'Архив'] as $v=>$t):?><option value="<?=$v?>" <?=$project['status']===$v?'selected':''?>><?=$t?></option><?php endforeach;?></select></form><a class="outline-button" href="export.php?id=<?=$id?>"><i class="bi bi-file-earmark-text"></i> Экспорт сметы</a><button class="primary-button" type="button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-plus-lg"></i> Добавить</button></div></div>
-<div class="estimate-summary"><div><span>ИТОГО ПО СМЕТЕ</span><strong><?=number_format($total,0,',',' ')?> ₽</strong><small>включая НДС 20%</small></div><div class="summary-stats"><div><b><?=count($cats)?></b> категории</div><div><b><?=$itemsCount?></b> позиций</div><div><b><?=number_format($itemsCount,0,'','')?></b> объём</div></div><div class="summary-actions"><button class="outline-button" type="button" onclick="document.querySelector('.estimate-controls').scrollIntoView({behavior:'smooth',block:'center'})"><i class="bi bi-calendar3"></i> Создать график</button><button class="icon-button darkish" type="button" title="Дополнительно"><i class="bi bi-three-dots"></i></button></div></div>
-<div class="estimate-controls"><div><span class="control-label">МЕТОД РАСЧЁТА</span><select class="status-select"><option>Ресурсный</option><option>Базисно-индексный</option><option>Ресурсно-индексный</option></select></div><label class="check-control"><input type="checkbox"> Зимнее удорожание <b>+12%</b></label><label class="check-control"><input type="checkbox"> Стеснённые условия <b>+8%</b></label><label class="custom-coeff">Свой коэффициент<input min="0.1" max="5" step="0.01" type="number" value="1"></label></div><div class="estimate-toolbar"><div class="toolbar-tabs"><button type="button" class="active">Смета</button><button type="button">График <span>скоро</span></button><button type="button">Документы <span>скоро</span></button></div><div class="estimate-actions"><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-plus-lg"></i> Добавить расценку</button><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#categoryModal"><i class="bi bi-plus-lg"></i> Добавить категорию</button></div></div>
-<div class="estimate-list">
-<?php foreach($cats as $n=>$cat):?><div class="estimate-group"><div class="group-heading"><span class="group-number"><?=str_pad((string)($n+1),2,'0',STR_PAD_LEFT)?></span><h3><?=e($cat['name'])?></h3><span><?=$cat['item_count']?> позиций</span><strong><?=number_format((float)$cat['total'],0,',',' ')?> ₽</strong><button class="icon-button" title="Удалить раздел" onclick="if(confirm('Удалить раздел и его позиции?'))document.getElementById('delcat<?=$cat['id']?>').submit()"><i class="bi bi-three-dots"></i></button></div>
-<div class="estimate-table"><div class="table-head"><span>РАБОТА</span><span>ОБЪЁМ</span><span>ЕД.</span><span>ЦЕНА</span><span>СУММА</span><span></span></div>
-<?php foreach($cat['items'] as $item):$sum=(float)$item['quantity']*(float)$item['price'];?><div class="table-row"><div class="work-name"><i class="work-dot"></i><?=e($item['name'])?></div><span><?=rtrim(rtrim(number_format((float)$item['quantity'],3,',',' '),'0'),',')?></span><span><?=e($item['unit'])?></span><span><?=number_format((float)$item['price'],2,',',' ')?> ₽</span><strong><?=number_format($sum,2,',',' ')?> ₽</strong><div class="row-actions"><button class="edit-label" type="button" title="Редактировать" onclick="editRow(<?=$item['id']?>)">Изменить</button><form id="edit<?=$item['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="update_item"><input type="hidden" name="item_id" value="<?=$item['id']?>"><input name="name" value="<?=e($item['name'])?>"><input name="quantity" value="<?=e((string)$item['quantity'])?>"><input name="unit" value="<?=e($item['unit'])?>"><input name="price" value="<?=e((string)$item['price'])?>"></form><button type="button" title="Удалить" onclick="if(confirm('Удалить позицию?'))document.getElementById('delete<?=$item['id']?>').submit()"><i class="bi bi-trash3"></i></button><form id="delete<?=$item['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_item"><input type="hidden" name="item_id" value="<?=$item['id']?>"></form></div></div><?php endforeach;?>
-<button class="add-row" data-bs-toggle="modal" data-bs-target="#item<?=$cat['id']?>"><i class="bi bi-plus-lg"></i> Добавить работу</button></div></div>
-<form id="delcat<?=$cat['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_category"><input type="hidden" name="category_id" value="<?=$cat['id']?>"></form>
-<div class="modal fade" id="item<?=$cat['id']?>" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form method="post" data-ajax-estimate><div class="modal-header"><h5 class="modal-title">Добавить позицию</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="item"><input type="hidden" name="category_id" value="<?=$cat['id']?>"><label class="form-label">Наименование</label><input class="form-control mb-3" name="name" required placeholder="Штукатурка стен по маякам"><div class="form-grid"><div><label class="form-label">Количество</label><input class="form-control" name="quantity" value="1"></div><div><label class="form-label">Единица</label><input class="form-control" name="unit" value="м²"></div><div><label class="form-label">Цена</label><input class="form-control" name="price" value="0"></div></div></div><div class="modal-footer"><button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button><button class="primary-button">Добавить</button></div></form></div></div></div>
-<?php endforeach;?>
-<?php if(!$cats):?><div class="empty-state module-panel"><i class="bi bi-list-columns-reverse fs-2 text-primary"></i><h3 class="mt-3">Смета пока пустая</h3><p class="text-muted">Создайте первый раздел и добавьте работы или материалы.</p><button class="primary-button" data-bs-toggle="modal" data-bs-target="#categoryModal">Создать раздел</button></div><?php endif;?>
-<div class="estimate-totals"><div><span>Прямые затраты</span><b><?=number_format($total,2,',',' ')?> ₽</b></div><div><span>Накладные расходы (НР) · 15%</span><b><?=number_format($total*.15,2,',',' ')?> ₽</b></div><div><span>Сметная прибыль (СП) · 8%</span><b><?=number_format($total*.08,2,',',' ')?> ₽</b></div><div><span>Коэффициенты</span><b>× 1.000</b></div><div><span>НДС · 20%</span><b><?=number_format(($total+$total*.15+$total*.08)*.2,2,',',' ')?> ₽</b></div><div class="grand-total"><span>Итого в текущем уровне цен</span><strong><?=number_format($total*1.23,2,',',' ')?> ₽</strong></div><a class="outline-button" href="export.php?id=<?=$id?>">Выбрать экспорт</a><a class="outline-button" href="export.php?id=<?=$id?>">Сформировать КС-2</a><a class="outline-button" href="export.php?id=<?=$id?>">Сформировать КС-3</a></div></div>
-<div class="mt-4 d-flex justify-content-between align-items-center"><a class="text-button" href="workspace.php?view=scan&id=<?=$id?>"><i class="bi bi-stars"></i> Смета из файла</a><form method="post" onsubmit="return confirm('Удалить проект и всю смету?')"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_project"><button class="text-danger border-0 bg-transparent small">Удалить проект</button></form></div>
-</section>
-<div class="modal fade" id="categoryModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form method="post"><div class="modal-header"><h5 class="modal-title">Новый раздел</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="category"><label class="form-label">Название</label><input class="form-control" name="name" required placeholder="Материалы, Работы, Электрика..."></div><div class="modal-footer"><button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button><button class="primary-button">Создать</button></div></form></div></div></div>
-<div class="modal fade" id="templateModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><form method="post"><div class="modal-header"><div><h5 class="modal-title">Добавить из шаблонов</h5><small class="text-muted">Готовые позиции для текущего проекта</small></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="template"><div class="template-list"><?php foreach($templates as $tpl):?><label class="template-option"><input type="radio" name="template_id" value="<?=$tpl['id']?>" required><span class="template-info"><strong><?=e($tpl['name'])?></strong><small><?=e($tpl['categoryName'])?> · <?=e($tpl['unit'])?> · <?=number_format((float)$tpl['price'],0,',',' ')?> ₽</small></span><span class="template-check"><i class="bi bi-check-lg"></i></span></label><?php endforeach;?></div><div class="mt-3"><label class="form-label">Количество</label><input class="form-control" type="number" name="template_quantity" value="1" min="0.001" step="0.001" required></div></div><div class="modal-footer"><button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button><button class="primary-button"><i class="bi bi-plus-lg"></i> Добавить в смету</button></div></form></div></div></div>
-<script>
-const projectId=<?=json_encode($id)?>;
-async function estimateAjax(form){
- const fd=new FormData(form);
- fd.set('project_id',projectId);
- const action=fd.get('action');
- const op=action==='category'?'category':action==='item'?'item':action==='template'?'template':action==='update_item'?'update_item':action==='delete_item'?'delete_item':action==='delete_category'?'delete_category':action==='status'?'status':'';
- if(!op)return false;
- fd.set('op',op);
- try{
-  const res=await fetch('api.php?action=estimate_action',{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}});
-  const data=await res.json();
-  if(!res.ok||!data.ok)throw new Error(data.error||'Не удалось сохранить');
-  await refreshEstimate();
-  return true;
- }catch(err){alert(err.message||'Ошибка сохранения');return false}
+.modal-dialog {
+  width: min(510px, calc(100% - 40px));
+  max-width: 510px;
+  margin: 1.75rem auto;
 }
-async function refreshEstimate(){
- const res=await fetch('project.php?id='+encodeURIComponent(projectId),{headers:{'X-Requested-With':'XMLHttpRequest'}});
- if(!res.ok)throw new Error('Не удалось обновить смету');
- const html=await res.text();
- const doc=new DOMParser().parseFromString(html,'text/html');
- const currentSummary=document.querySelector('.estimate-summary');
- const nextSummary=doc.querySelector('.estimate-summary');
- const currentList=document.querySelector('.estimate-list');
- const nextList=doc.querySelector('.estimate-list');
- if(currentSummary&&nextSummary)currentSummary.replaceWith(nextSummary);
- if(currentList&&nextList)currentList.replaceWith(nextList);
- const currentTabs=document.querySelector('.toolbar-tabs');
- const nextTabs=doc.querySelector('.toolbar-tabs');
- if(currentTabs&&nextTabs)currentTabs.replaceWith(nextTabs);
+.modal-dialog.modal-lg { max-width: 680px; }
+.modal-content {
+  background: #fff;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 26px;
+  box-shadow: 0 22px 60px rgba(38, 35, 31, .19);
+  overflow: hidden;
 }
-function bindEstimateForms(){
- document.querySelectorAll('form[data-ajax-estimate]').forEach(form=>{
-  if(form.dataset.ajaxBound)return;
-  form.dataset.ajaxBound='1';
-  form.addEventListener('submit',async e=>{
-   e.preventDefault();
-   if(form.dataset.busy)return;
-   form.dataset.busy='1';
-   const ok=await estimateAjax(form);
-   delete form.dataset.busy;
-   if(ok){
-    const modal=form.closest('.modal');
-    if(modal){const instance=bootstrap.Modal.getInstance(modal);if(instance)instance.hide();}
-   }
-  });
- });
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0;
+  margin: 0 0 25px;
+  border: 0;
 }
-function editRow(id){
- const f=document.getElementById('edit'+id);if(!f)return;
- const row=f.parentElement.closest('.table-row');f.remove();document.body.appendChild(f);
- const n=f.querySelector('[name="name"]').value,q=f.querySelector('[name="quantity"]').value,u=f.querySelector('[name="unit"]').value,p=f.querySelector('[name="price"]').value;
- row.innerHTML='<div class="work-name"><i class="work-dot"></i><input class="cell-input js-name" value="'+n.replace(/"/g,'&quot;')+'"></div><div><input class="cell-input js-qty" value="'+q+'"></div><div><input class="cell-input js-unit" value="'+u+'"></div><div><input class="cell-input js-price" value="'+p+'"></div><strong>—</strong><div class="row-actions"><button class="save-row" type="button" onclick="saveInline('+id+')"><i class="bi bi-check-lg"></i></button><button class="cancel-row" type="button" onclick="cancelInline('+id+')"><i class="bi bi-x-lg"></i></button></div>';
- row.classList.add('is-editing');
+.modal-title, .modal-header h5 {
+  margin: 10px 0 0;
+  color: var(--ink, #172554);
+  font-size: 24px;
+  line-height: 1.12;
+  font-weight: 700;
+  letter-spacing: -.05em;
 }
-function saveInline(id){
- const row=document.querySelector('.table-row.is-editing');const f=document.getElementById('edit'+id);if(!row||!f)return;
- f.querySelector('[name="name"]').value=row.querySelector('.js-name').value;
- f.querySelector('[name="quantity"]').value=row.querySelector('.js-qty').value;
- f.querySelector('[name="unit"]').value=row.querySelector('.js-unit').value;
- f.querySelector('[name="price"]').value=row.querySelector('.js-price').value;
- estimateAjax(f);
+.modal-header .btn-close {
+  width: 31px;
+  height: 31px;
+  margin: 0;
+  padding: 0;
+  border-radius: 8px;
+  opacity: 1;
+  background-color: #F8FAFC;
+  background-size: 12px;
+  border: 1px solid #E2E8F0;
 }
-function cancelInline(id){refreshEstimate().catch(()=>location.reload())}
-document.addEventListener('DOMContentLoaded',bindEstimateForms);
-const observer=new MutationObserver(bindEstimateForms);
-observer.observe(document.body,{childList:true,subtree:true});
-</script>
-<?php require __DIR__.'/includes/app_footer.php';?>
+.modal-header .btn-close:hover { background-color: #EEF2FF; }
+.modal-body { padding: 0; }
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 17px 0 0;
+  margin-top: 23px;
+  border-top: 1px solid #eae6dd;
+}
+.modal-content label {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 16px;
+  color: #686961;
+  font-size: 11px;
+  font-weight: 700;
+}
+.modal-content input:not([type="hidden"]),
+.modal-content select,
+.modal-content textarea {
+  border: 1px solid #dedbd3;
+  border-radius: 8px;
+  padding: 11px;
+  background: #fff;
+  color: var(--ink, #172554);
+  font-size: 12px;
+  font-weight: 500;
+}
+.modal-content input:not([type="hidden"]):focus,
+.modal-content select:focus,
+.modal-content textarea:focus {
+  border-color: #818CF8;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, .10);
+  outline: 0;
+}
+.modal-content .form-control,
+.modal-content .form-select { min-height: 42px; }
+.modal-content .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.modal-content .form-grid > * { min-width: 0; }
+.modal-content .primary-button,
+.modal-content .outline-button { min-height: 40px; }
+@media (max-width: 760px) {
+  .modal-dialog, .modal-dialog.modal-lg { width: calc(100% - 24px); max-width: none; }
+  .modal-content { padding: 20px; border-radius: 16px; }
+  .modal-content .form-grid { grid-template-columns: 1fr; gap: 0; }
+}
+
+/* SMETOGRAM AI */
+.ai-page{padding-top:48px}.ai-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:28px}.ai-chat-panel{min-height:520px;display:flex;flex-direction:column}.ai-chat-messages{flex:1;min-height:350px;max-height:440px;overflow:auto;padding:18px;background:#fafafa;border-radius:12px;margin:0 0 14px}.ai-empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:#9b9991;text-align:center}.ai-empty i{font-size:30px;color:var(--terra)}.ai-empty strong{color:var(--ink);font-size:15px}.ai-bubble{max-width:82%;padding:11px 13px;border-radius:12px;margin:7px 0;font-size:12px;line-height:1.5;white-space:pre-wrap}.ai-bubble.user{margin-left:auto;background:var(--terra);color:#fff}.ai-bubble.assistant{background:#fff;border:1px solid #e7e3da;color:#30312d}.ai-bubble.error{background:#fff0ed;color:#9b3d2b;border:1px solid #f0c8bc}.ai-chat-form{display:flex;gap:8px}.ai-chat-form input{flex:1;border:1px solid #dedbd3;border-radius:9px;padding:11px 13px;font-size:12px}.ai-chat-form .primary-button{padding:10px 13px}.ai-icon{font-size:22px;color:var(--terra)}.ai-notice{margin-top:22px;display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border:1px solid #eadfd5;background:#fffaf5;border-radius:12px;color:#7b766c}.ai-notice>i{color:var(--terra);font-size:18px}.ai-notice strong,.ai-notice span{display:block}.ai-notice strong{color:var(--ink);font-size:12px}.ai-notice span{font-size:10px;margin-top:4px}.ai-upload{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:190px;border:1px dashed #cfc9bf;border-radius:12px;background:#fbfaf7;text-align:center;cursor:pointer;margin-bottom:13px}.ai-upload i{font-size:28px;color:var(--terra)}.ai-upload strong{font-size:13px}.ai-upload span{font-size:10px;color:#aaa79e}.ai-upload input{display:none}.ai-page textarea{width:100%;resize:vertical;border:1px solid #dedbd3;border-radius:9px;padding:10px;font-size:11px;margin-bottom:12px}.ai-result{margin-top:14px;border-top:1px solid #eee9e0;padding-top:14px}.ai-result>strong{font-size:12px}.ai-detected{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}.ai-detected span{background:#f2ece6;color:#756453;border-radius:20px;padding:5px 8px;font-size:9px}.ai-tasks{border:1px solid #ece8e0;border-radius:9px;overflow:hidden;margin-bottom:12px}.ai-tasks div{display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px solid #f0ede7;font-size:10px}.ai-tasks div:last-child{border-bottom:0}.ai-tasks b{font-family:'IBM Plex Mono',monospace}.ai-error{color:#a43e2b;font-size:11px}.ai-import-panel{margin-top:14px}.ai-actions{display:flex;gap:8px;flex-wrap:wrap}.ai-actions .outline-button{background:#fff}.ai-actions .outline-button i{margin-right:4px}
+@media(max-width:850px){.ai-grid{grid-template-columns:1fr}.ai-chat-panel{min-height:460px}.ai-chat-messages{max-height:360px}}
+
+/* Legacy Smetogram workspace */
+.workspace-project-line{display:flex;align-items:center;gap:12px;margin:-10px 0 18px;padding-bottom:12px;border-bottom:1px solid #F1F5F9}
+.workspace-back{display:inline-flex;align-items:center;gap:6px;color:#94A3B8;font-size:10px;text-decoration:none}
+.workspace-back:hover{color:var(--terra)}
+.workspace-project-name{font-size:11px;font-weight:800;color:var(--ink);padding-left:12px;border-left:1px solid #E2E8F0}
+.workspace-project-meta{font-size:9px;color:#94A3B8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.workspace-tabs{display:flex;gap:24px;align-items:center;overflow:auto;border-bottom:1px solid #CBD5E1;margin:-1px 0 32px;padding:0 3px}
+.workspace-tabs a{position:relative;display:inline-flex;align-items:center;gap:6px;padding:0 0 13px;color:#94A3B8;text-decoration:none;font-size:10px;white-space:nowrap}
+.workspace-tabs a i{font-size:12px}
+.workspace-tabs a:hover{color:#475569}
+.workspace-tabs a.active{color:var(--ink);font-weight:800}
+.workspace-tabs a.active:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--terra);border-radius:2px}
+@media(max-width:700px){.workspace-project-line{flex-wrap:wrap}.workspace-project-meta{width:100%;padding-left:78px}.workspace-tabs{gap:18px;margin-bottom:25px}.workspace-tabs a{font-size:9px}.workspace-tabs a i{display:none}}
+
+/* Tariff / billing */
+.billing-hero{display:flex;justify-content:space-between;gap:30px;align-items:center;margin-bottom:15px;padding:24px 26px}
+.billing-hero h2{margin:8px 0 4px;font-size:22px;letter-spacing:-.04em}
+.billing-current{min-width:210px;padding-left:22px;border-left:1px solid #E2E8F0}
+.billing-current span,.billing-current small{display:block;color:#94A3B8;font-size:9px}
+.billing-current strong{display:block;margin:7px 0;font-size:17px;color:var(--ink)}
+.billing-plans{grid-template-columns:repeat(4,1fr);margin-bottom:15px}
+.billing-card{position:relative;min-height:330px;display:flex;flex-direction:column}
+.billing-card strong{margin:12px 0 2px}
+.billing-card small{font-size:9px;color:#94A3B8}
+.billing-card p{min-height:38px;margin:12px 0;color:#64748B;font-size:10px;line-height:1.5}
+.billing-card ul{list-style:none;padding:0;margin:0 0 18px;display:grid;gap:8px;flex:1}
+.billing-card li{font-size:10px;color:#475569}.billing-card li:before{content:'✓';color:var(--terra);font-weight:800;margin-right:7px}
+.billing-card form{margin-top:auto}.billing-card button{width:100%}
+.plan-badge{position:absolute;top:14px;right:14px!important;color:var(--terra)!important;font-size:8px!important;font-weight:800;letter-spacing:.06em}
+.billing-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:15px}
+.billing-feature-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.billing-feature-list>div{padding:15px;background:#F8FAFC;border-radius:10px}.billing-feature-list i{font-size:18px;color:var(--terra)}.billing-feature-list b,.billing-feature-list small{display:block}.billing-feature-list b{font-size:11px;margin-top:10px}.billing-feature-list small{font-size:9px;color:#94A3B8;margin-top:4px;line-height:1.45}
+.billing-note{display:flex;gap:12px;padding:15px;background:#F8FAFC;border-radius:10px}.billing-note>i{font-size:21px;color:var(--terra)}.billing-note b,.billing-note span{display:block}.billing-note b{font-size:11px}.billing-note span{font-size:10px;color:#94A3B8;margin-top:4px;line-height:1.5}
+@media(max-width:1050px){.billing-plans{grid-template-columns:repeat(2,1fr)}.billing-feature-list{grid-template-columns:1fr}.billing-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.billing-hero{display:grid}.billing-current{border-left:0;border-top:1px solid #E2E8F0;padding:15px 0 0}.billing-plans{grid-template-columns:1fr}}
+
+/* Global AJAX search + live notifications */
+.topbar-actions{position:relative}.global-search{position:relative}.global-search input{width:0;opacity:0;border:1px solid #E2E8F0;background:#fff;border-radius:10px;height:34px;padding:0;transition:.18s}.global-search:focus-within input,.global-search:hover input{width:220px;opacity:1;padding:0 12px 0 38px}.search-toggle{position:absolute;z-index:2;right:0}.search-results{display:none;position:absolute;right:0;top:42px;width:320px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 35px rgba(15,23,42,.12);overflow:hidden;z-index:100}.search-results.show{display:block}.search-results a{display:flex;gap:10px;padding:12px 14px;text-decoration:none;color:var(--ink);border-bottom:1px solid #F1F5F9}.search-results a:hover{background:#F8FAFC}.search-results i{color:var(--terra);font-size:17px}.search-results b,.search-results small{display:block}.search-results b{font-size:11px}.search-results small{font-size:9px;color:#94A3B8;margin-top:3px}.notifications{position:relative}.notification-badge{position:absolute;right:-2px;top:-3px;min-width:15px;height:15px;padding:0 4px;border-radius:9px;background:#EF4444;color:#fff;font-size:8px;line-height:15px;text-align:center;border:2px solid #fff}.notification-menu{display:none;position:absolute;right:0;top:42px;width:360px;background:#fff;border:1px solid var(--line);border-radius:13px;box-shadow:0 14px 35px rgba(15,23,42,.12);z-index:100;overflow:hidden}.notification-menu.show{display:block}.notification-head{display:flex;align-items:center;justify-content:space-between;padding:14px 15px;border-bottom:1px solid #F1F5F9}.notification-head strong{font-size:12px}.notification-head button{border:0;background:none;color:var(--terra);font-size:9px}.notification-item{display:flex;gap:9px;padding:12px 15px;text-decoration:none;color:var(--ink);border-bottom:1px solid #F1F5F9}.notification-item:hover{background:#F8FAFC}.notification-item.unread{background:#FAFAFF}.notification-dot{width:7px;height:7px;border-radius:50%;background:var(--terra);margin-top:5px;flex:0 0 auto}.notification-item b,.notification-item small{display:block}.notification-item b{font-size:10px}.notification-item small{font-size:8px;color:#94A3B8;line-height:1.45;margin-top:3px}.notification-empty{padding:25px;text-align:center;color:#94A3B8;font-size:10px}
+@media(max-width:760px){.notifications-dropdown{top:70px;right:12px;left:12px;width:auto;max-width:none;max-height:calc(100vh - 90px)}.notifications-list{max-height:calc(100vh - 210px)}}
+@media(max-width:700px){.global-search:focus-within input,.global-search:hover input{width:170px}.search-results{width:280px}.notification-menu{right:-50px;width:300px}}
+
+
+/* Legacy Smetogram search/notifications — exact interaction language */
+.global-search-backdrop{position:fixed;inset:0;z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding:90px 20px 30px;background:rgba(20,22,28,.42);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.global-search-backdrop[hidden]{display:none!important}
+.global-search-panel{width:min(720px,100%);max-height:calc(100vh - 120px);overflow:hidden;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:22px;box-shadow:0 30px 80px rgba(0,0,0,.22),0 8px 30px rgba(0,0,0,.08)}
+.global-search-input-wrap{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid #ecece8}
+.global-search-input-wrap>i{flex:0 0 auto;color:#73766f}.global-search-input-wrap input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#20221f;font-size:17px}.global-search-input-wrap input::placeholder{color:#9b9d97}
+.global-search-close{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border:0;border-radius:9px;background:#f2f3f0;color:#656862;cursor:pointer}.global-search-close:hover{background:#e8e9e5}
+.global-search-hint{padding:14px 18px;color:#858880;font-size:13px}.global-search-results{max-height:460px;overflow-y:auto;padding:0 10px 10px}
+.global-search-result{width:100%;display:flex;align-items:center;gap:13px;padding:13px 12px;border:0;border-radius:14px;background:transparent;text-align:left;cursor:pointer;text-decoration:none}
+.global-search-result:hover{background:#f5f6f3}.global-result-icon{width:40px;height:40px;flex:0 0 40px;display:grid;place-items:center;border-radius:11px;background:#f0f1ed;color:#555850}
+.global-result-content{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}.global-result-content strong{color:#20221f;font-size:14px}.global-result-content span,.global-result-content small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#858880;font-size:12px}.global-search-result>i{color:#9b9d97}
+.global-search-empty{min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:#8a8d85;text-align:center}.global-search-empty strong{color:#30332e}.global-search-empty span{font-size:13px}
+.global-search-footer{display:flex;justify-content:space-between;padding:12px 18px;border-top:1px solid #ecece8;color:#8a8d85;font-size:12px}.global-search-footer kbd{padding:3px 6px;border:1px solid #dddeda;border-radius:5px;background:#f5f5f2;font-size:10px}
+.notifications-dropdown{display:none;position:fixed;top:88px;right:clamp(20px,4vw,62px);z-index:100001;width:min(410px,calc(100vw - 30px));overflow:hidden;border:1px solid rgba(0,0,0,.08);border-radius:18px;background:#fff;box-shadow:0 25px 70px rgba(0,0,0,.18),0 5px 20px rgba(0,0,0,.07)}.notifications-dropdown.show{display:block}
+.notifications-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:17px 18px;border-bottom:1px solid #ecece8}.notifications-heading>div{display:flex;flex-direction:column;gap:3px}.notifications-heading strong{color:#252722;font-size:15px}.notifications-heading span{color:#92958e;font-size:12px}.notifications-read-all{border:0;background:transparent;color:#5b5f57;font-size:12px;cursor:pointer}.notifications-read-all:hover{color:#20221f}
+.notifications-list{max-height:430px;overflow-y:auto}.notification-row{position:relative;display:flex;border-bottom:1px solid #f0f0ed;text-decoration:none}.notification-row.unread{background:#fafbf8}.notification-main{min-width:0;flex:1;display:flex;align-items:flex-start;gap:11px;padding:14px;border:0;background:transparent;text-align:left;cursor:pointer}.notification-main:hover{background:#f5f6f3}
+.notification-icon{width:36px;height:36px;flex:0 0 36px;display:grid;place-items:center;border-radius:10px;background:#f0f1ed;color:#60645c}.notification-content{min-width:0;display:flex;flex-direction:column;gap:3px}.notification-content strong{color:#2a2d27;font-size:13px}.notification-content span{color:#777a73;font-size:12px;line-height:1.45}.notification-content small{color:#a0a39b;font-size:10px}.notification-unread-dot{width:7px;height:7px;flex:0 0 7px;margin:20px 12px 0 0;border-radius:50%;background:#ef5b5b}
+.notifications-empty{min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:#969990}.notifications-empty strong{color:#353831}.notifications-empty span{font-size:12px}.notifications-footer{padding:11px 16px;border-top:1px solid #ecece8;color:#9a9d96;font-size:10px;text-align:center}
+.search-open{overflow:hidden}
+.topbar-actions{z-index:1000}.notification-wrap{position:relative;z-index:1002}.topbar-actions .icon-button{position:relative;z-index:1001;pointer-events:auto;cursor:pointer}
+
+
+/* Keep the application/workspace viewport fixed; long content scrolls inside the app */
+html,body{height:100%;min-height:100%;margin:0;overflow:hidden}
+.app-shell{height:100vh;min-height:0;max-height:100vh;overflow:hidden}
+.main-content{height:100vh;min-height:0;max-height:100vh;overflow-x:hidden;overflow-y:auto}
+@supports (height:100dvh){
+  .app-shell{height:100dvh;max-height:100dvh}
+  .main-content{height:100dvh;max-height:100dvh}
+}
+.page-wrap{min-height:0}
