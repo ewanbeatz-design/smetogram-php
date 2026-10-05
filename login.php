@@ -5,7 +5,7 @@ if(current_user()) redirect('dashboard.php');
 
 $telegram = $config['telegram'] ?? [];
 $telegramClientId = trim((string)($telegram['client_id'] ?? ''));
-$telegramReady = $telegramClientId !== ''; 
+$telegramReady = $telegramClientId !== '';
 if ($telegramReady && empty($_SESSION['telegram_login_nonce'])) {
     $_SESSION['telegram_login_nonce'] = bin2hex(random_bytes(24));
 }
@@ -53,7 +53,8 @@ require __DIR__.'/includes/header.php';
       </div>
 
       <div class="auth-login-security"><span class="auth-security-dot"></span><div><strong>Быстрый и безопасный вход</strong><small>Telegram подтверждает вашу личность без пароля и SMS-кода.</small></div></div>
-      <p class="auth-phone-note">Продолжая, вы входите в Сметограм через Telegram. Мы не получаем ваш пароль Telegram.</p>\n      <a href="guide.php" class="auth-guide-button"><i class="bi bi-book"></i><span>Как пользоваться Сметограмом</span><i class="bi bi-arrow-up-right ms-auto"></i></a>
+      <p class="auth-phone-note">Продолжая, вы входите в Сметограм через Telegram. Мы не получаем ваш пароль Telegram.</p>
+      <a href="guide.php" class="auth-guide-button"><i class="bi bi-book"></i><span>Как пользоваться Сметограмом</span><i class="bi bi-arrow-up-right ms-auto"></i></a>
     </div>
 
     <div class="auth-login-footer">
