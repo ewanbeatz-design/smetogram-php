@@ -8,3 +8,6 @@ body:has(.smeta-guide){
 }
 .auth-page{overflow:visible!important;}
 .smeta-guide{overflow:visible!important;}
+
+.auth-guide-button{display:flex;align-items:center;gap:10px;margin-top:14px;padding:13px 14px;border:1px solid #e5e7eb;border-radius:13px;background:#fff;color:#334155;font-size:11px;font-weight:700;transition:.18s ease}.auth-guide-button:hover{border-color:#c7d2fe;background:#f8f8ff;color:#4f46e5;transform:translateY(-1px)}.auth-guide-button>i:first-child{color:#6366f1;font-size:15px}.auth-guide-button>i:last-child{color:#94a3b8;font-size:12px}
+@media(max-width:820px){.app-nav .container>div{flex-wrap:wrap}.app-nav .container>div .btn:first-child{display:inline-flex}}
