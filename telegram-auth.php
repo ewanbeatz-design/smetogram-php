@@ -68,8 +68,24 @@ try {
         $userId = (int)$user['id'];
     } else {
         $openId = 'telegram_'.bin2hex(random_bytes(16));
-        $insert = $pdo->prepare('INSERT INTO users (openId,name,email,loginMethod,role,password_hash,telegramId,telegramUsername,lastSignedIn) VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)');
-        $insert->execute([$openId,$name,null,'telegram','user',null,$telegramId,$username !== '' ? $username : null]);
+
+        // The existing users table has a UNIQUE username column.
+        // Telegram users may not have a username, so always generate a unique
+        // internal username instead of inserting an empty string.
+        $baseUsername = $username !== '' ? preg_replace('/[^a-zA-Z0-9_]/', '_', $username) : 'telegram_'.$telegramId;
+        $baseUsername = trim((string)$baseUsername, '_');
+        if ($baseUsername === '') $baseUsername = 'telegram_'.$telegramId;
+        $internalUsername = $baseUsername;
+        $suffix = 1;
+        $checkUsername = $pdo->prepare('SELECT id FROM users WHERE username = ? LIMIT 1');
+        while (true) {
+            $checkUsername->execute([$internalUsername]);
+            if (!$checkUsername->fetchColumn()) break;
+            $internalUsername = $baseUsername.'_'.$suffix++;
+        }
+
+        $insert = $pdo->prepare('INSERT INTO users (openId,name,email,loginMethod,role,password_hash,username,telegramId,telegramUsername,lastSignedIn) VALUES (?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)');
+        $insert->execute([$openId,$name,null,'telegram','user',null,$internalUsername,$telegramId,$username !== '' ? $username : null]);
         $userId = (int)$pdo->lastInsertId();
     }
 
