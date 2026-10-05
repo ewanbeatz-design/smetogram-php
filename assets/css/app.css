@@ -189,14 +189,10 @@
 .topbar-actions{z-index:1000}.notification-wrap{position:relative;z-index:1002}.topbar-actions .icon-button{position:relative;z-index:1001;pointer-events:auto;cursor:pointer}
 
 
-/* Keep the application/workspace viewport fixed; long content scrolls inside the app */
-html,body{height:100%;min-height:100%;margin:0;overflow:hidden}
-.app-shell{height:100vh;min-height:0;max-height:100vh;overflow:hidden}
-.main-content{height:100vh;min-height:0;max-height:100vh;overflow-x:hidden;overflow-y:auto}
-@supports (height:100dvh){
-  .app-shell{height:100dvh;max-height:100dvh}
-  .main-content{height:100dvh;max-height:100dvh}
-}
+/* Workspace scrolling: keep the app shell stable without disabling document scrolling on public pages */
+html,body{min-height:100%;margin:0}
+.app-shell{min-height:100vh;display:flex}
+.main-content{min-width:0;overflow-x:hidden}
 .page-wrap{min-height:0}
 
 /* Estimate inline editing — parity with legacy Smetogram */
