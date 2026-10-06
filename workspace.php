@@ -793,6 +793,7 @@ require __DIR__ . '/includes/app_header.php';
                                 <form method="post" class="ms-2"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="delete_room"><input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>"><button class="icon-button" type="submit" title="Удалить"><i class="bi bi-trash3"></i></button></form>
                             </div>
                             <div class="room-photo-actions">
+                                <button type="button" class="outline-button room-ai-estimate" data-project-id="<?= (int)$projectId ?>" data-room-id="<?= (int)$room['id'] ?>" data-room-name="<?= e($room['name']) ?>" data-photo-ids="<?= e(implode(',',array_map(static fn($p)=>(int)$p['id'],$roomPhotos[(int)$room['id']]??[]))) ?>" <?= empty($roomPhotos[(int)$room['id']])?'disabled':'' ?>><i class="bi bi-stars"></i> Рассчитать по фото</button>
                                 <form method="post" enctype="multipart/form-data" class="room-photo-upload">
                                     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
                                     <input type="hidden" name="action" value="upload_room_photo">
@@ -833,6 +834,19 @@ require __DIR__ . '/includes/app_header.php';
                 <div class="generated-row"><i class="bi bi-check-circle"></i><span>Периметр — 2 × (длина + ширина)</span></div>
                 <p class="panel-copy mt-3 mb-0">Расценка ставится уже в смете. Позиции можно редактировать или удалить как обычные работы.</p>
             </div>
+        </div>
+        <div class="modal fade" id="aiEstimateModal" tabindex="-1">
+            <div class="modal-dialog modal-lg"><div class="modal-content ai-estimate-modal-content">
+                <div class="modal-header"><div><h5 id="aiEstimateTitle">Расчёт по фото</h5><p class="panel-copy mb-0" id="aiEstimateSummary">Анализируем фотографии помещения…</p></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <div class="ai-estimate-loading" id="aiEstimateLoading"><div class="ai-estimate-spinner"><i class="bi bi-stars"></i></div><strong>AI анализирует помещение</strong><span>Определяем поверхности и подходящие работы</span></div>
+                    <div id="aiEstimateResult" class="ai-estimate-result d-none">
+                        <div class="ai-estimate-items" id="aiEstimateItems"></div>
+                        <div class="ai-estimate-note"><i class="bi bi-info-circle"></i><span>Это черновой расчёт по фотографиям. Перед добавлением в смету проверьте состав работ и количества.</span></div>
+                    </div>
+                </div>
+                <div class="modal-footer" id="aiEstimateFooter"><button type="button" class="outline-button" data-bs-dismiss="modal">Закрыть</button></div>
+            </div></div>
         </div>
         <div class="modal fade" id="roomModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post">
             <div class="modal-header"><h5>Новая комната</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
