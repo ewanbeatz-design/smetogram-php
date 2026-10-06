@@ -8,9 +8,18 @@ $isProjectPage = basename((string)($_SERVER['PHP_SELF'] ?? '')) === 'project.php
 $projectCount = 0;
 if ($user) {
     try {
-        $countQuery = $pdo->prepare('SELECT COUNT(*) FROM projects WHERE ownerId = ?');
-        $countQuery->execute([(int)$user['id']]);
-        $projectCount = (int)$countQuery->fetchColumn();
+        if (is_admin($user)) {
+            $projectCount = (int)$pdo->query('SELECT COUNT(*) FROM projects')->fetchColumn();
+        } else {
+            $countQuery = $pdo->prepare('
+                SELECT COUNT(DISTINCT p.id)
+                FROM projects p
+                LEFT JOIN projectmembers pm ON pm.projectId = p.id
+                WHERE p.ownerId = ? OR pm.userId = ?
+            ');
+            $countQuery->execute([(int)$user['id'], (int)$user['id']]);
+            $projectCount = (int)$countQuery->fetchColumn();
+        }
     } catch (Throwable $e) {
         $projectCount = 0;
     }
@@ -36,7 +45,7 @@ if ($user && !empty($user['name'])) {
   <button class="mobile-close" onclick="document.getElementById('appSidebar').classList.remove('sidebar-open')"><i class="bi bi-x-lg"></i></button>
   <div class="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
   <nav class="nav-list">
-    <a class="nav-item <?=($view==='projects'?'active':'')?>" href="dashboard.php"><span class="nav-icon"><i class="bi bi-grid-1x2"></i></span><span class="nav-label">Мои проекты</span><span class="nav-count"><?= isset($projectsCount) ? (int)$projectsCount : (int)($projectCount ?? 0) ?></span></a>
+    <a class="nav-item <?=($view==='projects'?'active':'')?>" href="dashboard.php"><span class="nav-icon"><i class="bi bi-grid-1x2"></i></span><span class="nav-label">Мои проекты</span><span class="nav-count"><?= (int)$projectCount ?></span></a>
     <a class="nav-item <?=($view==='scan'?'active':'')?>" href="workspace.php?view=scan<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-file-earmark-arrow-up"></i></span><span class="nav-label">Смета из файла</span></a>
     <a class="nav-item <?=($view==='measurements'?'active':'')?>" href="workspace.php?view=measurements<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-rulers"></i></span><span class="nav-label">Замеры</span></a>
     <a class="nav-item <?=($view==='schedule'?'active':'')?>" href="workspace.php?view=schedule<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-calendar3"></i></span><span class="nav-label">График работ</span></a>
