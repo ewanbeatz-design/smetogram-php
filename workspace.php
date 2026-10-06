@@ -243,7 +243,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $q = $pdo->prepare('INSERT INTO smetogram_rooms (user_id,project_id,name,length_m,width_m,height_m) VALUES (?,?,?,?,?,?)');
             $q->execute([$user['id'], $projectId > 0 ? $projectId : null, $name !== '' ? $name : 'Комната', $length, $width, $height]);
-            $notice = 'Замер сохранён.';
+            if ($projectId > 0) {
+                try { refresh_measurement_estimate_items($pdo,$projectId); } catch(Throwable $ignore) {}
+            }
+            $notice = 'Замер сохранён. Связанные позиции сметы пересчитаны автоматически.';
         } elseif ($action === 'delete_room') {
             $roomId = (int)($_POST['room_id'] ?? 0);
             $q = $pdo->prepare('DELETE FROM smetogram_rooms WHERE id=? AND user_id=? AND project_id=?');
@@ -721,14 +724,6 @@ require __DIR__ . '/includes/app_header.php';
                             <div class="member-avatar"><i class="bi bi-rulers"></i></div>
                             <div><strong><?= e($room['name']) ?></strong><span><?= e((string)$room['length_m']) ?> × <?= e((string)$room['width_m']) ?> × <?= e((string)$room['height_m']) ?> м · стены <?= number_format($walls,1,',',' ') ?> м²</span></div>
                             <em><?= number_format($area,1,',',' ') ?> м²</em>
-                            <?php if (!empty($canManageProject)): ?>
-                            <form method="post" class="ms-2 d-flex gap-2">
-                                <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
-                                <input type="hidden" name="action" value="add_measurement_to_estimate">
-                                <input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>">
-                                <button class="outline-button measurement-estimate-button" type="submit"><i class="bi bi-calculator"></i> В смету</button>
-                            </form>
-                            <?php endif; ?>
                             <form method="post" class="ms-2"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="delete_room"><input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>"><button class="icon-button" type="submit" title="Удалить"><i class="bi bi-trash3"></i></button></form>
                         </div>
                     <?php endforeach; ?>
@@ -736,7 +731,7 @@ require __DIR__ . '/includes/app_header.php';
             </div>
             <div class="module-panel">
                 <h2>Замеры → смета</h2>
-                <p class="panel-copy">Нажмите «В смету» у помещения — Сметограм автоматически добавит площадь пола, площадь стен, потолка и периметр с готовыми количествами.</p>
+                <p class="panel-copy">Замеры автоматически используются в смете. Вы добавляете работу — Сметограм сам подставляет нужное количество по всем помещениям.</p>
                 <div class="generated-row"><i class="bi bi-check-circle"></i><span>Пол — длина × ширина</span></div>
                 <div class="generated-row"><i class="bi bi-check-circle"></i><span>Стены — 2 × (длина + ширина) × высота</span></div>
                 <div class="generated-row"><i class="bi bi-check-circle"></i><span>Потолок — площадь пола</span></div>
