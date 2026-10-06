@@ -657,7 +657,13 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
   if(window.__smetogramEstimatePaymentsReady)return;
   window.__smetogramEstimatePaymentsReady=true;
   const money=(n)=>Number(n||0).toLocaleString('ru-RU',{maximumFractionDigits:0})+' ₽';
-  const num=(v)=>{const s=String(v??'').replace(/\\s/g,'').replace(/[^0-9,.-]/g,'').replace(',','.'); const n=Number(s); return Number.isFinite(n)?n:NaN;};
+  const num=(v)=>{
+    let s=String(v??'').replace(/\u00a0/g,' ').trim().replace(/\s+/g,'').replace(/₽/g,'').replace(',','.');
+    if(!s)return 0;
+    s=s.replace(/[^0-9.-]/g,'');
+    const n=Number(s);
+    return Number.isFinite(n)?n:NaN;
+  };
   async function stageRequest(stageId,action,extra={}){
     const card=document.querySelector('[data-payment-stage-card="'+CSS.escape(String(stageId))+'"]');
     const csrfInput=document.querySelector('input[name="csrf"]'); const csrf=csrfInput ? csrfInput.value : '';
