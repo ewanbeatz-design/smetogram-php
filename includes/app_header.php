@@ -27,7 +27,7 @@ if ($user && !empty($user['name'])) {
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" rel="stylesheet">
-<link href="/assets/css/app.css?v=20261006-mobile1" rel="stylesheet">
+<link href="/assets/css/app.css?v=20261006-mobile2" rel="stylesheet">
 </head><body>
 <div class="app-shell">
 <aside class="sidebar" id="appSidebar">
@@ -54,6 +54,21 @@ if ($user && !empty($user['name'])) {
   <div class="profile"><div class="avatar"><?=e($initials)?></div><div><strong><?=e($user['name']??'Пользователь')?></strong><span><?=e($user['email']??'')?></span></div><a href="logout.php" class="muted-icon" title="Выйти"><i class="bi bi-box-arrow-right"></i></a></div>
 </aside>
 <div class="sidebar-backdrop" onclick="document.getElementById('appSidebar').classList.remove('sidebar-open')"></div>
+<!-- Mobile bottom navigation -->
+<nav class="mobile-bottom-nav" aria-label="Основная навигация">
+  <a class="<?=($view==='projects'?'active':'')?>" href="dashboard.php">
+    <i class="bi bi-grid-1x2"></i><span>Проекты</span>
+  </a>
+  <a class="<?=($projectId && $view==='projects'?'':'')?>" href="project.php?id=<?=$projectId?>">
+    <i class="bi bi-calculator"></i><span>Смета</span>
+  </a>
+  <a class="<?=($view==='schedule'?'active':'')?>" href="workspace.php?view=schedule<?=($projectId?'&id='.$projectId:'')?>">
+    <i class="bi bi-calendar3"></i><span>График</span>
+  </a>
+  <a class="<?=($view==='team'?'active':'')?>" href="workspace.php?view=team<?=($projectId?'&id='.$projectId:'')?>">
+    <i class="bi bi-people"></i><span>Команда</span>
+  </a>
+</nav>
 <main class="main-content">
 <header class="topbar">
   <div class="breadcrumbs"><button class="mobile-menu" onclick="document.getElementById('appSidebar').classList.add('sidebar-open')"><i class="bi bi-list"></i></button><span>Рабочее пространство</span><span class="slash">/</span><strong><?=e($pageTitle)?></strong></div>
