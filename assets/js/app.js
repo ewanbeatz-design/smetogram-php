@@ -106,3 +106,56 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     }
   });
 })();
+
+(function(){
+  function uploadRoomPhoto(form, input){
+    if(!form || !input || !input.files || !input.files.length) return;
+    const file=input.files[0];
+    const progress=form.querySelector('.room-photo-progress');
+    const bar=progress?.querySelector('.room-photo-progress-track span');
+    const percent=progress?.querySelector('strong');
+    const buttons=form.closest('.room-photo-actions')?.querySelectorAll('.outline-button');
+    if(progress) progress.classList.add('is-uploading');
+    buttons?.forEach(b=>{b.classList.add('is-uploading');b.style.pointerEvents='none';});
+    if(percent) percent.textContent='0%';
+    if(bar) bar.style.width='0%';
+
+    const xhr=new XMLHttpRequest();
+    xhr.open('POST',form.getAttribute('action')||window.location.href,true);
+    xhr.setRequestHeader('X-Requested-With','XMLHttpRequest');
+    xhr.upload.addEventListener('progress',e=>{
+      if(!e.lengthComputable) return;
+      const value=Math.max(0,Math.min(100,Math.round(e.loaded/e.total*100)));
+      if(bar) bar.style.width=value+'%';
+      if(percent) percent.textContent=value+'%';
+    });
+    xhr.addEventListener('load',()=>{
+      let data=null;
+      try{data=JSON.parse(xhr.responseText)}catch(e){}
+      if(xhr.status>=200 && xhr.status<300 && data?.ok){
+        if(bar) bar.style.width='100%';
+        if(percent) percent.textContent='100%';
+        setTimeout(()=>window.location.reload(),180);
+        return;
+      }
+      const message=data?.message||'Не удалось загрузить фотографию.';
+      alert(message);
+      progress?.classList.remove('is-uploading');
+      buttons?.forEach(b=>{b.classList.remove('is-uploading');b.style.pointerEvents='';});
+      input.value='';
+    });
+    xhr.addEventListener('error',()=>{
+      alert('Ошибка соединения при загрузке фотографии.');
+      progress?.classList.remove('is-uploading');
+      buttons?.forEach(b=>{b.classList.remove('is-uploading');b.style.pointerEvents='';});
+      input.value='';
+    });
+    const formData=new FormData(form);
+    xhr.send(formData);
+  }
+
+  document.addEventListener('change',e=>{
+    const input=e.target.closest('.room-photo-upload input[type="file"]');
+    if(input) uploadRoomPhoto(input.form,input);
+  });
+})();
