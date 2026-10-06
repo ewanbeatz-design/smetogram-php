@@ -4,7 +4,8 @@ if (!isset($pageTitle)) $pageTitle = 'Сметограм';
 $user = current_user();
 $view = $_GET['view'] ?? 'projects';
 $projectId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-$currentPage = basename((string)($_SERVER['PHP_SELF'] ?? ''));\n$isProjectPage = $currentPage === 'project.php';
+$currentPage = basename((string)($_SERVER['PHP_SELF'] ?? ''));
+$isProjectPage = $currentPage === 'project.php';
 $projectCount = 0;
 if ($user) {
     try {
