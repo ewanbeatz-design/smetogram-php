@@ -20,7 +20,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
  }
  }
  }
-$projectSql="SELECT p.*,COALESCE((SELECT SUM(i.quantity*i.price) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id),0) total,(SELECT COUNT(*) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id) item_count FROM projects p";
+$projectSql="SELECT p.*,
+COALESCE((SELECT SUM(i.quantity*i.price) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id),0) total,
+(SELECT COUNT(*) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id) item_count,
+(SELECT COUNT(*) FROM scheduletasks st WHERE st.projectId=p.id) stage_count,
+(SELECT COUNT(*) FROM scheduletasks st WHERE st.projectId=p.id AND st.status='done') stage_done,
+(SELECT st.title FROM scheduletasks st WHERE st.projectId=p.id AND st.status='in_progress' ORDER BY st.startsAt IS NULL,st.startsAt,st.id LIMIT 1) current_stage,
+(SELECT st.title FROM scheduletasks st WHERE st.projectId=p.id AND st.status='planned' ORDER BY st.startsAt IS NULL,st.startsAt,st.id LIMIT 1) next_stage
+FROM projects p";
 if(is_admin($user)){
     $q=$pdo->query($projectSql." ORDER BY p.updatedAt DESC");
 }else{
@@ -43,8 +50,12 @@ $pageTitle='Мои проекты';require __DIR__.'/includes/app_header.php';
 </div>
 <div class="section-title-row"><div><h2>Проекты <span><?=count($projects)?></span></h2><p>Откройте объект, чтобы перейти в рабочее пространство.</p></div><form class="filter-row" method="get"><label class="project-search"><i class="bi bi-search"></i><input name="q" value="<?=e($query)?>" placeholder="Поиск проекта"></label><select class="filter-select" name="status" onchange="this.form.submit()"><option value="all" <?=$status==='all'?'selected':''?>>Все статусы</option><option value="in_progress" <?=$status==='in_progress'?'selected':''?>>В работе</option><option value="review" <?=$status==='review'?'selected':''?>>На согласовании</option><option value="completed" <?=$status==='completed'?'selected':''?>>Завершён</option></select></form></div>
 <div class="project-grid">
-<?php foreach($projects as $p): $st=$p['status'];$label=['draft'=>'Черновик','in_progress'=>'В работе','review'=>'На согласовании','completed'=>'Завершён','archived'=>'Архив'][$st]??$st;$cls=$st==='completed'?'status-done':($st==='review'?'status-review':'status-active');$progress=$p['item_count']?min(100,(int)$p['item_count']*12):0;?>
-<a class="project-card" href="project.php?id=<?=$p['id']?>"><div class="card-top"><span class="status <?=$cls?>"><i></i><?=$label?></span><span class="text-muted small"><?=e($p['workType'])?></span></div><div class="project-info"><h3><?=e($p['name'])?></h3><span><?=e($p['city']?:'Город не указан')?></span><div class="client-line mt-3"><span class="mini-avatar"><?=e(mb_strtoupper(mb_substr($p['clientName']??'К',0,1)))?></span><?=e($p['clientName']?:'Заказчик не указан')?></div></div><div class="progress-meta"><span>Заполнено сметы</span><strong><?=$progress?>%</strong></div><div class="progress-track"><span style="width:<?=$progress?>%"></span></div><div class="card-footer"><span><i class="bi bi-calendar3"></i> <?=e($p['deadline']?date('d.m.Y',strtotime($p['deadline'])):'Срок не указан')?></span><strong><?=number_format((float)$p['total'],0,',',' ')?> ₽</strong></div></a>
+<?php foreach($projects as $p): $st=$p['status'];$label=['draft'=>'Черновик','in_progress'=>'В работе','review'=>'На согласовании','completed'=>'Завершён','archived'=>'Архив'][$st]??$st;$cls=$st==='completed'?'status-done':($st==='review'?'status-review':'status-active');$progress=$p['item_count']?min(100,(int)$p['item_count']*12):0;$stageCount=(int)($p['stage_count']??0);$stageDone=(int)($p['stage_done']??0);$stageProgress=$stageCount>0?min(100,(int)round($stageDone/$stageCount*100)):0;$currentStage=$p['current_stage']?:($p['next_stage']?:'Этапы ещё не добавлены');?>
+<a class="project-card" href="project.php?id=<?=$p['id']?>">
+<div class="card-top"><span class="status <?=$cls?>"><i></i><?=$label?></span><span class="text-muted small"><?=e($p['workType'])?></span></div>
+<div class="project-info"><h3><?=e($p['name'])?></h3><span><?=e($p['city']?:'Город не указан')?></span><div class="client-line mt-3"><span class="mini-avatar"><?=e(mb_strtoupper(mb_substr($p['clientName']??'К',0,1)))?></span><?=e($p['clientName']?:'Заказчик не указан')?></div></div>
+<div class="project-stage"><div class="project-stage-head"><span><i class="bi bi-list-check"></i> Этапы</span><strong><?=$stageCount?($stageDone.' / '.$stageCount):'—'?></strong></div><div class="project-stage-title"><?=e($currentStage)?></div><div class="project-stage-track"><span style="width:<?=$stageProgress?>%"></span></div></div>
+<div class="progress-meta"><span>Заполнено сметы</span><strong><?=$progress?>%</strong></div><div class="progress-track"><span style="width:<?=$progress?>%"></span></div><div class="card-footer"><span><i class="bi bi-calendar3"></i> <?=e($p['deadline']?date('d.m.Y',strtotime($p['deadline'])):'Срок не указан')?></span><strong><?=number_format((float)$p['total'],0,',',' ')?> ₽</strong></div></a>
 <?php endforeach;?>
 <a class="new-project-card" href="#" data-bs-toggle="modal" data-bs-target="#<?= $canCreate?'newProject':'subscriptionLimitModal' ?>"><span><i class="bi bi-<?= $canCreate?'plus-lg':'lock' ?>"></i></span><strong><?= $canCreate?'Создать новый проект':'Новые сметы — по подписке' ?></strong><small><?= $canCreate?'Добавьте объект и начните собирать смету':'Первая смета уже доступна бесплатно' ?></small></a>
 </div>
