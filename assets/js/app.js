@@ -258,14 +258,14 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
         return;
       }
       const message=data?.message||'Не удалось загрузить фотографию.';
-      alert(message);
+      window.smetogramAlert?.(message,'error',4200);
       removeSkeleton(skeleton);
       progress?.classList.remove('is-uploading');
       buttons?.forEach(b=>{b.classList.remove('is-uploading');b.style.pointerEvents='';});
       input.value='';
     });
     xhr.addEventListener('error',()=>{
-      alert('Ошибка соединения при загрузке фотографии.');
+      window.smetogramAlert?.('Ошибка соединения при загрузке фотографии.','error',4200);
       removeSkeleton(skeleton);
       progress?.classList.remove('is-uploading');
       buttons?.forEach(b=>{b.classList.remove('is-uploading');b.style.pointerEvents='';});
@@ -324,7 +324,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
         }
       },220);
     }catch(error){
-      alert(error?.message || 'Не удалось удалить фотографию.');
+      window.smetogramAlert?.(error?.message || 'Не удалось удалить фотографию.','error',4200);
       form.dataset.deleting='';
       if(button){
         button.disabled=false;
@@ -396,14 +396,14 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
       if(!message) return;
       el.dataset.smetogramAlert='1';
       el.classList.add('smetogram-alert-hidden');
-      window.smetogramAlert?.(message,type,0);
+      window.smetogramAlert?.(message,type,4200);
     });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>convert(document),{once:true}); else convert(document);
   new MutationObserver(mutations=>{
     for(const m of mutations){
       for(const node of m.addedNodes){
-        if(node.nodeType===1) convert(node.parentNode||node);
+        if(node.nodeType===1) convert(node);
       }
     }
   }).observe(document.body,{childList:true,subtree:true});
