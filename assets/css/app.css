@@ -1657,3 +1657,8 @@ html,body{min-height:100%;margin:0}
 .payment-complete-note{font-size:12px;font-weight:800;color:#557c61;}
 @media (max-width:900px){.payment-stage-edit-grid{grid-template-columns:1fr 1fr;}.payment-stage-edit-grid label:first-child{grid-column:1/-1;}}
 @media (max-width:576px){.payment-stage-card{padding:14px;}.payment-stage-card-head{grid-template-columns:38px minmax(0,1fr);}.payment-stage-card-head em{grid-column:2;}.payment-stage-edit-grid{grid-template-columns:1fr;}.payment-stage-edit-grid label:first-child{grid-column:auto;}.payment-stage-actions>*{width:100%;justify-content:center;}.payment-metrics{grid-template-columns:1fr;}}
+
+.payment-stage-estimate{display:block;margin-top:6px;font-size:11px;line-height:1.35;color:#7a817c;}
+.payment-stage-estimate b{color:#4c5750;}
+.payment-stage-estimate.is-changed{color:#9a6a20;}
+.payment-stage-estimate.is-changed b{color:#8a5d18;}
