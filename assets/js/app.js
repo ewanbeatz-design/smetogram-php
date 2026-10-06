@@ -527,6 +527,22 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
   }).observe(document.body,{childList:true,subtree:true});
 })();
 
+/* Project cards open on click; inner controls keep their own actions. */
+(function(){
+  if(window.__smetogramProjectCardClickReady)return;
+  window.__smetogramProjectCardClickReady=true;
+  document.addEventListener('click',e=>{
+    const card=e.target.closest('.project-card[data-project-id]');
+    if(!card)return;
+    if(e.defaultPrevented)return;
+    if(e.target.closest('a,button,input,select,textarea,form,[data-bs-toggle],[data-stage-manage]'))return;
+    if(e.ctrlKey||e.metaKey||e.shiftKey||e.altKey)return;
+    const link=card.querySelector('.project-open-link[href]');
+    if(!link)return;
+    window.location.href=link.href;
+  });
+})();
+
 /* Project card stage manager — AJAX add/edit/delete. */
 (function(){
  if(window.__smetogramCardStagesReady)return;
