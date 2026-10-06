@@ -376,7 +376,7 @@ document.addEventListener('DOMContentLoaded',()=>{
      <div class="export-modal-brand"><span class="export-modal-brand-mark">S</span><span>сметограм</span></div>
      <div class="eyebrow">ЭКСПОРТ ПРОЕКТА</div>
      <h5 class="modal-title">Что скачать?</h5>
-     <p class="export-choice-subtitle">Выберите формат документа для проекта «<?=e($project['name'])?>».</p>
+     <p class="export-choice-subtitle">PDF — документы, Excel — таблица сметы.</p>
     </div>
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
    </div>
@@ -384,19 +384,19 @@ document.addEventListener('DOMContentLoaded',()=>{
     <div class="export-choice-grid">
      <a class="export-choice-card" href="export.php?id=<?=$id?>&download=1">
       <span class="export-choice-icon"><i class="bi bi-file-earmark-pdf"></i></span>
-      <span><strong>Смета</strong><small>Открыть печать и сохранить в PDF</small></span><i class="bi bi-arrow-up-right"></i>
+      <span><strong>Смета</strong><small>Готовый PDF-файл сметы</small></span><i class="bi bi-arrow-up-right"></i>
      </a>
-     <a class="export-choice-card" href="export.php?id=<?=$id?>&format=csv&download=1">
-      <span class="export-choice-icon"><i class="bi bi-filetype-csv"></i></span>
-      <span><strong>CSV</strong><small>Для Excel и обработки данных</small></span><i class="bi bi-arrow-down"></i>
+     <a class="export-choice-card" href="export.php?id=<?=$id?>&format=xlsx&download=1">
+      <span class="export-choice-icon"><i class="bi bi-file-earmark-excel"></i></span>
+      <span><strong>Excel XLSX</strong><small>Готовый файл для Excel</small></span><i class="bi bi-arrow-down"></i>
      </a>
      <a class="export-choice-card" href="export.php?id=<?=$id?>&format=ks2&download=1">
       <span class="export-choice-icon"><i class="bi bi-file-earmark-text"></i></span>
-      <span><strong>КС-2</strong><small>Акт выполненных работ</small></span><i class="bi bi-arrow-down"></i>
+      <span><strong>КС-2 PDF</strong><small>Готовый PDF акт выполненных работ</small></span><i class="bi bi-arrow-down"></i>
      </a>
      <a class="export-choice-card" href="export.php?id=<?=$id?>&format=ks3&download=1">
       <span class="export-choice-icon"><i class="bi bi-file-earmark-spreadsheet"></i></span>
-      <span><strong>КС-3</strong><small>Справка о стоимости работ</small></span><i class="bi bi-arrow-down"></i>
+      <span><strong>КС-3 PDF</strong><small>Готовый PDF справка о стоимости</small></span><i class="bi bi-arrow-down"></i>
      </a>
     </div>
    </div>
