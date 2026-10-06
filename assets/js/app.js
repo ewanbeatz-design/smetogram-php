@@ -385,3 +385,26 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
   })();
   initRoomFancybox();
 })();
+/* Convert Bootstrap alerts into the Smetogram toast style. */
+(function(){
+  function convert(root){
+    (root||document).querySelectorAll?.('.alert').forEach(el=>{
+      if(el.dataset.smetogramAlert==='1') return;
+      const cls=el.className||'';
+      let type=cls.includes('alert-danger')||cls.includes('alert-warning')?'error':cls.includes('alert-success')?'success':'info';
+      const message=(el.textContent||'').trim();
+      if(!message) return;
+      el.dataset.smetogramAlert='1';
+      el.classList.add('smetogram-alert-hidden');
+      window.smetogramAlert?.(message,type,0);
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>convert(document),{once:true}); else convert(document);
+  new MutationObserver(mutations=>{
+    for(const m of mutations){
+      for(const node of m.addedNodes){
+        if(node.nodeType===1) convert(node.parentNode||node);
+      }
+    }
+  }).observe(document.body,{childList:true,subtree:true});
+})();
