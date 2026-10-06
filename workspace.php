@@ -728,6 +728,7 @@ require __DIR__ . '/includes/app_header.php';
         $stagePayments=[];$payments=[];$paid=0;$pending=0;$totalStageAmount=0;
         if($project){
             $q=$pdo->prepare("SELECT st.id,st.title,st.paymentMilestone,st.estimateCategoryId,
+                COALESCE((SELECT SUM(i.quantity*i.price) FROM estimateitems i WHERE i.categoryId=st.estimateCategoryId),0) AS estimateTotal,
                 COALESCE((SELECT sp.paidAmount FROM smetogram_payments sp WHERE sp.projectId=st.projectId AND sp.stageId=st.id AND sp.type='stage' ORDER BY sp.id DESC LIMIT 1),0) AS paidAmount,
                 COALESCE((SELECT sp.status FROM smetogram_payments sp WHERE sp.projectId=st.projectId AND sp.stageId=st.id AND sp.type='stage' ORDER BY sp.id DESC LIMIT 1),'pending') AS paymentStatus
                 FROM scheduletasks st
@@ -767,9 +768,11 @@ require __DIR__ . '/includes/app_header.php';
                     <div class="payment-stage-list">
                     <?php foreach($stagePayments as $stagePay):
                         $total=(float)$stagePay['paymentMilestone'];
+                        $estimateTotal=max(0,(float)$stagePay['estimateTotal']);
                         $stagePaid=min($total,max(0,(float)$stagePay['paidAmount']));
                         $remaining=max(0,$total-$stagePaid);
                         $percent=$total>0?min(100,round($stagePaid/$total*100)):0;
+                        $estimateChanged=abs($estimateTotal-$total)>0.009;
                     ?>
                         <article class="payment-stage-card" data-payment-stage-card="<?=$stagePay['id']?>">
                             <div class="payment-stage-card-head">
@@ -781,7 +784,8 @@ require __DIR__ . '/includes/app_header.php';
                                 <em><?= $remaining<=0 ? 'Оплачено' : ($stagePaid>0 ? 'Аванс' : 'Не оплачено') ?></em>
                             </div>
                             <div class="payment-stage-edit-grid">
-                                <label><span>Общая сумма этапа</span><div class="payment-input-wrap"><input type="text" inputmode="decimal" value="<?=number_format($total,0,',',' ')?>" data-stage-amount="<?=$stagePay['id']?>"><b>₽</b></div></label>
+                                <label><span>Согласованная сумма этапа</span><div class="payment-input-wrap"><input type="text" inputmode="decimal" value="<?=number_format($total,0,',',' ')?>" data-stage-amount="<?=$stagePay['id']?>"><b>₽</b></div>
+                                <?php if($stagePay['estimateCategoryId']): ?><small class="payment-stage-estimate <?= $estimateChanged ? 'is-changed' : '' ?>">По текущей смете: <b><?=number_format($estimateTotal,0,',',' ')?> ₽</b><?php if($estimateChanged): ?> · сумма сметы изменилась<?php endif; ?></small><?php endif; ?></label>
                                 <div class="payment-stage-stat"><span>Получено</span><strong data-stage-paid="<?=$stagePay['id']?>"><?=number_format($stagePaid,0,',',' ')?> ₽</strong></div>
                                 <div class="payment-stage-stat"><span>Осталось</span><strong data-stage-remaining="<?=$stagePay['id']?>"><?=number_format($remaining,0,',',' ')?> ₽</strong></div>
                                 <label><span>Аванс / платёж</span><div class="payment-input-wrap"><input type="text" inputmode="decimal" placeholder="150 000" data-stage-payment-input="<?=$stagePay['id']?>"><b>₽</b></div></label>
