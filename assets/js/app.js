@@ -299,8 +299,13 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     aiEstimatePayload.photoIds.forEach(id=>fd.append('photo_ids[]',id));
     try{
       fd.append('action','room_estimate'); const res=await fetch('ai.php',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd,credentials:'same-origin'});
-      const data=await res.json().catch(()=>null);
-      if(!res.ok||!data?.ok)throw new Error(data?.error||'Не удалось выполнить AI-анализ.');
+      const responseText=await res.text();
+      let data=null;
+      try{data=JSON.parse(responseText);}catch(e){}
+      if(!res.ok||!data?.ok){
+        const serverMessage=data?.error||('AI-сервер вернул HTTP '+res.status+(responseText?' — '+responseText.replace(/<[^>]*>/g,' ').replace(/\\s+/g,' ').trim().slice(0,300):''));
+        throw new Error(serverMessage||'Не удалось выполнить AI-анализ.');
+      }
       aiEstimatePayload.items=data.items||[];
       document.getElementById('aiEstimateLoading').classList.add('d-none');
       document.getElementById('aiEstimateResult').classList.remove('d-none');
