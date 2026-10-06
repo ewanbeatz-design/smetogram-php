@@ -108,13 +108,60 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
 })();
 
 (function(){
+  function initRoomFancybox(){
+    if(window.Fancybox){
+      window.Fancybox.bind('[data-fancybox^="room-"]',{
+        Thumbs:{autoStart:false},
+        Toolbar:{
+          display:{
+            left:['infobar'],
+            middle:[],
+            right:['slideshow','thumbs','close']
+          }
+        },
+        Carousel:{infinite:true}
+      });
+    }
+  }
+
+  function addRoomUploadSkeleton(form,input){
+    const card=form.closest('.room-photo-card');
+    if(!card) return null;
+    let grid=card.querySelector('.room-photo-grid');
+    if(!grid){
+      const empty=card.querySelector('.room-photo-empty');
+      grid=document.createElement('div');
+      grid.className='room-photo-grid';
+      empty?.replaceWith(grid);
+    }
+    const skeleton=document.createElement('div');
+    skeleton.className='room-photo-thumb room-photo-thumb-skeleton';
+    skeleton.innerHTML='<span class="room-photo-skeleton-shimmer"></span><span class="room-photo-skeleton-icon"><i class="bi bi-image"></i></span>';
+    grid.prepend(skeleton);
+
+    if(input.files?.[0]){
+      const objectUrl=URL.createObjectURL(input.files[0]);
+      skeleton.style.backgroundImage='url("'+objectUrl.replace(/"/g,'&quot;')+'")';
+      skeleton.classList.add('has-preview');
+      skeleton.dataset.objectUrl=objectUrl;
+    }
+    return skeleton;
+  }
+
+  function removeSkeleton(skeleton){
+    if(!skeleton) return;
+    if(skeleton.dataset.objectUrl) URL.revokeObjectURL(skeleton.dataset.objectUrl);
+    skeleton.remove();
+  }
+
   function uploadRoomPhoto(form, input){
     if(!form || !input || !input.files || !input.files.length) return;
-    const file=input.files[0];
     const progress=form.querySelector('.room-photo-progress');
     const bar=progress?.querySelector('.room-photo-progress-track span');
     const percent=progress?.querySelector('strong');
     const buttons=form.closest('.room-photo-actions')?.querySelectorAll('.outline-button');
+    const skeleton=addRoomUploadSkeleton(form,input);
+
     if(progress) progress.classList.add('is-uploading');
     buttons?.forEach(b=>{b.classList.add('is-uploading');b.style.pointerEvents='none';});
     if(percent) percent.textContent='0%';
@@ -135,17 +182,20 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
       if(xhr.status>=200 && xhr.status<300 && data?.ok){
         if(bar) bar.style.width='100%';
         if(percent) percent.textContent='100%';
-        setTimeout(()=>window.location.reload(),180);
+        skeleton?.classList.add('is-complete');
+        setTimeout(()=>window.location.reload(),220);
         return;
       }
       const message=data?.message||'Не удалось загрузить фотографию.';
       alert(message);
+      removeSkeleton(skeleton);
       progress?.classList.remove('is-uploading');
       buttons?.forEach(b=>{b.classList.remove('is-uploading');b.style.pointerEvents='';});
       input.value='';
     });
     xhr.addEventListener('error',()=>{
       alert('Ошибка соединения при загрузке фотографии.');
+      removeSkeleton(skeleton);
       progress?.classList.remove('is-uploading');
       buttons?.forEach(b=>{b.classList.remove('is-uploading');b.style.pointerEvents='';});
       input.value='';
@@ -158,4 +208,6 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     const input=e.target.closest('.room-photo-upload input[type="file"]');
     if(input) uploadRoomPhoto(input.form,input);
   });
+
+  initRoomFancybox();
 })();
