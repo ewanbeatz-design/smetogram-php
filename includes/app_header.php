@@ -42,6 +42,9 @@ if ($user && !empty($user['name'])) {
     <a class="nav-item <?=($view==='schedule'?'active':'')?>" href="workspace.php?view=schedule<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-calendar3"></i></span><span class="nav-label">График работ</span></a>
     <a class="nav-item <?=($view==='analytics'?'active':'')?>" href="workspace.php?view=analytics<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-bar-chart"></i></span><span class="nav-label">Графики</span></a>
     <a class="nav-item <?=($view==='team'?'active':'')?>" href="workspace.php?view=team<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-people"></i></span><span class="nav-label">Команда</span></a>
+    <?php if (is_admin($user)): ?>
+    <a class="nav-item <?=($pageTitle==='Сотрудники и доступ'?'active':'')?>" href="admin.php"><span class="nav-icon"><i class="bi bi-person-gear"></i></span><span class="nav-label">Сотрудники</span><span class="nav-count">∞</span></a>
+    <?php endif; ?>
   </nav>
   <div class="sidebar-spacer"></div>
   <div class="trial-card"><div class="trial-icon"><i class="bi bi-stars"></i></div><div><strong>Первый проект бесплатно</strong><span>Без карты и обязательств</span></div><i class="bi bi-arrow-up-right"></i></div>
