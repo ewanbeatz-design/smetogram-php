@@ -372,8 +372,13 @@ document.addEventListener('DOMContentLoaded',()=>{
  <div class="modal-dialog modal-dialog-centered">
   <div class="modal-content">
    <div class="modal-header">
-    <div class="export-modal-brand"><span class="export-modal-brand-mark">S</span><span>сметограм</span></div><div class="eyebrow">ЭКСПОРТ ПРОЕКТА</div><h5 class="modal-title">Что скачать?</h5><p class="export-choice-subtitle">Выберите формат документа для проекта «<?=e($project['name'])?>».</p></div>
-    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div>
+     <div class="export-modal-brand"><span class="export-modal-brand-mark">S</span><span>сметограм</span></div>
+     <div class="eyebrow">ЭКСПОРТ ПРОЕКТА</div>
+     <h5 class="modal-title">Что скачать?</h5>
+     <p class="export-choice-subtitle">Выберите формат документа для проекта «<?=e($project['name'])?>».</p>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
    </div>
    <div class="modal-body">
     <div class="export-choice-grid">
