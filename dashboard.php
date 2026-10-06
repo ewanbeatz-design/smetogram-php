@@ -230,6 +230,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         }
         $error=$e->getMessage();
     }
+}
 
 $projectSql="SELECT p.*,
 COALESCE((SELECT SUM(i.quantity*i.price) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id),0) total,
