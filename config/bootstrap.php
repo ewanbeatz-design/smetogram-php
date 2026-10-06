@@ -145,6 +145,7 @@ try {
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, projectId BIGINT UNSIGNED NOT NULL,
             title VARCHAR(255) NOT NULL, startsAt DATETIME NULL, endsAt DATETIME NULL,
             status VARCHAR(32) NOT NULL DEFAULT 'planned', paymentMilestone DECIMAL(14,2) NOT NULL DEFAULT 0,
+            estimateCategoryId BIGINT UNSIGNED NULL,
             createdAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP, INDEX(projectId)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
         'projectmembers' => "CREATE TABLE projectmembers (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, projectId BIGINT UNSIGNED NOT NULL,
@@ -175,7 +176,7 @@ try {
         'scheduletasks'=>[
             'projectId'=>"BIGINT UNSIGNED NULL",'title'=>"VARCHAR(255) NOT NULL DEFAULT 'Этап'",
             'startsAt'=>"DATETIME NULL",'endsAt'=>"DATETIME NULL",'status'=>"VARCHAR(32) NOT NULL DEFAULT 'planned'",
-            'paymentMilestone'=>"DECIMAL(14,2) NOT NULL DEFAULT 0",'createdAt'=>"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP"
+            'paymentMilestone'=>"DECIMAL(14,2) NOT NULL DEFAULT 0",'estimateCategoryId'=>"BIGINT UNSIGNED NULL",'createdAt'=>"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP"
         ],
         'projectmembers'=>[
             'projectId'=>"BIGINT UNSIGNED NULL",'userId'=>"BIGINT UNSIGNED NULL",'invitedEmail'=>"VARCHAR(320) NULL",
