@@ -298,7 +298,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     fd.append('csrf',csrf);fd.append('project_id',aiEstimatePayload.projectId);fd.append('room_id',aiEstimatePayload.roomId);
     aiEstimatePayload.photoIds.forEach(id=>fd.append('photo_ids[]',id));
     try{
-      const res=await fd.append('action','room_estimate'); const res=await fetch('ai.php',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd,credentials:'same-origin'});
+      fd.append('action','room_estimate'); const res=await fetch('ai.php',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd,credentials:'same-origin'});
       const data=await res.json().catch(()=>null);
       if(!res.ok||!data?.ok)throw new Error(data?.error||'Не удалось выполнить AI-анализ.');
       aiEstimatePayload.items=data.items||[];
