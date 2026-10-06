@@ -29,8 +29,8 @@ $docNo=(string)($_GET['no']??($id.'-'.date('Y')));
 $date=(string)($_GET['date']??date('d.m.Y'));
 $period=(string)($_GET['period']??date('m.Y'));
 $download=(int)($_GET['download']??0)===1;
-if($download && in_array($format,['ks2','ks3'],true)){
-    $suffix=$format==='ks2'?'ks2':'ks3';
+if($download && in_array($format,['print','ks2','ks3'],true)){
+    $suffix=$format==='print'?'smeta':$format;
     header('Content-Type:text/html; charset=UTF-8');
     header('Content-Disposition:attachment; filename="smetogram-'.$id.'-'.$suffix.'.html"');
 }
