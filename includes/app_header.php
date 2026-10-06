@@ -36,7 +36,7 @@ if ($user && !empty($user['name'])) {
   <button class="mobile-close" onclick="document.getElementById('appSidebar').classList.remove('sidebar-open')"><i class="bi bi-x-lg"></i></button>
   <div class="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
   <nav class="nav-list">
-    <a class="nav-item <?=($view==='projects'?'active':'')?>" href="dashboard.php"><span class="nav-icon"><i class="bi bi-grid-1x2"></i></span><span class="nav-label">Мои проекты</span><span class="nav-count"><?= $projectCount ?? 0 ?></span></a>
+    <a class="nav-item <?=($view==='projects'?'active':'')?>" href="dashboard.php"><span class="nav-icon"><i class="bi bi-grid-1x2"></i></span><span class="nav-label">Мои проекты</span><span class="nav-count"><?= isset($projectsCount) ? (int)$projectsCount : (int)($projectCount ?? 0) ?></span></a>
     <a class="nav-item <?=($view==='scan'?'active':'')?>" href="workspace.php?view=scan<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-file-earmark-arrow-up"></i></span><span class="nav-label">Смета из файла</span></a>
     <a class="nav-item <?=($view==='measurements'?'active':'')?>" href="workspace.php?view=measurements<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-rulers"></i></span><span class="nav-label">Замеры</span></a>
     <a class="nav-item <?=($view==='schedule'?'active':'')?>" href="workspace.php?view=schedule<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-calendar3"></i></span><span class="nav-label">График работ</span></a>
