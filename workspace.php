@@ -91,6 +91,21 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS smetogram_room_photos (
     INDEX(room_id), INDEX(project_id), INDEX(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+/* Acceptance stage photos. */
+$pdo->exec("CREATE TABLE IF NOT EXISTS smetogram_acceptance_photos (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    stage_id BIGINT UNSIGNED NOT NULL,
+    project_id BIGINT UNSIGNED NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
+    original_name VARCHAR(255) NOT NULL,
+    stored_name VARCHAR(255) NOT NULL,
+    mime VARCHAR(80) NOT NULL,
+    size_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    path VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX(stage_id), INDEX(project_id), INDEX(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
 /* Lightweight chat polling endpoint — no page reload. */
 if (isset($_GET['chat_poll']) && (string)$_GET['chat_poll'] === '1' && $projectId > 0) {
     $pollChannel = (string)($_GET['channel'] ?? $channel);
@@ -244,14 +259,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Сначала откройте проект.');
             }
             $title = trim((string)($_POST['title'] ?? ''));
-            if ($title === '') {
-                throw new RuntimeException('Введите название этапа.');
-            }
-            $amount = (float)str_replace(',', '.', (string)($_POST['amount'] ?? '0'));
-            $holdback = (float)str_replace(',', '.', (string)($_POST['holdback'] ?? '0'));
-
-            $q = $pdo->prepare('INSERT INTO acceptancestages (projectId,title,amount,holdback,status) VALUES (?,?,?,?,?)');
-            $q->execute([$projectId, $title, $amount, $holdback, 'pending']);
+            if ($title === '') throw new RuntimeException('Введите название этапа.');
+            $amount = (float)str_replace([' ', ','], ['', '.'], (string)($_POST['amount'] ?? '0'));
+            $holdback = (float)str_replace([' ', ','], ['', '.'], (string)($_POST['holdback'] ?? '0'));
+            $scheduleTaskId = (int)($_POST['schedule_task_id'] ?? 0);
+            $q = $pdo->prepare('INSERT INTO acceptancestages (projectId,scheduleTaskId,title,amount,holdback,status) VALUES (?,?,?,?,?,?)');
+            $q->execute([$projectId, $scheduleTaskId ?: null, $title, $amount, $holdback, 'pending']);
             $notice = 'Этап приёмки создан.';
             $notifyProject('acceptance','Создан этап приёмки',$title,'workspace.php?view=acceptance&id='.$projectId);
         } elseif ($action === 'submit_stage') {
@@ -263,6 +276,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $q->execute([$stageId, $projectId]);
             $notice = 'Этап отправлен на приёмку.';
             $notifyProject('acceptance','Этап отправлен на приёмку','Требуется проверка.','workspace.php?view=acceptance&id='.$projectId);
+        } elseif ($action === 'upload_acceptance_photo') {
+            if (!$project) throw new RuntimeException('Сначала откройте проект.');
+            $stageId=(int)($_POST['stage_id']??0);
+            $sq=$pdo->prepare('SELECT id,title FROM acceptancestages WHERE id=? AND projectId=? LIMIT 1');
+            $sq->execute([$stageId,$projectId]);
+            $stage=$sq->fetch();
+            if(!$stage) throw new RuntimeException('Этап приёмки не найден.');
+            if(empty($_FILES['acceptance_photo']) || $_FILES['acceptance_photo']['error']!==UPLOAD_ERR_OK) throw new RuntimeException('Не удалось загрузить фотографию.');
+            $file=$_FILES['acceptance_photo'];
+            if((int)$file['size']>15*1024*1024) throw new RuntimeException('Максимальный размер фотографии — 15 МБ.');
+            $mime=(new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+            $allowed=['image/jpeg','image/png','image/webp','image/heic','image/heif'];
+            if(!in_array($mime,$allowed,true)) throw new RuntimeException('Можно загружать только фотографии JPG, PNG, WebP или HEIC.');
+            $dir=__DIR__.'/uploads/acceptance-photos/'.$projectId.'/'.$stageId;
+            if(!is_dir($dir) && !mkdir($dir,0755,true) && !is_dir($dir)) throw new RuntimeException('Не удалось создать папку для фотографий.');
+            $ext=strtolower(pathinfo((string)$file['name'],PATHINFO_EXTENSION)); if($ext==='') $ext='jpg';
+            $stored=bin2hex(random_bytes(16)).'.'.$ext; $path=$dir.'/'.$stored;
+            if(!move_uploaded_file($file['tmp_name'],$path)) throw new RuntimeException('Не удалось сохранить фотографию.');
+            $rel='uploads/acceptance-photos/'.$projectId.'/'.$stageId.'/'.$stored;
+            $pdo->prepare('INSERT INTO smetogram_acceptance_photos(stage_id,project_id,user_id,original_name,stored_name,mime,size_bytes,path) VALUES(?,?,?,?,?,?,?,?)')->execute([$stageId,$projectId,$user['id'],(string)$file['name'],$stored,$mime,(int)$file['size'],$rel]);
+            $notice='Фото приёмки добавлено.';
+        } elseif ($action === 'delete_acceptance_photo') {
+            if (!$project) throw new RuntimeException('Сначала откройте проект.');
+            $photoId=(int)($_POST['photo_id']??0);
+            $q=$pdo->prepare('SELECT * FROM smetogram_acceptance_photos WHERE id=? AND project_id=? LIMIT 1'); $q->execute([$photoId,$projectId]); $photo=$q->fetch();
+            if(!$photo) throw new RuntimeException('Фотография не найдена.');
+            if(!is_admin($user) && (int)$photo['user_id']!==(int)$user['id'] && empty($canManageProject)) throw new RuntimeException('Недостаточно прав для удаления фотографии.');
+            $filePath=__DIR__.'/'.$photo['path']; if(is_file($filePath)) @unlink($filePath);
+            $pdo->prepare('DELETE FROM smetogram_acceptance_photos WHERE id=?')->execute([$photoId]);
+            $notice='Фото удалено.';
         } elseif ($action === 'upload_room_photo') {
             if (!$project) throw new RuntimeException('Сначала откройте проект.');
             $roomId=(int)($_POST['room_id']??0);
@@ -856,31 +899,58 @@ require __DIR__ . '/includes/app_header.php';
         <?php
         $stages = [];
         if ($project) {
-            $q = $pdo->prepare('SELECT * FROM acceptancestages WHERE projectId=? ORDER BY id DESC');
-            $q->execute([$projectId]);
-            $stages = $q->fetchAll();
-        }
+            $sync=$pdo->prepare('SELECT id,title,paymentMilestone FROM scheduletasks WHERE projectId=? ORDER BY startsAt,id');
+            $sync->execute([$projectId]);
+            foreach($sync->fetchAll() as $task){
+                $chk=$pdo->prepare('SELECT id FROM acceptancestages WHERE projectId=? AND scheduleTaskId=? LIMIT 1');
+                $chk->execute([$projectId,(int)$task['id']]);
+                if(!$chk->fetchColumn()){
+                    $amount=(float)$task['paymentMilestone'];
+                    $pdo->prepare('INSERT INTO acceptancestages(projectId,scheduleTaskId,title,amount,status) VALUES(?,?,?,?,?)')->execute([$projectId,(int)$task['id'],$task['title'],$amount,'pending']);
+                }
+            }
+            $q=$pdo->prepare('SELECT * FROM acceptancestages WHERE projectId=? ORDER BY id ASC'); $q->execute([$projectId]); $stages=$q->fetchAll();
+            $photosByStage=[];
+            $pq=$pdo->prepare('SELECT * FROM smetogram_acceptance_photos WHERE project_id=? ORDER BY id DESC'); $pq->execute([$projectId]);
+            foreach($pq->fetchAll() as $photo) $photosByStage[(int)$photo['stage_id']][]=$photo;
+        } else $photosByStage=[];
         ?>
         <div class="module-grid">
-            <div class="module-panel">
-                <div class="panel-heading"><div><h2>Этапы на приёмку</h2><p>Фиксируйте замечания и статус сдачи.</p></div><?php if ($project): ?><button class="primary-button" data-bs-toggle="modal" data-bs-target="#stageModal"><i class="fa-solid fa-plus"></i> Этап</button><?php endif; ?></div>
-                <?php if (!$stages): ?><div class="empty-state">Этапов приёмки пока нет.</div><?php else: ?>
-                    <?php foreach ($stages as $stage): ?>
-                        <div class="document-row"><div class="member-avatar"><i class="fa-solid fa-check-square"></i></div><div><strong><?= e($stage['title']) ?></strong><span><?= number_format((float)$stage['amount'], 0, ',', ' ') ?> ₽ · удержание <?= number_format((float)$stage['holdback'], 0, ',', ' ') ?> ₽</span></div><em><?= e($stage['status']) ?></em>
-                        <?php if ($stage['status'] === 'pending'): ?><form method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="submit_stage"><input type="hidden" name="stage_id" value="<?= (int)$stage['id'] ?>"><button class="outline-button" type="submit">Сдать этап</button></form><?php endif; ?>
-                        </div>
-                    <?php endforeach; ?>
+            <div class="module-panel wide-panel">
+                <div class="panel-heading"><div><h2>Приёмка по этапам</h2><p>Этапы проекта подгружаются автоматически. Добавляйте фото фактически выполненных работ.</p></div></div>
+                <?php if (!$stages): ?><div class="empty-state">Этапов проекта пока нет. Добавьте этапы в графике.</div><?php else: ?>
+                    <div class="acceptance-stage-list">
+                    <?php foreach ($stages as $stage): $photos=$photosByStage[(int)$stage['id']]??[]; ?>
+                        <article class="acceptance-stage-card">
+                            <div class="acceptance-stage-head">
+                                <div class="member-avatar"><i class="fa-solid fa-clipboard-check"></i></div>
+                                <div><strong><?=e($stage['title'])?></strong><span><?=number_format((float)$stage['amount'],0,',',' ')?> ₽</span></div>
+                                <em><?=e($stage['status'])?></em>
+                            </div>
+                            <div class="acceptance-photo-actions">
+                                <form method="post" enctype="multipart/form-data" class="acceptance-photo-upload">
+                                    <input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="upload_acceptance_photo"><input type="hidden" name="stage_id" value="<?= (int)$stage['id'] ?>">
+                                    <label class="outline-button"><i class="fa-solid fa-camera"></i> Сфотографировать<input hidden type="file" name="acceptance_photo" accept="image/*" capture="environment"></label>
+                                </form>
+                                <form method="post" enctype="multipart/form-data" class="acceptance-photo-upload">
+                                    <input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="upload_acceptance_photo"><input type="hidden" name="stage_id" value="<?= (int)$stage['id'] ?>">
+                                    <label class="outline-button"><i class="fa-solid fa-images"></i> Из галереи<input hidden type="file" name="acceptance_photo" accept="image/*"></label>
+                                </form>
+                            </div>
+                            <?php if($photos): ?><div class="acceptance-photo-grid">
+                                <?php foreach($photos as $photo): ?>
+                                <div class="acceptance-photo-thumb"><a href="<?=e($photo['path'])?>" data-fancybox="acceptance-<?=$stage['id']?>"><img src="<?=e($photo['path'])?>" alt="<?=e($photo['original_name'])?>"></a>
+                                    <form method="post" class="acceptance-photo-delete"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_acceptance_photo"><input type="hidden" name="photo_id" value="<?= (int)$photo['id'] ?>"><button type="submit" class="icon-button" title="Удалить"><i class="fa-solid fa-trash-can"></i></button></form>
+                                </div>
+                                <?php endforeach; ?>
+                            </div><?php else: ?><div class="acceptance-photo-empty"><i class="fa-solid fa-camera"></i> Фото пока нет</div><?php endif; ?>
+                            <?php if($stage['status']==='pending'): ?><form method="post" class="mt-3"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="submit_stage"><input type="hidden" name="stage_id" value="<?= (int)$stage['id'] ?>"><button class="primary-button" type="submit"><i class="fa-solid fa-paper-plane"></i> Сдать этап</button></form><?php endif; ?>
+                        </article>
+                    <?php endforeach; ?></div>
                 <?php endif; ?>
             </div>
-            <div class="module-panel"><i class="fa-solid fa-wallet fs-4 text-primary"></i><h2 class="mt-3">Удержание</h2><strong class="fs-4"><?= number_format((float)($project['budget'] ?? 0) * .05, 0, ',', ' ') ?> ₽</strong><p class="panel-copy">5% можно удерживать до закрытия замечаний.</p></div>
+            <div class="module-panel"><i class="fa-solid fa-shield-check fs-4 text-primary"></i><h2 class="mt-3">Контроль приёмки</h2><p class="panel-copy">Фото сохраняются отдельно у каждого этапа. Их можно снять камерой или выбрать из галереи.</p></div>
         </div>
-        <?php if ($project): ?>
-        <div class="modal fade" id="stageModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post">
-            <div class="modal-header"><h5>Новый этап приёмки</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="add_stage"><input class="form-control mb-3" name="title" required placeholder="Электромонтажные работы"><div class="form-grid"><input class="form-control" name="amount" value="0" placeholder="Сумма"><input class="form-control" name="holdback" value="0" placeholder="Удержание"></div></div>
-            <div class="modal-footer"><button class="primary-button">Создать</button></div>
-        </form></div></div></div>
-        <?php endif; ?>
 
     <?php elseif ($view === 'scan'): ?>
         <div class="module-grid">
