@@ -253,6 +253,8 @@ try {
     $addColumn($pdo,'users','telegramUsername',"VARCHAR(255) NULL");
     $addColumn($pdo,'users','username',"VARCHAR(255) NULL");
     $addColumn($pdo,'smetogram_payments','stageId',"BIGINT UNSIGNED NULL");
+    $addColumn($pdo,'smetogram_payments','paidAmount',"DECIMAL(14,2) NOT NULL DEFAULT 0");
+    try { $pdo->exec("UPDATE smetogram_payments SET paidAmount=CASE WHEN status='paid' THEN amount ELSE 0 END WHERE type='stage' AND paidAmount=0"); } catch (Throwable $e) {}
     if (!$tableExists($pdo,'smetogram_notifications')) {
         $pdo->exec("CREATE TABLE smetogram_notifications (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
