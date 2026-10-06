@@ -132,13 +132,20 @@
 .workspace-back:hover{color:var(--terra)}
 .workspace-project-name{font-size:11px;font-weight:800;color:var(--ink);padding-left:12px;border-left:1px solid #E2E8F0}
 .workspace-project-meta{font-size:9px;color:#94A3B8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.workspace-tabs{display:flex;gap:24px;align-items:center;overflow:auto;border-bottom:1px solid #CBD5E1;margin:-1px 0 32px;padding:0 3px}
-.workspace-tabs a{position:relative;display:inline-flex;align-items:center;gap:6px;padding:0 0 13px;color:#94A3B8;text-decoration:none;font-size:10px;white-space:nowrap}
-.workspace-tabs a i{font-size:12px}
-.workspace-tabs a:hover{color:#475569}
-.workspace-tabs a.active{color:var(--ink);font-weight:800}
-.workspace-tabs a.active:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--terra);border-radius:2px}
-@media(max-width:700px){.workspace-project-line{flex-wrap:wrap}.workspace-project-meta{width:100%;padding-left:78px}.workspace-tabs{gap:18px;margin-bottom:25px}.workspace-tabs a{font-size:9px}.workspace-tabs a i{display:none}}
+.workspace-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:-1px 0 28px;padding:0 0 12px;border-bottom:1px solid #CBD5E1}
+.workspace-tabs a{position:relative;display:flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:10px 12px;border:1px solid #E2E8F0;border-radius:10px;background:#fff;color:#64748B;text-decoration:none;font-size:11px;font-weight:700;white-space:nowrap;transition:.18s ease}
+.workspace-tabs a i{font-size:14px;flex:0 0 auto}
+.workspace-tabs a:hover{border-color:#CBD5E1;background:#F8FAFC;color:#334155}
+.workspace-tabs a.active{color:var(--ink);border-color:#CBD5E1;background:#F8FAFC}
+.workspace-tabs a.active:after{content:"";position:absolute;left:10px;right:10px;bottom:-13px;height:2px;background:var(--terra);border-radius:2px}
+@media(max-width:700px){
+.workspace-project-line{flex-wrap:wrap}
+.workspace-project-meta{width:100%;padding-left:0}
+.workspace-tabs{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-bottom:22px;padding-bottom:10px}
+.workspace-tabs a{min-height:46px;padding:9px 8px;font-size:10px;border-radius:9px;justify-content:flex-start}
+.workspace-tabs a i{font-size:15px}
+.workspace-tabs a.active:after{left:8px;right:8px;bottom:-11px}
+}
 
 /* Tariff / billing */
 .billing-hero{display:flex;justify-content:space-between;gap:30px;align-items:center;margin-bottom:15px;padding:24px 26px}
