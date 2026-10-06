@@ -10,8 +10,6 @@ $q=$pdo->prepare("SELECT * FROM projects WHERE id=? LIMIT 1");
 $q->execute([$id]);
 $p=$q->fetch();
 if(!$p || !can_access_project($pdo,$user,$id)) redirect('dashboard.php');
-$p=$q->fetch();
-if(!$p) redirect('dashboard.php');
 
 $q=$pdo->prepare("SELECT c.name category,i.id,i.name,i.quantity,i.unit,i.price,(i.quantity*i.price) total
 FROM estimateitems i
