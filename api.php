@@ -102,7 +102,9 @@ if($action==='estimate_action'){
   foreach($items as $it){
     $name=trim((string)($it['name']??''));$qty=(float)($it['quantity']??0);$unit=trim((string)($it['unit']??'шт.'));$price=(float)($it['price']??0);$type=(string)($it['measurementType']??'manual');
     if($name===''||$qty<=0)continue;
-    $q->execute([$cat,$name,$qty,$unit,$price,'ai_photo',$type!=='manual'?'measurement':'manual',$type,$type!=='manual'?implode(',',array_map('intval',project_measurement_quantities($pdo,$id)['roomIds'])):null]);
+    $measurementTypes=['floor','walls','ceiling','perimeter'];
+    $isMeasured=in_array($type,$measurementTypes,true);
+    $q->execute([$cat,$name,$qty,$unit,$price,'ai_photo',$isMeasured?'measurement':'manual',$isMeasured?$type:null,$isMeasured?implode(',',array_map('intval',project_measurement_quantities($pdo,$id)['roomIds'])):null]);
   }
 }elseif($op==='status'){
   $allowed=['draft','in_progress','review','completed','archived'];$st=(string)($_POST['status']??'draft');
