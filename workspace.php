@@ -514,23 +514,23 @@ require __DIR__ . '/includes/app_header.php';
             <h1><?= e($pageTitle) ?></h1>
             <p class="lede"><?= e($project ? ($project['name'] . ' · ' . $project['city'] . ' · ' . $project['clientName']) : 'Сметограм — рабочее пространство строительного проекта.') ?></p>
         </div>
-        <div class="module-icon"><i class="bi bi-stars"></i></div>
+        <div class="module-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
     </div>
     <?php if ($project): ?>
     <div class="workspace-project-line">
-        <a href="dashboard.php" class="workspace-back"><i class="bi bi-arrow-left"></i> Мои проекты <b class="workspace-project-count"><?= $projectsCount ?></b></a>
+        <a href="dashboard.php" class="workspace-back"><i class="fa-solid fa-arrow-left"></i> Мои проекты <b class="workspace-project-count"><?= $projectsCount ?></b></a>
         <span class="workspace-project-name"><?= e($project['name']) ?></span>
         <span class="workspace-project-meta"><?= e(($project['city'] ?? '') . ' · ' . ($project['clientName'] ?? '')) ?></span>
     </div>
     <div class="workspace-tabs" aria-label="Разделы проекта">
-        <a href="workspace.php?view=schedule&id=<?= $projectId ?>" class="<?= $view==='schedule'?'active':'' ?>"><i class="bi bi-calendar3"></i> График</a>
-        <a href="workspace.php?view=measurements&id=<?= $projectId ?>" class="<?= $view==='measurements'?'active':'' ?>"><i class="bi bi-rulers"></i> Замеры</a>
+        <a href="workspace.php?view=schedule&id=<?= $projectId ?>" class="<?= $view==='schedule'?'active':'' ?>"><i class="fa-solid fa-calendar-days"></i> График</a>
+        <a href="workspace.php?view=measurements&id=<?= $projectId ?>" class="<?= $view==='measurements'?'active':'' ?>"><i class="fa-solid fa-ruler-combined"></i> Замеры</a>
         <a href="workspace.php?view=team&id=<?= $projectId ?>" class="<?= $view==='team'?'active':'' ?>"><i class="bi bi-people"></i> Команда</a>
-        <a href="workspace.php?view=chat&id=<?= $projectId ?>&channel=<?= e($channel) ?>" class="<?= $view==='chat'?'active':'' ?>"><i class="bi bi-chat"></i> Чат</a>
-        <a href="workspace.php?view=documents&id=<?= $projectId ?>" class="<?= $view==='documents'?'active':'' ?>"><i class="bi bi-file-earmark-text"></i> Документы</a>
-        <a href="workspace.php?view=payments&id=<?= $projectId ?>" class="<?= $view==='payments'?'active':'' ?>"><i class="bi bi-wallet2"></i> Оплаты</a>
-        <a href="workspace.php?view=acceptance&id=<?= $projectId ?>" class="<?= $view==='acceptance'?'active':'' ?>"><i class="bi bi-check2-circle"></i> Приёмка</a>
-        <a href="workspace.php?view=analytics&id=<?= $projectId ?>" class="<?= $view==='analytics'?'active':'' ?>"><i class="bi bi-bar-chart"></i> Аналитика</a>
+        <a href="workspace.php?view=chat&id=<?= $projectId ?>&channel=<?= e($channel) ?>" class="<?= $view==='chat'?'active':'' ?>"><i class="fa-solid fa-comments"></i> Чат</a>
+        <a href="workspace.php?view=documents&id=<?= $projectId ?>" class="<?= $view==='documents'?'active':'' ?>"><i class="fa-solid fa-file-lines"></i> Документы</a>
+        <a href="workspace.php?view=payments&id=<?= $projectId ?>" class="<?= $view==='payments'?'active':'' ?>"><i class="fa-solid fa-wallet"></i> Оплаты</a>
+        <a href="workspace.php?view=acceptance&id=<?= $projectId ?>" class="<?= $view==='acceptance'?'active':'' ?>"><i class="fa-solid fa-check-circle"></i> Приёмка</a>
+        <a href="workspace.php?view=analytics&id=<?= $projectId ?>" class="<?= $view==='analytics'?'active':'' ?>"><i class="fa-solid fa-chart-column"></i> Аналитика</a>
     </div>   <?php if ($error !== ''): ?>
         <div class="alert alert-danger"><?= e($error) ?></div>
     <?php endif; ?>
@@ -551,7 +551,7 @@ require __DIR__ . '/includes/app_header.php';
             <div class="module-panel wide-panel">
                 <div class="panel-heading">
                     <div><h2>Этапы объекта</h2><p>Сроки и вехи оплаты по проекту.</p></div>
-                    <?php if ($project): ?><button class="primary-button" data-bs-toggle="modal" data-bs-target="#taskModal"><i class="bi bi-plus-lg"></i> Добавить этап</button><?php endif; ?>
+                    <?php if ($project): ?><button class="primary-button" data-bs-toggle="modal" data-bs-target="#taskModal"><i class="fa-solid fa-plus"></i> Добавить этап</button><?php endif; ?>
                 </div>
                 <?php if (!$project): ?>
                     <div class="empty-state">Откройте проект, чтобы вести график.</div>
@@ -564,7 +564,7 @@ require __DIR__ . '/includes/app_header.php';
                         $statusLabels = ['planned'=>'Запланировано','in_progress'=>'В работе','done'=>'Завершено','blocked'=>'Заблокировано'];
                         ?>
                         <div class="timeline-row">
-                            <div class="timeline-dot <?= $task['status'] === 'done' ? 'done' : '' ?>"><i class="bi bi-check"></i></div>
+                            <div class="timeline-dot <?= $task['status'] === 'done' ? 'done' : '' ?>"><i class="fa-solid fa-check"></i></div>
                             <div class="timeline-content">
                                 <strong><?= e($task['title']) ?></strong>
                                 <span><?= e($task['startsAt'] ? date('d.m.Y', strtotime($task['startsAt'])) : 'Без даты') ?> — <?= e($task['endsAt'] ? date('d.m.Y', strtotime($task['endsAt'])) : '') ?></span>
@@ -578,7 +578,7 @@ require __DIR__ . '/includes/app_header.php';
             <div class="module-panel">
                 <h2>Ближайшая веха</h2>
                 <p class="panel-copy">Платёжные вехи можно привязать к этапам.</p>
-                <div class="milestone"><i class="bi bi-calendar-check"></i><div><strong>Следующий этап</strong><span>Настройте даты и сумму</span></div></div>
+                <div class="milestone"><i class="fa-solid fa-calendar-check"></i><div><strong>Следующий этап</strong><span>Настройте даты и сумму</span></div></div>
             </div>
         </div>
 
@@ -624,7 +624,7 @@ require __DIR__ . '/includes/app_header.php';
             <div class="module-panel">
                 <div class="panel-heading">
                     <div><h2>Участники</h2><p>Роли и контакты проекта.</p></div>
-                    <?php if ($project && !empty($canManageProject)): ?><button class="primary-button" data-bs-toggle="modal" data-bs-target="#memberModal"><i class="bi bi-person-plus"></i> Назначить сотрудника</button><?php endif; ?>
+                    <?php if ($project && !empty($canManageProject)): ?><button class="primary-button" data-bs-toggle="modal" data-bs-target="#memberModal"><i class="fa-solid fa-user-plus"></i> Назначить сотрудника</button><?php endif; ?>
                 </div>
                 <?php if (!$members): ?>
                     <div class="empty-state">Участников пока нет.</div>
@@ -669,7 +669,7 @@ require __DIR__ . '/includes/app_header.php';
         }
         ?>
         <div class="module-panel">
-            <div class="panel-heading"><div><h2>Документы проекта</h2><p>Договоры, счета и акты.</p></div><?php if ($project): ?><button class="primary-button" data-bs-toggle="modal" data-bs-target="#docModal"><i class="bi bi-plus-lg"></i> Создать документ</button><?php endif; ?></div>
+            <div class="panel-heading"><div><h2>Документы проекта</h2><p>Договоры, счета и акты.</p></div><?php if ($project): ?><button class="primary-button" data-bs-toggle="modal" data-bs-target="#docModal"><i class="fa-solid fa-plus"></i> Создать документ</button><?php endif; ?></div>
             <?php if (!$documents): ?><div class="empty-state">Документов пока нет.</div><?php else: ?>
                 <?php foreach ($documents as $doc): ?>
                     <?php
@@ -679,11 +679,11 @@ require __DIR__ . '/includes/app_header.php';
                     $latestFile=$docFiles[0]??null;
                     ?>
                     <div class="document-row">
-                        <div class="member-avatar"><i class="bi bi-file-earmark-text"></i></div>
+                        <div class="member-avatar"><i class="fa-solid fa-file-lines"></i></div>
                         <div><strong><?= e($doc['title']) ?></strong><span><?= e(mb_strtoupper($doc['type'])) ?> · <?= count($docFiles) ?> файл(ов)</span></div>
                         <em><?= e($doc['status']) ?></em>
-                        <a class="outline-button" href="document.php?id=<?= (int)$doc['id'] ?>"><i class="bi bi-eye"></i> Открыть</a>
-                        <?php if ($latestFile): ?><a class="icon-button subtle" target="_blank" href="document_file.php?id=<?= (int)$latestFile['id'] ?>" title="Открыть файл"><i class="bi bi-box-arrow-up-right"></i></a><?php endif; ?>
+                        <a class="outline-button" href="document.php?id=<?= (int)$doc['id'] ?>"><i class="fa-solid fa-eye"></i> Открыть</a>
+                        <?php if ($latestFile): ?><a class="icon-button subtle" target="_blank" href="document_file.php?id=<?= (int)$latestFile['id'] ?>" title="Открыть файл"><i class="fa-solid fa-arrow-up-right-from-square"></i></a><?php endif; ?>
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>
@@ -755,7 +755,7 @@ require __DIR__ . '/includes/app_header.php';
                         <h2>Оплаты проекта</h2>
                         <p>Этапы автоматически взяты из разделов сметы. Сумму каждого этапа можно подогнать под договор и затем вносить авансы.</p>
                     </div>
-                    <?php if($project): ?><button class="outline-button" type="button" data-bs-toggle="modal" data-bs-target="#paymentModal"><i class="bi bi-plus-lg"></i> Другой платёж</button><?php endif; ?>
+                    <?php if($project): ?><button class="outline-button" type="button" data-bs-toggle="modal" data-bs-target="#paymentModal"><i class="fa-solid fa-plus"></i> Другой платёж</button><?php endif; ?>
                 </div>
 
                 <div class="metric-grid payment-metrics">
@@ -776,7 +776,7 @@ require __DIR__ . '/includes/app_header.php';
                     ?>
                         <article class="payment-stage-card" data-payment-stage-card="<?=$stagePay['id']?>">
                             <div class="payment-stage-card-head">
-                                <div class="payment-stage-icon"><i class="bi bi-list-check"></i></div>
+                                <div class="payment-stage-icon"><i class="fa-solid fa-list-check"></i></div>
                                 <div class="payment-stage-title-wrap">
                                     <strong><?=e($stagePay['title'])?></strong>
                                     <span><?= $stagePay['estimateCategoryId'] ? 'Из сметы' : 'Добавлен вручную' ?></span>
@@ -792,20 +792,20 @@ require __DIR__ . '/includes/app_header.php';
                             </div>
                             <div class="payment-stage-progress"><span data-stage-progress="<?=$stagePay['id']?>" style="width:<?=$percent?>%"></span></div>
                             <div class="payment-stage-actions">
-                                <button type="button" class="outline-button" data-stage-save-amount="<?=$stagePay['id']?>"><i class="bi bi-pencil"></i> Сохранить сумму</button>
-                                <?php if($remaining>0): ?><button type="button" class="primary-button" data-stage-payment="<?=$stagePay['id']?>"><i class="bi bi-plus-circle"></i> Внести оплату</button><?php else: ?><span class="payment-complete-note"><i class="bi bi-check2-circle"></i> Этап оплачен полностью</span><?php endif; ?>
+                                <button type="button" class="outline-button" data-stage-save-amount="<?=$stagePay['id']?>"><i class="fa-solid fa-pen"></i> Сохранить сумму</button>
+                                <?php if($remaining>0): ?><button type="button" class="primary-button" data-stage-payment="<?=$stagePay['id']?>"><i class="fa-solid fa-circle-plus"></i> Внести оплату</button><?php else: ?><span class="payment-complete-note"><i class="fa-solid fa-check-circle"></i> Этап оплачен полностью</span><?php endif; ?>
                             </div>
                         </article>
                     <?php endforeach; ?>
                     </div>
                 <?php else: ?>
-                    <div class="empty-state"><i class="bi bi-receipt fs-2"></i><h3 class="mt-3">В смете пока нет этапов с суммой</h3><p>Добавьте разделы и работы в смету — они автоматически появятся здесь как этапы.</p><a class="primary-button" href="project.php?id=<?=$projectId?>">Открыть смету</a></div>
+                    <div class="empty-state"><i class="fa-solid fa-receipt fs-2"></i><h3 class="mt-3">В смете пока нет этапов с суммой</h3><p>Добавьте разделы и работы в смету — они автоматически появятся здесь как этапы.</p><a class="primary-button" href="project.php?id=<?=$projectId?>">Открыть смету</a></div>
                 <?php endif; ?>
 
                 <?php if($payments): ?>
                     <div class="payment-manual-list"><h3>Другие платежи</h3>
                     <?php foreach($payments as $pay): ?>
-                        <div class="document-row"><div class="member-avatar"><i class="bi bi-credit-card"></i></div><div><strong><?=e($pay['title'])?></strong><span><?=number_format((float)$pay['amount'],0,',',' ')?> ₽</span></div><em><?= $pay['status']==='paid' ? 'Оплачено' : 'Ожидает оплаты' ?></em>
+                        <div class="document-row"><div class="member-avatar"><i class="fa-solid fa-credit-card"></i></div><div><strong><?=e($pay['title'])?></strong><span><?=number_format((float)$pay['amount'],0,',',' ')?> ₽</span></div><em><?= $pay['status']==='paid' ? 'Оплачено' : 'Ожидает оплаты' ?></em>
                         <?php if($pay['status']==='pending'): ?><form method="post"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="mark_payment"><input type="hidden" name="payment_id" value="<?= (int)$pay['id']?>"><button class="outline-button">Оплачено</button></form><?php endif; ?></div>
                     <?php endforeach; ?></div>
                 <?php endif; ?>
@@ -814,10 +814,10 @@ require __DIR__ . '/includes/app_header.php';
             <div class="module-panel">
                 <div class="eyebrow">ФИНАНСЫ</div>
                 <h2>Как это работает</h2>
-                <div class="generated-row"><i class="bi bi-1-circle"></i><span><b>Смета</b> — разделы автоматически становятся этапами.</span></div>
-                <div class="generated-row"><i class="bi bi-2-circle"></i><span><b>Сумма</b> — при необходимости подгоняете под договор.</span></div>
-                <div class="generated-row"><i class="bi bi-3-circle"></i><span><b>Аванс</b> — например 150 000 из 500 000 ₽.</span></div>
-                <div class="generated-row"><i class="bi bi-4-circle"></i><span><b>Остаток</b> — Сметограм считает автоматически.</span></div>
+                <div class="generated-row"><i class="fa-solid fa-1"></i><span><b>Смета</b> — разделы автоматически становятся этапами.</span></div>
+                <div class="generated-row"><i class="fa-solid fa-2"></i><span><b>Сумма</b> — при необходимости подгоняете под договор.</span></div>
+                <div class="generated-row"><i class="fa-solid fa-3"></i><span><b>Аванс</b> — например 150 000 из 500 000 ₽.</span></div>
+                <div class="generated-row"><i class="fa-solid fa-4"></i><span><b>Остаток</b> — Сметограм считает автоматически.</span></div>
             </div>
         </div>
         <?php if($project): ?><div class="modal fade" id="paymentModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post"><div class="modal-header"><h5>Другой платёж</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="add_payment"><input class="form-control mb-3" name="title" required placeholder="Например: Дополнительные работы"><input class="form-control" name="amount" required placeholder="150000"></div><div class="modal-footer"><button class="primary-button">Сохранить</button></div></form></div></div></div><?php endif; ?>
@@ -837,7 +837,7 @@ require __DIR__ . '/includes/app_header.php';
                     <a href="workspace.php?view=chat&id=<?= $projectId ?>&channel=<?= rawurlencode($channelKey) ?>" class="<?= $channel === $channelKey ? 'active' : '' ?>"><?= e($channelName) ?></a>
                 <?php endforeach; ?>
             </div>
-            <div class="chat-header"><div><strong>Чат проекта</strong><span data-chat-status>В сети</span></div><i class="bi bi-three-dots"></i></div><div class="chat-messages" data-chat-messages>
+            <div class="chat-header"><div><strong>Чат проекта</strong><span data-chat-status>В сети</span></div><i class="fa-solid fa-ellipsis"></i></div><div class="chat-messages" data-chat-messages>
                 <?php if (!$messages): ?><div class="empty-state">Сообщений пока нет.</div><?php else: ?>
                     <?php foreach ($messages as $message): ?>
                         <div class="chat-message <?= (int)$message['authorId'] === (int)$user['id'] ? 'mine' : '' ?>">
@@ -848,7 +848,7 @@ require __DIR__ . '/includes/app_header.php';
                 <?php endif; ?>
             </div>
             <?php if ($project): ?>
-            <form class="chat-compose" data-chat-form method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="send_message"><input type="hidden" name="channel" value="<?= e($channel) ?>"><textarea name="body" required rows="1" data-chat-input placeholder="Напишите сообщение..."></textarea><button class="primary-button" data-chat-send type="submit"><i class="bi bi-send"></i></button></form>
+            <form class="chat-compose" data-chat-form method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="send_message"><input type="hidden" name="channel" value="<?= e($channel) ?>"><textarea name="body" required rows="1" data-chat-input placeholder="Напишите сообщение..."></textarea><button class="primary-button" data-chat-send type="submit"><i class="fa-solid fa-paper-plane"></i></button></form>
             <?php endif; ?>
         </div>
 
@@ -863,16 +863,16 @@ require __DIR__ . '/includes/app_header.php';
         ?>
         <div class="module-grid">
             <div class="module-panel">
-                <div class="panel-heading"><div><h2>Этапы на приёмку</h2><p>Фиксируйте замечания и статус сдачи.</p></div><?php if ($project): ?><button class="primary-button" data-bs-toggle="modal" data-bs-target="#stageModal"><i class="bi bi-plus-lg"></i> Этап</button><?php endif; ?></div>
+                <div class="panel-heading"><div><h2>Этапы на приёмку</h2><p>Фиксируйте замечания и статус сдачи.</p></div><?php if ($project): ?><button class="primary-button" data-bs-toggle="modal" data-bs-target="#stageModal"><i class="fa-solid fa-plus"></i> Этап</button><?php endif; ?></div>
                 <?php if (!$stages): ?><div class="empty-state">Этапов приёмки пока нет.</div><?php else: ?>
                     <?php foreach ($stages as $stage): ?>
-                        <div class="document-row"><div class="member-avatar"><i class="bi bi-check2-square"></i></div><div><strong><?= e($stage['title']) ?></strong><span><?= number_format((float)$stage['amount'], 0, ',', ' ') ?> ₽ · удержание <?= number_format((float)$stage['holdback'], 0, ',', ' ') ?> ₽</span></div><em><?= e($stage['status']) ?></em>
+                        <div class="document-row"><div class="member-avatar"><i class="fa-solid fa-check-square"></i></div><div><strong><?= e($stage['title']) ?></strong><span><?= number_format((float)$stage['amount'], 0, ',', ' ') ?> ₽ · удержание <?= number_format((float)$stage['holdback'], 0, ',', ' ') ?> ₽</span></div><em><?= e($stage['status']) ?></em>
                         <?php if ($stage['status'] === 'pending'): ?><form method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="submit_stage"><input type="hidden" name="stage_id" value="<?= (int)$stage['id'] ?>"><button class="outline-button" type="submit">Сдать этап</button></form><?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
-            <div class="module-panel"><i class="bi bi-wallet2 fs-4 text-primary"></i><h2 class="mt-3">Удержание</h2><strong class="fs-4"><?= number_format((float)($project['budget'] ?? 0) * .05, 0, ',', ' ') ?> ₽</strong><p class="panel-copy">5% можно удерживать до закрытия замечаний.</p></div>
+            <div class="module-panel"><i class="fa-solid fa-wallet fs-4 text-primary"></i><h2 class="mt-3">Удержание</h2><strong class="fs-4"><?= number_format((float)($project['budget'] ?? 0) * .05, 0, ',', ' ') ?> ₽</strong><p class="panel-copy">5% можно удерживать до закрытия замечаний.</p></div>
         </div>
         <?php if ($project): ?>
         <div class="modal fade" id="stageModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post">
@@ -887,11 +887,11 @@ require __DIR__ . '/includes/app_header.php';
             <div class="module-panel upload-panel">
                 <form method="post" enctype="multipart/form-data">
                     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="import_csv">
-                    <label class="upload-zone"><div class="upload-icon"><i class="bi bi-file-earmark-spreadsheet"></i></div><h2>Загрузите смету из CSV</h2><p>Колонки: Наименование; Количество; Ед.; Цена</p><span class="outline-button">Выбрать файл</span><input hidden type="file" name="csv" accept=".csv,.txt" required></label>
+                    <label class="upload-zone"><div class="upload-icon"><i class="fa-solid fa-file-excel"></i></div><h2>Загрузите смету из CSV</h2><p>Колонки: Наименование; Количество; Ед.; Цена</p><span class="outline-button">Выбрать файл</span><input hidden type="file" name="csv" accept=".csv,.txt" required></label>
                     <?php if ($project): ?><div class="mt-3 d-flex gap-2"><input class="form-control" name="category" value="Импорт из файла" placeholder="Раздел"><button class="primary-button" type="submit">Импортировать</button></div><?php else: ?><div class="alert alert-info mt-3">Откройте проект и перейдите сюда для импорта.</div><?php endif; ?>
                 </form>
             </div>
-            <div class="module-panel"><i class="bi bi-stars fs-4 text-primary"></i><h2 class="mt-3">Смета из файла</h2><p class="panel-copy">Импорт переносит позиции в выбранный раздел.</p><div class="generated-row"><i class="bi bi-check-circle"></i> CSV / Excel-совместимый формат</div><div class="generated-row"><i class="bi bi-check-circle"></i> Количество, единица и цена</div><div class="generated-row"><i class="bi bi-check-circle"></i> Источник позиции сохраняется</div></div>
+            <div class="module-panel"><i class="fa-solid fa-wand-magic-sparkles fs-4 text-primary"></i><h2 class="mt-3">Смета из файла</h2><p class="panel-copy">Импорт переносит позиции в выбранный раздел.</p><div class="generated-row"><i class="fa-solid fa-check-circle"></i> CSV / Excel-совместимый формат</div><div class="generated-row"><i class="fa-solid fa-check-circle"></i> Количество, единица и цена</div><div class="generated-row"><i class="fa-solid fa-check-circle"></i> Источник позиции сохраняется</div></div>
         </div>
 
     <?php elseif ($view === 'analytics'): ?>
@@ -925,16 +925,16 @@ require __DIR__ . '/includes/app_header.php';
         ?>
         <div class="module-grid">
             <div class="module-panel">
-                <div class="panel-heading"><div><h2>Размеры помещения</h2><p>Площадь, объём и площадь стен считаются автоматически.</p></div><button class="primary-button" data-bs-toggle="modal" data-bs-target="#roomModal"><i class="bi bi-plus-lg"></i> Добавить комнату</button></div>
+                <div class="panel-heading"><div><h2>Размеры помещения</h2><p>Площадь, объём и площадь стен считаются автоматически.</p></div><button class="primary-button" data-bs-toggle="modal" data-bs-target="#roomModal"><i class="fa-solid fa-plus"></i> Добавить комнату</button></div>
                 <?php if (!$rooms): ?><div class="empty-state">Замеров пока нет. Добавьте первую комнату.</div><?php else: ?>
                     <?php foreach ($rooms as $room): ?>
                         <?php $area=(float)$room['length_m']*(float)$room['width_m']; $walls=2*((float)$room['length_m']+(float)$room['width_m'])*(float)$room['height_m']; ?>
                         <div class="room-photo-card">
                             <div class="document-row room-measure-row">
-                                <div class="member-avatar"><i class="bi bi-rulers"></i></div>
+                                <div class="member-avatar"><i class="fa-solid fa-ruler-combined"></i></div>
                                 <div><strong><?= e($room['name']) ?></strong><span><?= e((string)$room['length_m']) ?> × <?= e((string)$room['width_m']) ?> × <?= e((string)$room['height_m']) ?> м · стены <?= number_format($walls,1,',',' ') ?> м²</span></div>
                                 <em><?= number_format($area,1,',',' ') ?> м²</em>
-                                <form method="post" class="ms-2"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="delete_room"><input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>"><button class="icon-button" type="submit" title="Удалить"><i class="bi bi-trash3"></i></button></form>
+                                <form method="post" class="ms-2"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="delete_room"><input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>"><button class="icon-button" type="submit" title="Удалить"><i class="fa-solid fa-trash-can"></i></button></form>
                             </div>
                             <div class="room-photo-actions">
                                 
@@ -942,14 +942,14 @@ require __DIR__ . '/includes/app_header.php';
                                     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
                                     <input type="hidden" name="action" value="upload_room_photo">
                                     <input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>">
-                                    <label class="outline-button room-camera-button"><i class="bi bi-camera"></i> Сфотографировать<input type="file" name="room_photo" accept="image/*" capture="environment"></label>
+                                    <label class="outline-button room-camera-button"><i class="fa-solid fa-camera"></i> Сфотографировать<input type="file" name="room_photo" accept="image/*" capture="environment"></label>
                                     <div class="room-photo-progress" aria-hidden="true"><div class="room-photo-progress-track"><span></span></div><strong>0%</strong></div>
                                 </form>
                                 <form method="post" enctype="multipart/form-data" class="room-photo-upload">
                                     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
                                     <input type="hidden" name="action" value="upload_room_photo">
                                     <input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>">
-                                    <label class="outline-button"><i class="bi bi-images"></i> Добавить фото<input type="file" name="room_photo" accept="image/*"></label>
+                                    <label class="outline-button"><i class="fa-solid fa-images"></i> Добавить фото<input type="file" name="room_photo" accept="image/*"></label>
                                     <div class="room-photo-progress" aria-hidden="true"><div class="room-photo-progress-track"><span></span></div><strong>0%</strong></div>
                                 </form>
                             </div>
@@ -958,12 +958,12 @@ require __DIR__ . '/includes/app_header.php';
                                 <?php foreach ($roomPhotos[(int)$room['id']] as $photo): ?>
                                     <div class="room-photo-thumb">
                                         <a href="<?= e($photo['path']) ?>" data-fancybox="room-<?= (int)$room['id'] ?>" data-caption="<?= e($room['name']) ?>"><img src="<?= e($photo['path']) ?>" alt="<?= e($room['name']) ?>" loading="lazy"></a>
-                                        <form method="post" class="room-photo-delete-form"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="delete_room_photo"><input type="hidden" name="photo_id" value="<?= (int)$photo['id'] ?>"><button type="submit" class="room-photo-delete" title="Удалить" aria-label="Удалить фотографию"><i class="bi bi-x-lg"></i></button></form>
+                                        <form method="post" class="room-photo-delete-form"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="delete_room_photo"><input type="hidden" name="photo_id" value="<?= (int)$photo['id'] ?>"><button type="submit" class="room-photo-delete" title="Удалить" aria-label="Удалить фотографию"><i class="fa-solid fa-xmark-lg"></i></button></form>
                                     </div>
                                 <?php endforeach; ?>
                                 </div>
                             <?php else: ?>
-                                <div class="room-photo-empty"><i class="bi bi-camera"></i><span>Фотографии комнаты ещё не добавлены</span></div>
+                                <div class="room-photo-empty"><i class="fa-solid fa-camera"></i><span>Фотографии комнаты ещё не добавлены</span></div>
                             <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
@@ -972,10 +972,10 @@ require __DIR__ . '/includes/app_header.php';
             <div class="module-panel">
                 <h2>Замеры → смета</h2>
                 <p class="panel-copy">Замеры автоматически используются в смете. Вы добавляете работу — Сметограм сам подставляет нужное количество по всем помещениям.</p>
-                <div class="generated-row"><i class="bi bi-check-circle"></i><span>Пол — длина × ширина</span></div>
-                <div class="generated-row"><i class="bi bi-check-circle"></i><span>Стены — 2 × (длина + ширина) × высота</span></div>
-                <div class="generated-row"><i class="bi bi-check-circle"></i><span>Потолок — площадь пола</span></div>
-                <div class="generated-row"><i class="bi bi-check-circle"></i><span>Периметр — 2 × (длина + ширина)</span></div>
+                <div class="generated-row"><i class="fa-solid fa-check-circle"></i><span>Пол — длина × ширина</span></div>
+                <div class="generated-row"><i class="fa-solid fa-check-circle"></i><span>Стены — 2 × (длина + ширина) × высота</span></div>
+                <div class="generated-row"><i class="fa-solid fa-check-circle"></i><span>Потолок — площадь пола</span></div>
+                <div class="generated-row"><i class="fa-solid fa-check-circle"></i><span>Периметр — 2 × (длина + ширина)</span></div>
                 <p class="panel-copy mt-3 mb-0">Расценка ставится уже в смете. Позиции можно редактировать или удалить как обычные работы.</p>
             </div>
         </div>
@@ -983,10 +983,10 @@ require __DIR__ . '/includes/app_header.php';
             <div class="modal-dialog modal-lg"><div class="modal-content ai-estimate-modal-content">
                 <div class="modal-header"><div><h5 id="aiEstimateTitle">Расчёт по фото</h5><p class="panel-copy mb-0" id="aiEstimateSummary">Анализируем фотографии помещения…</p></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
-                    <div class="ai-estimate-loading" id="aiEstimateLoading"><div class="ai-estimate-spinner"><i class="bi bi-stars"></i></div><strong>AI анализирует помещение</strong><span>Определяем поверхности и подходящие работы</span></div>
+                    <div class="ai-estimate-loading" id="aiEstimateLoading"><div class="ai-estimate-spinner"><i class="fa-solid fa-wand-magic-sparkles"></i></div><strong>AI анализирует помещение</strong><span>Определяем поверхности и подходящие работы</span></div>
                     <div id="aiEstimateResult" class="ai-estimate-result d-none">
                         <div class="ai-estimate-items" id="aiEstimateItems"></div>
-                        <div class="ai-estimate-note"><i class="bi bi-info-circle"></i><span>Это черновой расчёт по фотографиям. Перед добавлением в смету проверьте состав работ и количества.</span></div>
+                        <div class="ai-estimate-note"><i class="fa-solid fa-circle-info"></i><span>Это черновой расчёт по фотографиям. Перед добавлением в смету проверьте состав работ и количества.</span></div>
                     </div>
                 </div>
                 <div class="modal-footer" id="aiEstimateFooter"><button type="button" class="outline-button" data-bs-dismiss="modal">Закрыть</button></div>
@@ -1033,8 +1033,8 @@ require __DIR__ . '/includes/app_header.php';
             <?php endforeach; ?>
         </div>
         <div class="billing-grid">
-            <div class="module-panel"><div class="panel-heading"><div><h2>Состав тарифов</h2><p>Функции Сметограма развиваются внутри рабочего пространства.</p></div></div><div class="billing-feature-list"><div><i class="bi bi-calculator"></i><span><b>Смета</b><small>Разделы, позиции, цены, импорт и экспорт.</small></span></div><div><i class="bi bi-kanban"></i><span><b>Объект</b><small>График, замеры, команда, документы, чат и приёмка.</small></span></div><div><i class="bi bi-stars"></i><span><b>ИИ</b><small>Распознавание файлов и подготовка черновика.</small></span></div></div></div>
-            <div class="module-panel"><div class="panel-heading"><div><h2>Оплата</h2><p>Без фиктивных списаний.</p></div></div><div class="billing-note"><i class="bi bi-credit-card-2-front"></i><div><b>Онлайн-оплата</b><span>Выбор тарифа уже сохраняется. Эквайринг подключим отдельным шагом, когда будет выбран платёжный провайдер.</span></div></div></div>
+            <div class="module-panel"><div class="panel-heading"><div><h2>Состав тарифов</h2><p>Функции Сметограма развиваются внутри рабочего пространства.</p></div></div><div class="billing-feature-list"><div><i class="fa-solid fa-calculator"></i><span><b>Смета</b><small>Разделы, позиции, цены, импорт и экспорт.</small></span></div><div><i class="fa-solid fa-table-columns"></i><span><b>Объект</b><small>График, замеры, команда, документы, чат и приёмка.</small></span></div><div><i class="fa-solid fa-wand-magic-sparkles"></i><span><b>ИИ</b><small>Распознавание файлов и подготовка черновика.</small></span></div></div></div>
+            <div class="module-panel"><div class="panel-heading"><div><h2>Оплата</h2><p>Без фиктивных списаний.</p></div></div><div class="billing-note"><i class="fa-solid fa-credit-card-2-front"></i><div><b>Онлайн-оплата</b><span>Выбор тарифа уже сохраняется. Эквайринг подключим отдельным шагом, когда будет выбран платёжный провайдер.</span></div></div></div>
         </div>
     <?php else: ?>
         <div class="module-panel"><div class="empty-state">Раздел не найден.</div></div>
