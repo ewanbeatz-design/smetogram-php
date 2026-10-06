@@ -342,6 +342,123 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
   });
 
 
+  /* WhatsApp/Telegram-style chat: AJAX send + polling, no page reload. */
+  (function(){
+    let chatTimer=null;
+    let chatAbort=null;
+    let chatRequestBusy=false;
+
+    function esc(value){
+      return String(value??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[s]));
+    }
+    function initChat(){
+      const root=document.querySelector('[data-chat-root]');
+      if(!root || root.dataset.chatReady==='1') return;
+      root.dataset.chatReady='1';
+      const list=root.querySelector('[data-chat-messages]');
+      const form=root.querySelector('[data-chat-form]');
+      const input=root.querySelector('[data-chat-input]');
+      const send=root.querySelector('[data-chat-send]');
+      const status=root.querySelector('[data-chat-status]');
+      if(!list||!form||!input||!send) return;
+
+      const projectId=root.dataset.projectId;
+      const channel=root.dataset.channel;
+      let lastId=Number(root.dataset.lastId||0);
+      let atBottom=true;
+
+      function scrollBottom(force=false){
+        const distance=list.scrollHeight-list.scrollTop-list.clientHeight;
+        if(force || distance<100) list.scrollTop=list.scrollHeight;
+      }
+      function setStatus(text,ok=false){
+        if(!status)return;
+        status.textContent=text||'';
+        status.classList.toggle('is-online',!!ok);
+      }
+      function appendMessage(m,animate=true){
+        if(!m || !m.id || list.querySelector('[data-message-id="'+CSS.escape(String(m.id))+'"]')) return;
+        const mine=Number(m.authorId)===Number(window.smetogramUserId||0);
+        const name=m.authorName||'Пользователь';
+        const initials=name.trim().slice(0,2).toUpperCase()||'П';
+        const row=document.createElement('div');
+        row.className='chat-message '+(mine?'mine':'');
+        row.dataset.messageId=m.id;
+        row.innerHTML='<div class="member-avatar">'+esc(initials)+'</div><div class="chat-bubble-wrap"><strong>'+esc(name)+'</strong><p>'+esc(m.body).replace(/\n/g,'<br>')+'</p><small>'+esc(m.createdAt||'')+'</small></div>';
+        list.appendChild(row);
+        lastId=Math.max(lastId,Number(m.id));
+        if(animate) row.classList.add('chat-message-new');
+      }
+      async function poll(){
+        if(chatRequestBusy)return;
+        chatRequestBusy=true;
+        try{
+          if(chatAbort)chatAbort.abort();
+          chatAbort=new AbortController();
+          const url='workspace.php?view=chat&id='+encodeURIComponent(projectId)+'&channel='+encodeURIComponent(channel)+'&chat_poll=1&after='+encodeURIComponent(lastId);
+          const res=await fetch(url,{headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},credentials:'same-origin',signal:chatAbort.signal,cache:'no-store'});
+          const data=await res.json();
+          if(!res.ok||!data.ok)throw new Error(data.message||'Не удалось обновить чат.');
+          let added=0;
+          (data.messages||[]).forEach(m=>{appendMessage(m,true);added++;});
+          if(added)scrollBottom(false);
+          setStatus('В сети',true);
+        }catch(e){
+          if(e.name!=='AbortError')setStatus('Нет связи');
+        }finally{chatRequestBusy=false;}
+      }
+      form.addEventListener('submit',async e=>{
+        e.preventDefault();
+        const body=input.value.trim();
+        if(!body||send.disabled)return;
+        send.disabled=true;
+        input.disabled=true;
+        setStatus('Отправка…');
+        try{
+          const fd=new FormData(form);
+          fd.set('body',body);
+          const res=await fetch('workspace.php?view=chat&id='+encodeURIComponent(projectId)+'&channel='+encodeURIComponent(channel),{
+            method:'POST',body:fd,credentials:'same-origin',
+            headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}
+          });
+          const data=await res.json();
+          if(!res.ok||!data.ok)throw new Error(data.message||'Не удалось отправить сообщение.');
+          input.value='';
+          if(data.chatMessage)appendMessage(data.chatMessage,true);
+          scrollBottom(true);
+          setStatus('В сети',true);
+          input.focus();
+        }catch(e){
+          window.smetogramAlert?.(e.message||'Не удалось отправить сообщение.','error',4200);
+          setStatus('Нет связи');
+        }finally{
+          input.disabled=false;send.disabled=false;input.focus();
+        }
+      });
+      input.addEventListener('keydown',e=>{
+        if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){
+          e.preventDefault();
+          form.requestSubmit();
+        }
+      });
+      input.addEventListener('input',()=>{
+        input.style.height='auto';
+        input.style.height=Math.min(input.scrollHeight,130)+'px';
+      });
+      list.addEventListener('scroll',()=>{
+        const distance=list.scrollHeight-list.scrollTop-list.clientHeight;
+        atBottom=distance<100;
+      });
+      scrollBottom(true);
+      setStatus('В сети',true);
+      poll();
+      chatTimer=setInterval(poll,2500);
+      root.addEventListener('chat:destroy',()=>{if(chatTimer)clearInterval(chatTimer);if(chatAbort)chatAbort.abort();});
+    }
+    document.addEventListener('workspace:loaded',initChat);
+    initChat();
+  })();
+
   // Workspace tabs: load project sections without a full page reload.
   (function(){
     let busy=false;
