@@ -1606,6 +1606,22 @@ html,body{min-height:100%;margin:0}
 .stage-payment{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:8px 12px;border:1px solid rgba(50,58,49,.14);border-radius:10px;background:#fff;color:#2f4a3a;font-weight:700;font-size:13px;cursor:pointer;transition:.18s ease;}
 .stage-payment:hover{transform:translateY(-1px);border-color:rgba(50,58,49,.28);background:#f6faf7;}
 .stage-payment:disabled{opacity:.55;cursor:wait;transform:none;}
+.payment-stage-list{display:grid;gap:10px;margin-top:18px;}
+.payment-stage-row{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:12px;padding:14px;border:1px solid rgba(50,58,49,.1);border-radius:14px;background:#fff;}
+.payment-stage-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:#f2f6f3;color:#2f4a3a;}
+.payment-stage-main{min-width:0;}
+.payment-stage-head{display:flex;justify-content:space-between;gap:12px;align-items:center;}
+.payment-stage-head strong{font-size:14px;color:#303631;}
+.payment-stage-head span{font-size:12px;font-weight:800;color:#657069;}
+.payment-stage-total{font-size:12px;color:#747b76;margin-top:3px;}
+.payment-stage-total b{color:#303631;}
+.payment-stage-progress{height:6px;background:#edf0ed;border-radius:99px;overflow:hidden;margin-top:10px;}
+.payment-stage-progress span{display:block;height:100%;background:#557c61;border-radius:inherit;}
+.payment-stage-values{display:flex;gap:18px;flex-wrap:wrap;margin-top:7px;font-size:12px;color:#747b76;}
+.payment-stage-values b{color:#303631;}
+.payment-stage-row>em{font-style:normal;font-size:12px;font-weight:800;white-space:nowrap;color:#657069;}
+.payment-manual-list{margin-top:22px;}
+.payment-manual-list h3{font-size:15px;margin:0 0 10px;}
 .stage-payment-box{margin-top:12px;padding:12px 13px;border:1px solid rgba(50,58,49,.1);border-radius:12px;background:#f8faf8;}
 .stage-payment-box.is-paid{background:#edf7ef;border-color:#b8d9bf;}
 .stage-payment-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:#68706a;flex-wrap:wrap;}
