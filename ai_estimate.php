@@ -11,13 +11,14 @@ $roomId=(int)($_POST['room_id']??0);
 if($projectId<=0 || $roomId<=0 || !can_manage_project($pdo,$user,$projectId)) ai_json(['ok'=>false,'error'=>'Недостаточно прав.'],403);
 $q=$pdo->prepare('SELECT id,name,length_m,width_m,height_m FROM smetogram_rooms WHERE id=? AND project_id=? LIMIT 1');$q->execute([$roomId,$projectId]);$room=$q->fetch();
 if(!$room) ai_json(['ok'=>false,'error'=>'Комната не найдена.'],404);
-$ids=$_POST['photo_ids']??[];if(!is_array($ids))$ids=[$ids];$ids=array_values(array_filter(array_map('intval',$ids)));if(!$ids)ai_json(['ok'=>false,'error'=>'Выберите фото.'],422);$ids=array_slice($ids,0,$model==='qwen/qwen3.8-27b'?3:5);
+$ids=$_POST['photo_ids']??[];if(!is_array($ids))$ids=[$ids];$ids=array_values(array_filter(array_map('intval',$ids)));if(!$ids)ai_json(['ok'=>false,'error'=>'Выберите фото.'],422);
 $ph=implode(',',array_fill(0,count($ids),'?'));$q=$pdo->prepare("SELECT id,path,mime FROM smetogram_room_photos WHERE project_id=? AND room_id=? AND id IN ($ph)");$q->execute(array_merge([$projectId,$roomId],$ids));$photos=$q->fetchAll();
 if(!$photos)ai_json(['ok'=>false,'error'=>'Фотографии не найдены.'],404);
 $config=is_file(__DIR__.'/config/config.php')?require __DIR__.'/config/config.php':[];$key=(string)(getenv('GROQ_API_KEY')?:($config['ai']['groq_api_key']??''));$model=(string)(getenv('GROQ_VISION_MODEL')?:($config['ai']['groq_vision_model']??'qwen/qwen3.8-27b'));
 // Groq retired Llama 4 Scout on 17.07.2026. Also cap Qwen 3.8 at its current 3-image limit.
 if(in_array($model,['meta-llama/llama-4-scout-17b-16e-instruct','qwen/qwen3.6-27b'],true)) $model='qwen/qwen3.8-27b';
 if($key==='')ai_json(['ok'=>false,'error'=>'Не настроен GROQ_API_KEY.'],503);
+$ids=array_slice($ids,$model==='qwen/qwen3.8-27b'?0:0,$model==='qwen/qwen3.8-27b'?3:5);
 $catalog=[];try{$s=$pdo->query('SELECT name,unit,price FROM estimateitemtemplates ORDER BY id LIMIT 250');$catalog=$s->fetchAll();}catch(Throwable $e){}
 $catalogText='';foreach($catalog as $r)$catalogText.='- '.$r['name'].' | '.$r['unit'].' | '.$r['price']."\n";
 $area=(float)$room['length_m']*(float)$room['width_m'];$walls=2*((float)$room['length_m']+(float)$room['width_m'])*(float)$room['height_m'];$perimeter=2*((float)$room['length_m']+(float)$room['width_m']);
