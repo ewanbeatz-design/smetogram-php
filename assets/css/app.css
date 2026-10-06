@@ -1541,3 +1541,33 @@ html,body{min-height:100%;margin:0}
 /* Bootstrap alerts are converted to Smetogram toasts by app.js. Hide them from the first paint so they never flash. */
 .alert{display:none!important}
 .alert.smetogram-alert-hidden{display:none!important}
+
+/* Realtime messenger UI — WhatsApp/Telegram style. */
+.chat-app{padding:0;overflow:hidden;display:flex;flex-direction:column;min-height:620px;background:#fff}
+.chat-header{height:64px;flex:0 0 64px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;border-bottom:1px solid #EEF2F7;background:rgba(255,255,255,.96)}
+.chat-header>div{display:flex;align-items:center;gap:10px}.chat-header strong{font-size:13px;color:#172554}.chat-header span{font-size:9px;color:#16A34A}.chat-header span:not(.is-online){color:#94A3B8}.chat-header>i{color:#94A3B8}
+.chat-app .chat-tabs{padding:8px 12px;border-bottom:1px solid #F1F5F9;background:#FAFBFC;flex:0 0 auto}
+.chat-app .chat-tabs a{padding:9px 12px;border-radius:10px}
+.chat-app .chat-messages{flex:1;min-height:390px;max-height:calc(100vh - 330px);overflow-y:auto;display:flex;flex-direction:column;gap:7px;padding:18px 18px 12px;background:#F8FAFC;scroll-behavior:smooth}
+.chat-app .chat-message{max-width:min(72%,620px);display:flex;gap:8px;align-items:flex-end;margin:0}
+.chat-app .chat-message.mine{margin-left:auto;flex-direction:row-reverse;text-align:left}
+.chat-app .chat-message .member-avatar{width:30px;height:30px;border-radius:50%;font-size:8px}
+.chat-bubble-wrap{min-width:0}.chat-bubble-wrap>strong{display:block;font-size:9px;color:#64748B;margin:0 7px 3px}.chat-message.mine .chat-bubble-wrap>strong{text-align:right}
+.chat-app .chat-message p{margin:0;padding:9px 12px;border-radius:14px 14px 14px 4px;background:#fff;border:1px solid #E8ECF2;color:#334155;font:500 12px/1.45 Manrope,sans-serif;box-shadow:0 2px 7px rgba(15,23,42,.04);word-break:break-word}
+.chat-app .chat-message.mine p{border-radius:14px 14px 4px 14px;background:#EEF2FF;border-color:#E0E7FF;color:#312E81}
+.chat-app .chat-message small{display:block;margin:4px 7px 0;color:#A0A9B8;font-size:8px}
+.chat-message-new{animation:chatMessageIn .22s ease both}@keyframes chatMessageIn{from{opacity:0;transform:translateY(7px) scale(.98)}to{opacity:1;transform:none}}
+.chat-compose{flex:0 0 auto;align-items:flex-end;padding:11px 12px;border-top:1px solid #E8ECF2;background:#fff}
+.chat-compose textarea{flex:1;min-height:42px;max-height:130px;resize:none;border:1px solid #D8DEE8;border-radius:15px;padding:11px 13px;outline:0;background:#F8FAFC;color:#172554;font-size:12px;line-height:1.35}
+.chat-compose textarea:focus{border-color:#818CF8;box-shadow:0 0 0 3px rgba(79,70,229,.08);background:#fff}
+.chat-compose .primary-button{width:42px;height:42px;padding:0;border-radius:13px;flex:0 0 42px}
+.chat-compose .primary-button:disabled{opacity:.55;cursor:wait}
+@media(max-width:760px){
+ .chat-app{min-height:calc(100vh - 150px);border-radius:15px}
+ .chat-app .chat-messages{max-height:none;min-height:calc(100vh - 360px);padding:13px 10px 10px}
+ .chat-app .chat-message{max-width:88%}.chat-app .chat-message .member-avatar{display:none}
+ .chat-app .chat-tabs{overflow-x:auto;padding:7px 8px}
+ .chat-app .chat-tabs a{font-size:9px}
+ .chat-compose{padding:8px}
+ .chat-compose textarea{font-size:16px}
+}
