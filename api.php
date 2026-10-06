@@ -36,7 +36,9 @@ if($action==='estimate_action'){
   if(!$q->fetch()){http_response_code(422);echo json_encode(['ok'=>false,'error'=>'Раздел не найден'],JSON_UNESCAPED_UNICODE);exit;}
   $name=trim((string)($_POST['name']??''));$qty=(float)str_replace(',','.',(string)($_POST['quantity']??0));$unit=trim((string)($_POST['unit']??'шт'));$price=(float)str_replace(',','.',(string)($_POST['price']??0));
   if($name===''){http_response_code(422);echo json_encode(['ok'=>false,'error'=>'Введите наименование'],JSON_UNESCAPED_UNICODE);exit;}
-  $q=$pdo->prepare("INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source) VALUES(?,?,?,?,?,?)");$q->execute([$cat,$name,$qty,$unit,$price,'manual']);
+  $m=project_measurement_quantities($pdo,$id);$mType=measurement_type_for_name($name,$unit);if($mType!==null){$qty=(float)$m[$mType];}
+  $q=$pdo->prepare("INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source,quantitySource,measurementType,measurementRoomIds) VALUES(?,?,?,?,?,?,?,?,?)");
+  $q->execute([$cat,$name,$qty,$unit,$price,'manual',$mType!==null?'measurement':'manual',$mType,$mType!==null?implode(',',array_map('intval',$m['roomIds'])):null]);
  }elseif($op==='estimate_template'){
   $templateId=(int)($_POST['estimate_template_id']??0);
   $q=$pdo->prepare("SELECT * FROM estimatetemplates WHERE id=? LIMIT 1");$q->execute([$templateId]);$preset=$q->fetch();
@@ -49,7 +51,8 @@ if($action==='estimate_action'){
    $catStmt=$pdo->prepare("SELECT id FROM estimatecategories WHERE projectId=? AND name=? LIMIT 1");
    $newCat=$pdo->prepare("INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)");
    $nextSort=$pdo->prepare("SELECT COALESCE(MAX(sortOrder),0)+1 FROM estimatecategories WHERE projectId=?");
-   $itemStmt=$pdo->prepare("INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source) VALUES(?,?,?,?,?,?)");
+   $itemStmt=$pdo->prepare("INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source,quantitySource,measurementType,measurementRoomIds) VALUES(?,?,?,?,?,?,?,?,?)");
+   $measurement=project_measurement_quantities($pdo,$id);
    foreach($rows as $row){
     $catName=(string)$row['categoryName'];
     if(!isset($categories[$catName])){
@@ -57,7 +60,10 @@ if($action==='estimate_action'){
      if(!$catId){$nextSort->execute([$id]);$sort=(int)$nextSort->fetchColumn();$newCat->execute([$id,$catName,$sort]);$catId=$pdo->lastInsertId();}
      $categories[$catName]=(int)$catId;
     }
-    $itemStmt->execute([$categories[$catName],$row['name'],1,$row['unit'],$row['price'],'estimate_template']);
+    $mType=measurement_type_for_name((string)$row['name'],(string)$row['unit']);
+    $qty=$mType!==null?(float)$measurement[$mType]:1;
+    $roomIds=$mType!==null?implode(',',array_map('intval',$measurement['roomIds'])):null;
+    $itemStmt->execute([$categories[$catName],$row['name'],$qty,$row['unit'],$row['price'],'estimate_template',$mType!==null?'measurement':'template',$mType,$roomIds]);
    }
    $pdo->commit();
   }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
@@ -73,13 +79,15 @@ if($action==='estimate_action'){
    $q=$pdo->prepare("SELECT id FROM estimatecategories WHERE projectId=? AND name=? LIMIT 1");$q->execute([$id,$it['categoryName']]);$cat=$q->fetchColumn();
    if(!$cat){$q=$pdo->prepare("SELECT COALESCE(MAX(sortOrder),0)+1 FROM estimatecategories WHERE projectId=?");$q->execute([$id]);$sort=(int)$q->fetchColumn();$q=$pdo->prepare("INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)");$q->execute([$id,$it['categoryName'],$sort]);$cat=$pdo->lastInsertId();}
   }
-  $q=$pdo->prepare("INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source) VALUES(?,?,?,?,?,?)");$q->execute([(int)$cat,$it['name'],$qty,$it['unit'],$it['price'],'template']);
+  $m=project_measurement_quantities($pdo,$id);$mType=measurement_type_for_name((string)$it['name'],(string)$it['unit']);if($mType!==null)$qty=(float)$m[$mType];
+  $q=$pdo->prepare("INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source,quantitySource,measurementType,measurementRoomIds) VALUES(?,?,?,?,?,?,?,?,?)");
+  $q->execute([(int)$cat,$it['name'],$qty,$it['unit'],$it['price'],'template',$mType!==null?'measurement':'template',$mType,$mType!==null?implode(',',array_map('intval',$m['roomIds'])):null]);
  }elseif($op==='update_item'){
   $item=(int)($_POST['item_id']??0);$q=$pdo->prepare("SELECT i.id FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE i.id=? AND c.projectId=?");$q->execute([$item,$id]);
   if(!$q->fetch()){http_response_code(422);echo json_encode(['ok'=>false,'error'=>'Позиция не найдена'],JSON_UNESCAPED_UNICODE);exit;}
   $name=trim((string)($_POST['name']??''));$qty=(float)str_replace(',','.',(string)($_POST['quantity']??0));$unit=trim((string)($_POST['unit']??'шт'));$price=(float)str_replace(',','.',(string)($_POST['price']??0));
   if($name===''){http_response_code(422);echo json_encode(['ok'=>false,'error'=>'Введите наименование'],JSON_UNESCAPED_UNICODE);exit;}
-  $q=$pdo->prepare("UPDATE estimateitems SET name=?,quantity=?,unit=?,price=? WHERE id=?");$q->execute([$name,$qty,$unit,$price,$item]);
+  $q=$pdo->prepare("UPDATE estimateitems SET name=?,quantity=?,unit=?,price=?,quantitySource='manual',measurementType=NULL,measurementRoomIds=NULL WHERE id=?");$q->execute([$name,$qty,$unit,$price,$item]);
  }elseif($op==='delete_item'){
   $q=$pdo->prepare("DELETE i FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE i.id=? AND c.projectId=?");$q->execute([(int)($_POST['item_id']??0),$id]);
  }elseif($op==='delete_category'){
