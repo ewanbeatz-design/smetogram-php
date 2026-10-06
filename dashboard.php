@@ -23,66 +23,57 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 }
 
                 $sid=(int)($_POST['stage_id']??0);
-                $paymentStatus=(string)($_POST['payment_status']??'paid');
-                $paymentStatus=$paymentStatus==='paid'?'paid':'pending';
+                $paymentAmount=(float)str_replace(',','.',(string)($_POST['payment_amount']??'0'));
+                if($paymentAmount<=0){
+                    throw new RuntimeException('Укажите сумму оплаты.');
+                }
 
                 $q=$pdo->prepare('SELECT id,title,paymentMilestone FROM scheduletasks WHERE id=? AND projectId=? LIMIT 1');
                 $q->execute([$sid,$pid]);
                 $stage=$q->fetch();
+                if(!$stage) throw new RuntimeException('Этап не найден.');
 
-                if(!$stage){
-                    throw new RuntimeException('Этап не найден.');
-                }
+                $total=(float)$stage['paymentMilestone'];
+                if($total<=0) throw new RuntimeException('У этапа не указана общая сумма.');
 
-                $amount=(float)$stage['paymentMilestone'];
-                if($amount<=0){
-                    throw new RuntimeException('У этапа не указана сумма оплаты.');
-                }
-
-                $q=$pdo->prepare("SELECT id FROM smetogram_payments WHERE projectId=? AND stageId=? AND type='stage' ORDER BY id DESC LIMIT 1");
+                $q=$pdo->prepare("SELECT id,amount,paidAmount,status FROM smetogram_payments WHERE projectId=? AND stageId=? AND type='stage' ORDER BY id DESC LIMIT 1");
                 $q->execute([$pid,$sid]);
-                $paymentId=(int)$q->fetchColumn();
+                $payment=$q->fetch();
 
-                if($paymentId){
-                    $q=$pdo->prepare('UPDATE smetogram_payments SET title=?,amount=?,status=?,paidAt=? WHERE id=? AND projectId=?');
-                    $q->execute([
-                        'Этап: '.$stage['title'],
-                        $amount,
-                        $paymentStatus,
-                        $paymentStatus==='paid'?date('Y-m-d H:i:s'):null,
-                        $paymentId,
-                        $pid
-                    ]);
+                $paid=(float)($payment['paidAmount']??0);
+                $remaining=max(0,$total-$paid);
+                if($paymentAmount>$remaining+0.0001){
+                    throw new RuntimeException('Нельзя оплатить больше остатка: '.number_format($remaining,0,',',' ').' ₽.');
+                }
+
+                $newPaid=round($paid+$paymentAmount,2);
+                $newStatus=$newPaid>=$total?'paid':'partial';
+                $paidAt=$newStatus==='paid'?date('Y-m-d H:i:s'):null;
+
+                if($payment){
+                    $paymentId=(int)$payment['id'];
+                    $q=$pdo->prepare('UPDATE smetogram_payments SET title=?,amount=?,paidAmount=?,status=?,paidAt=? WHERE id=? AND projectId=?');
+                    $q->execute(['Этап: '.$stage['title'],$total,$newPaid,$newStatus,$paidAt,$paymentId,$pid]);
                 }else{
-                    $q=$pdo->prepare('INSERT INTO smetogram_payments(projectId,userId,type,stageId,title,amount,status,paidAt) VALUES(?,?,?,?,?,?,?,?)');
-                    $q->execute([
-                        $pid,
-                        (int)$user['id'],
-                        'stage',
-                        $sid,
-                        'Этап: '.$stage['title'],
-                        $amount,
-                        $paymentStatus,
-                        $paymentStatus==='paid'?date('Y-m-d H:i:s'):null
-                    ]);
+                    $q=$pdo->prepare('INSERT INTO smetogram_payments(projectId,userId,type,stageId,title,amount,paidAmount,status,paidAt) VALUES(?,?,?,?,?,?,?,?,?)');
+                    $q->execute([$pid,(int)$user['id'],'stage',$sid,'Этап: '.$stage['title'],$total,$newPaid,$newStatus,$paidAt]);
                     $paymentId=(int)$pdo->lastInsertId();
                 }
 
                 $q=$pdo->prepare('INSERT INTO smetogram_payment_events(paymentId,eventType,payloadJson) VALUES(?,?,?)');
-                $q->execute([
-                    $paymentId,
-                    $paymentStatus==='paid'?'stage_paid':'stage_pending',
-                    json_encode(['stageId'=>$sid,'amount'=>$amount],JSON_UNESCAPED_UNICODE)
-                ]);
+                $q->execute([$paymentId,'stage_payment',json_encode(['stageId'=>$sid,'amount'=>$paymentAmount,'paidAmount'=>$newPaid,'total'=>$total],JSON_UNESCAPED_UNICODE)]);
 
                 $payload=[
                     'ok'=>true,
-                    'status'=>$paymentStatus,
-                    'message'=>$paymentStatus==='paid'
-                        ?'Этап отмечен как оплаченный.'
-                        :'Оплата этапа возвращена в ожидание.'
+                    'status'=>$newStatus,
+                    'paidAmount'=>$newPaid,
+                    'amount'=>$total,
+                    'remaining'=>max(0,$total-$newPaid),
+                    'message'=>$newStatus==='paid'
+                        ?'Этап полностью оплачен.'
+                        :'Аванс добавлен: '.number_format($paymentAmount,0,',',' ').' ₽.'
                 ];
-            }elseif($stageAction==='delete'){
+            }            }elseif($stageAction==='delete'){
                 if(!can_manage_project($pdo,$user,$pid)){
                     throw new RuntimeException('Редактировать этапы может только владелец проекта.');
                 }
@@ -156,14 +147,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     }
                 }
 
-                $q=$pdo->prepare("SELECT id,status FROM smetogram_payments WHERE projectId=? AND stageId=? AND type='stage' ORDER BY id DESC LIMIT 1");
+                $q=$pdo->prepare("SELECT id,status,amount,paidAmount FROM smetogram_payments WHERE projectId=? AND stageId=? AND type='stage' ORDER BY id DESC LIMIT 1");
                 $q->execute([$pid,$sid]);
                 $existingPayment=$q->fetch();
 
                 if($payment>0){
                     if($existingPayment){
-                        $q=$pdo->prepare('UPDATE smetogram_payments SET title=?,amount=? WHERE id=? AND projectId=?');
-                        $q->execute(['Этап: '.$title,$payment,(int)$existingPayment['id'],$pid]);
+                        $paidAmount=min($payment,(float)($existingPayment['paidAmount']??0));
+                        $paymentStatus=$paidAmount>=$payment?'paid':($paidAmount>0?'partial':'pending');
+                        $q=$pdo->prepare('UPDATE smetogram_payments SET title=?,amount=?,paidAmount=?,status=?,paidAt=? WHERE id=? AND projectId=?');
+                        $q->execute(['Этап: '.$title,$payment,$paidAmount,$paymentStatus,$paymentStatus==='paid'?date('Y-m-d H:i:s'):null,(int)$existingPayment['id'],$pid]);
                     }else{
                         $q=$pdo->prepare('INSERT INTO smetogram_payments(projectId,userId,type,stageId,title,amount,status) VALUES(?,?,?,?,?,?,?)');
                         $q->execute([$pid,(int)$user['id'],'stage',$sid,'Этап: '.$title,$payment,'pending']);
@@ -177,9 +170,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 $q->execute([$sid,$pid]);
                 $item=$q->fetch();
 
-                $q=$pdo->prepare("SELECT status FROM smetogram_payments WHERE projectId=? AND stageId=? AND type='stage' ORDER BY id DESC LIMIT 1");
+                $q=$pdo->prepare("SELECT status,amount,paidAmount FROM smetogram_payments WHERE projectId=? AND stageId=? AND type='stage' ORDER BY id DESC LIMIT 1");
                 $q->execute([$pid,$sid]);
-                $item['paymentStatus']=$q->fetchColumn()?:'none';
+                $pay=$q->fetch();
+                $item['paymentStatus']=$pay['status']??'none';
+                $item['paidAmount']=(float)($pay['paidAmount']??0);
+                $item['paymentAmount']=(float)($pay['amount']??$item['paymentMilestone']);
 
                 $payload=[
                     'ok'=>true,
@@ -247,7 +243,9 @@ if(is_admin($user)){
     $q->execute([$user['id'],$user['id']]);
 }
 $all=$q->fetchAll();
-if(isset($_GET['stages_for'])){ $sid=(int)$_GET['stages_for']; if($sid<=0||!can_access_project($pdo,$user,$sid)){http_response_code(403);header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>false,'message'=>'Нет доступа к проекту.'],JSON_UNESCAPED_UNICODE);exit;} $sq=$pdo->prepare("SELECT st.id,st.title,st.startsAt,st.endsAt,st.status,st.paymentMilestone,COALESCE((SELECT sp.status FROM smetogram_payments sp WHERE sp.projectId=st.projectId AND sp.stageId=st.id AND sp.type='stage' ORDER BY sp.id DESC LIMIT 1),'none') AS paymentStatus FROM scheduletasks st WHERE st.projectId=? ORDER BY st.startsAt IS NULL,st.startsAt,st.id");$sq->execute([$sid]);header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>true,'items'=>$sq->fetchAll()],JSON_UNESCAPED_UNICODE);exit; }
+if(isset($_GET['stages_for'])){ $sid=(int)$_GET['stages_for']; if($sid<=0||!can_access_project($pdo,$user,$sid)){http_response_code(403);header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>false,'message'=>'Нет доступа к проекту.'],JSON_UNESCAPED_UNICODE);exit;} $sq=$pdo->prepare("SELECT st.id,st.title,st.startsAt,st.endsAt,st.status,st.paymentMilestone,
+COALESCE((SELECT sp.status FROM smetogram_payments sp WHERE sp.projectId=st.projectId AND sp.stageId=st.id AND sp.type='stage' ORDER BY sp.id DESC LIMIT 1),'none') AS paymentStatus,
+COALESCE((SELECT sp.paidAmount FROM smetogram_payments sp WHERE sp.projectId=st.projectId AND sp.stageId=st.id AND sp.type='stage' ORDER BY sp.id DESC LIMIT 1),0) AS paidAmount FROM scheduletasks st WHERE st.projectId=? ORDER BY st.startsAt IS NULL,st.startsAt,st.id");$sq->execute([$sid]);header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>true,'items'=>$sq->fetchAll()],JSON_UNESCAPED_UNICODE);exit; }
 
 $query=trim($_GET['q']??'');$status=$_GET['status']??'all';
 $projects=array_values(array_filter($all,function($p)use($query,$status){$hay=mb_strtolower(($p['name']??'').' '.($p['city']??'').' '.($p['clientName']??'').' '.($p['workType']??''));return ($query===''||mb_strpos($hay,mb_strtolower($query))!==false)&&($status==='all'||$p['status']===$status);}));
