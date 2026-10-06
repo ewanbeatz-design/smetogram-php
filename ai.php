@@ -3,6 +3,15 @@ declare(strict_types=1);
 require __DIR__.'/config/bootstrap.php';
 
 $user = require_auth();
+
+// Room photo AI is a JSON endpoint. Handle it before the legacy AI page's
+// owner-only project lookup, so admins/employees and AJAX requests are not
+// redirected to dashboard.php and returned as HTML instead of JSON.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'room_estimate') {
+    require __DIR__.'/ai_estimate.php';
+    exit;
+}
+
 $projectId = (int)($_GET['id'] ?? $_POST['project_id'] ?? 0);
 $project = null;
 if ($projectId <= 0) redirect('dashboard.php');
@@ -75,9 +84,6 @@ function ai_call(array $config, string $system, string $userText, ?string $image
 if($_SERVER['REQUEST_METHOD']==='POST'){
     check_csrf();
     $action=$_POST['action']??'';
-    if($action==='room_estimate'){
-        require __DIR__.'/ai_estimate.php';
-    }
     if($action==='chat'){
         if(!$project) ai_json_response(['ok'=>false,'error'=>'Сначала выберите проект'],422);
         $prompt=trim($_POST['prompt']??'');
