@@ -364,6 +364,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
 
       const projectId=root.dataset.projectId;
       const channel=root.dataset.channel;
+      const currentUserId=Number(root.dataset.userId||0);
       let lastId=Number(root.dataset.lastId||0);
       let atBottom=true;
 
@@ -378,7 +379,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
       }
       function appendMessage(m,animate=true){
         if(!m || !m.id || list.querySelector('[data-message-id="'+CSS.escape(String(m.id))+'"]')) return;
-        const mine=Number(m.authorId)===Number(window.smetogramUserId||0);
+        const mine=Number(m.authorId)===currentUserId;
         const name=m.authorName||'Пользователь';
         const initials=name.trim().slice(0,2).toUpperCase()||'П';
         const row=document.createElement('div');
