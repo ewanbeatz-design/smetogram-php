@@ -301,6 +301,24 @@ function redirect(string $u):never{header('Location: '.$u);exit;}
 function csrf_token():string{if(empty($_SESSION['csrf']))$_SESSION['csrf']=bin2hex(random_bytes(32));return $_SESSION['csrf'];}
 function check_csrf():void{if(!hash_equals($_SESSION['csrf']??'',$_POST['csrf']??'')){http_response_code(419);exit('Сессия формы устарела. Обновите страницу.');}}
 function current_user():?array{return $_SESSION['user']??null;}
+function is_admin(array $user):bool{return strtolower(trim((string)($user['role']??'')))==='admin';}
+function can_access_project(PDO $pdo,array $user,int $projectId):bool{
+    if($projectId<=0)return false;
+    if(is_admin($user))return true;
+    $q=$pdo->prepare('SELECT 1 FROM projects WHERE id=? AND ownerId=? LIMIT 1');
+    $q->execute([$projectId,(int)$user['id']]);
+    if($q->fetchColumn())return true;
+    $q=$pdo->prepare('SELECT 1 FROM projectmembers WHERE projectId=? AND userId=? LIMIT 1');
+    $q->execute([$projectId,(int)$user['id']]);
+    return (bool)$q->fetchColumn();
+}
+function can_manage_project(PDO $pdo,array $user,int $projectId):bool{
+    if($projectId<=0)return false;
+    if(is_admin($user))return true;
+    $q=$pdo->prepare('SELECT 1 FROM projects WHERE id=? AND ownerId=? LIMIT 1');
+    $q->execute([$projectId,(int)$user['id']]);
+    return (bool)$q->fetchColumn();
+}
 function create_notification(PDO $pdo, int $userId, ?int $projectId, string $type, string $title, string $body = '', ?string $url = null): void {
     if ($userId <= 0) return;
     $q = $pdo->prepare('INSERT INTO smetogram_notifications (userId,projectId,type,title,body,url) VALUES (?,?,?,?,?,?)');
@@ -308,6 +326,7 @@ function create_notification(PDO $pdo, int $userId, ?int $projectId, string $typ
 }
 
 function subscription_is_active(array $user):bool{
+    if(is_admin($user))return true;
     $plan=trim((string)($user['subscriptionPlan']??'free'));
     $status=trim((string)($user['subscriptionStatus']??'active'));
     if($plan===''||$plan==='free'||$status!=='active')return false;
@@ -320,10 +339,37 @@ function user_project_count(PDO $pdo,int $userId):int{
     return (int)$q->fetchColumn();
 }
 function can_create_project(PDO $pdo,array $user):bool{
-    return subscription_is_active($user)||user_project_count($pdo,(int)($user['id']??0))<1;
+    return is_admin($user)||subscription_is_active($user)||user_project_count($pdo,(int)($user['id']??0))<1;
 }
 function subscription_label(array $user):string{
     return subscription_is_active($user)?'Подписка активна':'Бесплатный доступ';
 }
 
-function require_auth():array{if(!current_user())redirect('login.php');return current_user();}
+function require_auth():array{
+    $session=current_user();
+    if(!$session)redirect('login.php');
+    $q=$pdo->prepare('SELECT * FROM users WHERE id=? LIMIT 1');
+    $q->execute([(int)($session['id']??0)]);
+    $fresh=$q->fetch();
+    if(!$fresh){unset($_SESSION['user']);redirect('login.php');}
+    // Однократно назначаем владельца системы: самого первого зарегистрированного пользователя,
+    // если в базе ещё нет администратора. После этого права меняются только через админку.
+    try{
+        $hasAdmin=(int)$pdo->query("SELECT COUNT(*) FROM users WHERE role='admin'")->fetchColumn();
+        if($hasAdmin===0){
+            $first=(int)$pdo->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetchColumn();
+            if($first>0){
+                $pdo->prepare("UPDATE users SET role='admin' WHERE id=?")->execute([$first]);
+                if((int)$fresh['id']===$first)$fresh['role']='admin';
+            }
+        }
+    }catch(Throwable $e){}
+    $_SESSION['user']=[
+        'id'=>(int)$fresh['id'],'name'=>(string)($fresh['name']??''),'email'=>(string)($fresh['email']??''),
+        'role'=>(string)($fresh['role']??'user'),'subscriptionPlan'=>(string)($fresh['subscriptionPlan']??'free'),
+        'subscriptionStatus'=>(string)($fresh['subscriptionStatus']??'active'),
+        'subscriptionExpiresAt'=>(string)($fresh['subscriptionExpiresAt']??''),
+        'username'=>(string)($fresh['username']??''),'telegramId'=>$fresh['telegramId']??null
+    ];
+    return $_SESSION['user'];
+}
