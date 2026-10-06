@@ -280,6 +280,56 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     if(input) uploadRoomPhoto(input.form,input);
   });
 
+  document.addEventListener('change',e=>{
+    const input=e.target.closest('.acceptance-photo-upload input[type="file"]');
+    if(!input || !input.files || !input.files.length) return;
+    const form=input.form;
+    const stageId=form?.querySelector('[name="stage_id"]')?.value;
+    if(!form || !stageId) return;
+    const xhr=new XMLHttpRequest();
+    const buttons=form.closest('.acceptance-photo-actions')?.querySelectorAll('.outline-button');
+    buttons?.forEach(b=>{b.classList.add('is-uploading');b.style.pointerEvents='none';});
+    xhr.open('POST',form.getAttribute('action')||window.location.href,true);
+    xhr.setRequestHeader('X-Requested-With','XMLHttpRequest');
+    xhr.addEventListener('load',()=>{
+      let data=null; try{data=JSON.parse(xhr.responseText)}catch(err){}
+      buttons?.forEach(b=>{b.classList.remove('is-uploading');b.style.pointerEvents='';});
+      input.value='';
+      if(xhr.status>=200&&xhr.status<300&&data?.ok){
+        window.smetogramAlert?.('Фото приёмки добавлено.','success',2600);
+        window.location.reload();
+      }else{
+        window.smetogramAlert?.(data?.message||'Не удалось загрузить фотографию.','error',4200);
+      }
+    });
+    xhr.addEventListener('error',()=>{
+      buttons?.forEach(b=>{b.classList.remove('is-uploading');b.style.pointerEvents='';});
+      input.value='';
+      window.smetogramAlert?.('Ошибка соединения при загрузке фотографии.','error',4200);
+    });
+    xhr.send(new FormData(form));
+  });
+
+  document.addEventListener('submit',async e=>{
+    const form=e.target.closest('.acceptance-photo-delete');
+    if(!form)return;
+    e.preventDefault();
+    if(form.dataset.deleting==='1')return;
+    form.dataset.deleting='1';
+    try{
+      const res=await fetch(window.location.href,{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:new FormData(form),credentials:'same-origin'});
+      const data=await res.json().catch(()=>null);
+      if(!res.ok||!data?.ok)throw new Error(data?.message||'Не удалось удалить фотографию.');
+      form.closest('.acceptance-photo-thumb')?.remove();
+      window.smetogramAlert?.('Фото удалено.','success',2200);
+    }catch(err){
+      window.smetogramAlert?.(err.message||'Не удалось удалить фотографию.','error',4200);
+      form.dataset.deleting='';
+    }
+  });
+
+
+
   async function deleteRoomPhoto(form){
     const card=form.closest('.room-photo-thumb');
     if(!card || form.dataset.deleting==='1') return;
