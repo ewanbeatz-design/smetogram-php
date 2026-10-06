@@ -4,7 +4,7 @@ require __DIR__.'/config/bootstrap.php';
 
 $user=require_auth();
 $id=(int)($_GET['id']??0);
-$format=(string)($_GET['format']??'print');
+$format=(string)($_GET['format']??'print'); // pdf/xlsx export
 
 $q=$pdo->prepare("SELECT * FROM projects WHERE id=? LIMIT 1");
 $q->execute([$id]);
