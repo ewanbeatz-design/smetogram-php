@@ -63,7 +63,7 @@ jobs:
             PHP
 
             chmod 640 config/config.php
-            composer install --no-interaction --no-dev --prefer-dist --optimize-autoloader
+            /var/www/u1027561/data/bin/composer install --no-interaction --no-dev --prefer-dist --optimize-autoloader
 
             php -r '$c=require "config/config.php"; if (empty($c["telegram"]["client_id"])) {fwrite(STDERR,"TELEGRAM_CLIENT_ID_NOT_CONFIGURED\\n"); exit(1);} if (empty($c["telegram"]["bot_token"])) {fwrite(STDERR,"TELEGRAM_BOT_TOKEN_NOT_CONFIGURED\\n"); exit(1);} echo "TELEGRAM_CONFIG_OK\\n";'
             php -r '$c=require "config/config.php"; try { new PDO("mysql:host=".$c["db"]["host"].";port=".$c["db"]["port"].";dbname=".$c["db"]["name"].";charset=".$c["db"]["charset"], $c["db"]["user"], $c["db"]["password"], [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]); echo "DB_CONNECTION_OK\\n"; } catch (Throwable $e) { echo "DB_CONNECTION_ERROR: ".$e->getMessage()."\\n"; exit(1); }'
