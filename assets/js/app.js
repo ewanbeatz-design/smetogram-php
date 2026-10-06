@@ -590,7 +590,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
  function edit(item){
   $('[data-stage-id]').value=item.id; $('[data-stage-project]').value=projectId; $('[data-stage-title]').value=item.title||'';
   $('[data-stage-start]').value=date(item.startsAt); $('[data-stage-end]').value=date(item.endsAt);
-  $('[data-stage-status]').value=item.status||'planned'; $('[data-stage-payment]').value=Number(item.paymentMilestone||0)||'';
+  $('[data-stage-status]').value=item.status||'planned'; $('[data-stage-total]').value=Number(item.paymentMilestone||0)||'';
   $('[data-stage-form-title]').textContent='Редактирование этапа'; $('[data-stage-submit]').innerHTML='<i class="bi bi-check2"></i> Сохранить изменения'; $('[data-stage-cancel]').hidden=false;
   $('[data-stage-title]').focus({preventScroll:true});
  }
@@ -615,7 +615,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
    paymentBtn.disabled=true;
    try{
     const input=document.querySelector('[data-stage-payment-input="'+paymentBtn.dataset.stagePayment+'"]');
-    const raw=String(input?.value||'').replace(/\\s/g,'').replace(',','.');
+    const raw=String(input?.value||'').replace(/\s/g,'').replace(',','.');
     const amount=Number(raw);
     if(!Number.isFinite(amount)||amount<=0)throw new Error('Укажите сумму оплаты.');
     const fd=new FormData();
