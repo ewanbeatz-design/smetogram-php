@@ -660,14 +660,14 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
   const num=(v)=>Number(String(v??'').replace(/\\s/g,'').replace(',','.'));
   async function stageRequest(stageId,action,extra={}){
     const card=document.querySelector('[data-payment-stage-card="'+CSS.escape(String(stageId))+'"]');
-    const csrf=document.querySelector('input[name="csrf"]')?.value;
+    const csrfInput=document.querySelector('input[name="csrf"]'); const csrf=csrfInput ? csrfInput.value : '';
     const fd=new FormData();fd.append('csrf',csrf||'');fd.append('stage_action',action);fd.append('project_id',new URLSearchParams(location.search).get('id')||'0');fd.append('stage_id',stageId);
     Object.entries(extra).forEach(([k,v])=>fd.append(k,String(v)));
     const res=await fetch('dashboard.php',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd,credentials:'same-origin'});
     const data=await res.json().catch(()=>null);
     if(!res.ok||!data?.ok)throw new Error(data?.message||'Не удалось сохранить оплату.');
     if(card){
-      const total=Number(data.amount??card.querySelector('[data-stage-amount]')?.value??0);
+      const total=Number(data.amount ?? (card.querySelector('[data-stage-amount]') ? card.querySelector('[data-stage-amount]').value : 0));
       const paid=Number(data.paidAmount??card.querySelector('[data-stage-paid]')?.textContent.replace(/\\D/g,'')??0);
       const remaining=Math.max(0,total-paid),percent=total>0?Math.min(100,Math.round(paid/total*100)):0;
       const amountInput=card.querySelector('[data-stage-amount]');if(amountInput&&action==='amount')amountInput.value=money(total).replace(' ₽','');
@@ -681,7 +681,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
       if(metrics.length>=3){
         let totalAll=0,paidAll=0;
         document.querySelectorAll('[data-payment-stage-card]').forEach(x=>{
-          totalAll+=num(x.querySelector('[data-stage-amount]')?.value);paidAll+=num(x.querySelector('[data-stage-paid]')?.textContent);
+          const ai=x.querySelector('[data-stage-amount]'); const pi=x.querySelector('[data-stage-paid]'); totalAll+=num(ai ? ai.value : 0); paidAll+=num(pi ? pi.textContent : 0);
         });
         metrics[0].textContent=money(totalAll);metrics[1].textContent=money(paidAll);metrics[2].textContent=money(Math.max(0,totalAll-paidAll));
       }
@@ -697,11 +697,11 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     btn.disabled=true;
     try{
       if(amountBtn){
-        const input=card.querySelector('[data-stage-amount]'),amount=num(input?.value);
+        const input=card.querySelector('[data-stage-amount]'); const amount=num(input ? input.value : '');
         if(!Number.isFinite(amount)||amount<0)throw new Error('Укажите корректную сумму этапа.');
         await stageRequest(stageId,'amount',{stage_amount:amount});
       }else{
-        const input=card.querySelector('[data-stage-payment-input]'),amount=num(input?.value);
+        const input=card.querySelector('[data-stage-payment-input]'); const amount=num(input ? input.value : '');
         if(!Number.isFinite(amount)||amount<=0)throw new Error('Укажите сумму аванса / платежа.');
         await stageRequest(stageId,'payment',{payment_amount:amount});
       }
