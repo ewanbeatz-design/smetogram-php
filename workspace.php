@@ -713,13 +713,13 @@ require __DIR__ . '/includes/app_header.php';
             $messages = $q->fetchAll();
         }
         ?>
-        <div class="module-panel chat-panel">
+        <div class="module-panel chat-panel chat-app" data-chat-root data-project-id="<?= (int)$projectId ?>" data-channel="<?= e($channel) ?>" data-last-id="<?= (int)($messages ? end($messages)['id'] : 0) ?>">
             <div class="chat-tabs">
                 <?php foreach (['foreman_client'=>'Прораб — заказчик','team'=>'Бригада','designer_client'=>'Дизайнер — заказчик','general'=>'Общий'] as $channelKey => $channelName): ?>
                     <a href="workspace.php?view=chat&id=<?= $projectId ?>&channel=<?= rawurlencode($channelKey) ?>" class="<?= $channel === $channelKey ? 'active' : '' ?>"><?= e($channelName) ?></a>
                 <?php endforeach; ?>
             </div>
-            <div class="chat-messages">
+            <div class="chat-header"><div><strong>Чат проекта</strong><span data-chat-status>В сети</span></div><i class="bi bi-three-dots"></i></div><div class="chat-messages" data-chat-messages>
                 <?php if (!$messages): ?><div class="empty-state">Сообщений пока нет.</div><?php else: ?>
                     <?php foreach ($messages as $message): ?>
                         <div class="chat-message <?= (int)$message['authorId'] === (int)$user['id'] ? 'mine' : '' ?>">
@@ -730,7 +730,7 @@ require __DIR__ . '/includes/app_header.php';
                 <?php endif; ?>
             </div>
             <?php if ($project): ?>
-            <form class="chat-compose" method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="send_message"><input type="hidden" name="channel" value="<?= e($channel) ?>"><input name="body" required placeholder="Напишите сообщение..."><button class="primary-button" type="submit"><i class="bi bi-send"></i></button></form>
+            <form class="chat-compose" data-chat-form method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="send_message"><input type="hidden" name="channel" value="<?= e($channel) ?>"><textarea name="body" required rows="1" data-chat-input placeholder="Напишите сообщение..."></textarea><button class="primary-button" data-chat-send type="submit"><i class="bi bi-send"></i></button></form>
             <?php endif; ?>
         </div>
 
