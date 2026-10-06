@@ -5,8 +5,7 @@ $user=require_auth();
 $id=(int)($_GET['id']??0);
 $q=$pdo->prepare('SELECT f.* FROM smetogram_document_files f INNER JOIN projects p ON p.id=f.projectId WHERE f.id=? LIMIT 1');
 $q->execute([$id]); $file=$q->fetch();
-if(!$file || !can_access_project($pdo,$user,(int)$file['projectId'])){http_response_code(404);exit('Файл не найден.');} $file=$q->fetch();
-if(!$file){http_response_code(404);exit('Файл не найден.');}
+if(!$file || !can_access_project($pdo,$user,(int)$file['projectId'])){http_response_code(404);exit('Файл не найден.');}
 $path=__DIR__.'/'.$file['path'];
 if(!is_file($path)){http_response_code(404);exit('Файл отсутствует на сервере.');}
 $mime=(string)$file['mime'];
