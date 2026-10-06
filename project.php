@@ -75,20 +75,20 @@ $label=['draft'=>'Черновик','in_progress'=>'В работе','review'=>'
 $pageTitle=$project['name'];require __DIR__.'/includes/app_header.php';
 ?>
 <section class="page-wrap estimate-page">
-<div class="estimate-heading"><div><a href="dashboard.php" class="back-button"><i class="bi bi-arrow-left"></i> Все проекты</a><div class="estimate-title-row"><div class="project-symbol"><i class="bi bi-house"></i><i class="bi bi-check2"></i></div><div><div class="eyebrow">ПРОЕКТ / СМЕТА</div><h1><?=e($project['name'])?></h1><p><?=e($project['city'])?> <b>·</b> <?=e($project['clientName'])?> <b>·</b> <?=e($project['workType'])?></p></div></div></div><div class="heading-actions"><form method="post" data-ajax-estimate><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="status"><select class="status-select" name="status" onchange="estimateStatus(this.form)"><?php foreach(['draft'=>'Черновик','in_progress'=>'В работе','review'=>'На согласовании','completed'=>'Завершён','archived'=>'Архив'] as $v=>$t):?><option value="<?=$v?>" <?=$project['status']===$v?'selected':''?>><?=$t?></option><?php endforeach;?></select></form><button class="outline-button" type="button" data-bs-toggle="modal" data-bs-target="#exportModal"><i class="bi bi-file-earmark-arrow-down"></i> Экспорт</button><a class="outline-button" href="catalog.php?id=<?=$id?>"><i class="bi bi-journal-text"></i> Каталог</a><?php if($canEditCard): ?><button class="outline-button" type="button" data-bs-toggle="modal" data-bs-target="#editProjectModal"><i class="bi bi-pencil"></i> Редактировать</button><?php endif; ?><?php if($canDelete): ?><form method="post" class="d-inline" onsubmit="return confirm('Удалить эту смету и все её данные? Это действие нельзя отменить.')"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_project"><button class="danger-button" type="submit"><i class="bi bi-trash3"></i> Удалить смету</button></form><?php endif; ?><button class="primary-button" type="button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-grid-3x3-gap"></i> Готовая смета</button></div></div>
-<div class="estimate-summary"><div><span>ИТОГО ПО СМЕТЕ</span><strong><?=number_format($estimateGrandTotal,0,',',' ')?> ₽</strong><small>включая НДС 20%</small></div><div class="summary-stats"><div><b><?=count($cats)?></b> категории</div><div><b><?=$itemsCount?></b> позиций</div><div><b><?=number_format(array_sum(array_map(fn($c)=>(float)$c['items']?0:0,$cats)),0)?></b> объём</div></div><div class="summary-actions"><button class="outline-button" type="button" onclick="document.querySelector('.estimate-controls').scrollIntoView({behavior:'smooth',block:'center'})"><i class="bi bi-calendar3"></i> Создать график</button><button class="icon-button darkish" type="button" title="Дополнительно"><i class="bi bi-three-dots"></i></button></div></div>
-<div class="estimate-controls" id="estimateCalcControls"><div><span class="control-label">МЕТОД РАСЧЁТА</span><select class="status-select" id="estimateMethod"><option value="resource">Ресурсный</option><option value="base-index">Базисно-индексный</option><option value="resource-index">Ресурсно-индексный</option></select></div><label class="check-control"><input id="winterCoeff" type="checkbox"> Зимнее удорожание <b>+12%</b></label><label class="check-control"><input id="tightCoeff" type="checkbox"> Стеснённые условия <b>+8%</b></label><label class="custom-coeff">Свой коэффициент<input id="customCoeff" min="0.1" max="5" step="0.01" type="number" value="1"></label></div><div class="estimate-toolbar"><div class="toolbar-tabs"><button type="button" class="active">Смета</button><button type="button">График <span>скоро</span></button><button type="button">Документы <span>скоро</span></button></div><div class="estimate-actions"><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-grid-3x3-gap"></i> Готовая смета</button><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#categoryModal"><i class="bi bi-plus-lg"></i> Добавить категорию</button></div></div>
+<div class="estimate-heading"><div><a href="dashboard.php" class="back-button"><i class="fa-solid fa-arrow-left"></i> Все проекты</a><div class="estimate-title-row"><div class="project-symbol"><i class="fa-solid fa-house"></i><i class="fa-solid fa-check"></i></div><div><div class="eyebrow">ПРОЕКТ / СМЕТА</div><h1><?=e($project['name'])?></h1><p><?=e($project['city'])?> <b>·</b> <?=e($project['clientName'])?> <b>·</b> <?=e($project['workType'])?></p></div></div></div><div class="heading-actions"><form method="post" data-ajax-estimate><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="status"><select class="status-select" name="status" onchange="estimateStatus(this.form)"><?php foreach(['draft'=>'Черновик','in_progress'=>'В работе','review'=>'На согласовании','completed'=>'Завершён','archived'=>'Архив'] as $v=>$t):?><option value="<?=$v?>" <?=$project['status']===$v?'selected':''?>><?=$t?></option><?php endforeach;?></select></form><button class="outline-button" type="button" data-bs-toggle="modal" data-bs-target="#exportModal"><i class="fa-solid fa-file-arrow-down"></i> Экспорт</button><a class="outline-button" href="catalog.php?id=<?=$id?>"><i class="fa-solid fa-book-open"></i> Каталог</a><?php if($canEditCard): ?><button class="outline-button" type="button" data-bs-toggle="modal" data-bs-target="#editProjectModal"><i class="fa-solid fa-pen"></i> Редактировать</button><?php endif; ?><?php if($canDelete): ?><form method="post" class="d-inline" onsubmit="return confirm('Удалить эту смету и все её данные? Это действие нельзя отменить.')"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_project"><button class="danger-button" type="submit"><i class="fa-solid fa-trash-can"></i> Удалить смету</button></form><?php endif; ?><button class="primary-button" type="button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="fa-solid fa-grip"></i> Готовая смета</button></div></div>
+<div class="estimate-summary"><div><span>ИТОГО ПО СМЕТЕ</span><strong><?=number_format($estimateGrandTotal,0,',',' ')?> ₽</strong><small>включая НДС 20%</small></div><div class="summary-stats"><div><b><?=count($cats)?></b> категории</div><div><b><?=$itemsCount?></b> позиций</div><div><b><?=number_format(array_sum(array_map(fn($c)=>(float)$c['items']?0:0,$cats)),0)?></b> объём</div></div><div class="summary-actions"><button class="outline-button" type="button" onclick="document.querySelector('.estimate-controls').scrollIntoView({behavior:'smooth',block:'center'})"><i class="fa-solid fa-calendar-days"></i> Создать график</button><button class="icon-button darkish" type="button" title="Дополнительно"><i class="fa-solid fa-ellipsis"></i></button></div></div>
+<div class="estimate-controls" id="estimateCalcControls"><div><span class="control-label">МЕТОД РАСЧЁТА</span><select class="status-select" id="estimateMethod"><option value="resource">Ресурсный</option><option value="base-index">Базисно-индексный</option><option value="resource-index">Ресурсно-индексный</option></select></div><label class="check-control"><input id="winterCoeff" type="checkbox"> Зимнее удорожание <b>+12%</b></label><label class="check-control"><input id="tightCoeff" type="checkbox"> Стеснённые условия <b>+8%</b></label><label class="custom-coeff">Свой коэффициент<input id="customCoeff" min="0.1" max="5" step="0.01" type="number" value="1"></label></div><div class="estimate-toolbar"><div class="toolbar-tabs"><button type="button" class="active">Смета</button><button type="button">График <span>скоро</span></button><button type="button">Документы <span>скоро</span></button></div><div class="estimate-actions"><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="fa-solid fa-grip"></i> Готовая смета</button><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#categoryModal"><i class="fa-solid fa-plus"></i> Добавить категорию</button></div></div>
 <div class="estimate-list">
-<?php foreach($cats as $n=>$cat):?><div class="estimate-group"><div class="group-heading"><span class="group-number"><?=str_pad((string)($n+1),2,'0',STR_PAD_LEFT)?></span><h3><?=e($cat['name'])?></h3><span><?=$cat['item_count']?> позиций</span><strong><?=number_format((float)$cat['total'],0,',',' ')?> ₽</strong><button class="icon-button" title="Удалить раздел" onclick="if(confirm('Удалить раздел и его позиции?'))document.getElementById('delcat<?=$cat['id']?>').submit()"><i class="bi bi-three-dots"></i></button></div>
+<?php foreach($cats as $n=>$cat):?><div class="estimate-group"><div class="group-heading"><span class="group-number"><?=str_pad((string)($n+1),2,'0',STR_PAD_LEFT)?></span><h3><?=e($cat['name'])?></h3><span><?=$cat['item_count']?> позиций</span><strong><?=number_format((float)$cat['total'],0,',',' ')?> ₽</strong><button class="icon-button" title="Удалить раздел" onclick="if(confirm('Удалить раздел и его позиции?'))document.getElementById('delcat<?=$cat['id']?>').submit()"><i class="fa-solid fa-ellipsis"></i></button></div>
 <div class="estimate-table"><div class="table-head"><span>РАБОТА</span><span>ОБЪЁМ</span><span>ЕД.</span><span>ЦЕНА</span><span>СУММА</span><span></span></div>
-<?php foreach($cat['items'] as $item):$sum=(float)$item['quantity']*(float)$item['price'];?><div class="table-row" data-quantity="<?=e((string)$item['quantity'])?>" data-price="<?=e((string)$item['price'])?>" onclick="event.stopPropagation();editRow(<?=$item['id']?>)"><div class="work-name"><i class="work-dot"></i><?=e($item['name'])?></div><span><?=rtrim(rtrim(number_format((float)$item['quantity'],3,',',' '),'0'),',')?><?php if (($item['quantitySource']??'')==='measurement'): ?><em class="estimate-measurement-badge" title="Количество рассчитывается по замерам помещений"><i class="bi bi-rulers"></i></em><?php endif; ?></span><span><?=e($item['unit'])?></span><span><?=number_format((float)$item['price'],2,',',' ')?> ₽</span><strong><?=number_format($sum,2,',',' ')?> ₽</strong><div class="row-actions"><button class="edit-label" type="button" title="Редактировать" onclick="editRow(<?=$item['id']?>)">Изменить</button><form id="edit<?=$item['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="update_item"><input type="hidden" name="item_id" value="<?=$item['id']?>"><input name="name" value="<?=e($item['name'])?>"><input name="quantity" value="<?=e((string)$item['quantity'])?>"><input name="unit" value="<?=e($item['unit'])?>"><input name="price" value="<?=e((string)$item['price'])?>"></form><button type="button" title="Удалить" onclick="if(confirm('Удалить позицию?'))document.getElementById('delete<?=$item['id']?>').submit()"><i class="bi bi-trash3"></i></button><form id="delete<?=$item['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_item"><input type="hidden" name="item_id" value="<?=$item['id']?>"></form></div></div><?php endforeach;?>
-<button class="add-row" type="button" data-work-catalog data-category-id="<?=$cat['id']?>" data-bs-toggle="modal" data-bs-target="#workCatalogModal"><i class="bi bi-plus-lg"></i> Добавить работу</button></div></div>
+<?php foreach($cat['items'] as $item):$sum=(float)$item['quantity']*(float)$item['price'];?><div class="table-row" data-quantity="<?=e((string)$item['quantity'])?>" data-price="<?=e((string)$item['price'])?>" onclick="event.stopPropagation();editRow(<?=$item['id']?>)"><div class="work-name"><i class="work-dot"></i><?=e($item['name'])?></div><span><?=rtrim(rtrim(number_format((float)$item['quantity'],3,',',' '),'0'),',')?><?php if (($item['quantitySource']??'')==='measurement'): ?><em class="estimate-measurement-badge" title="Количество рассчитывается по замерам помещений"><i class="fa-solid fa-ruler-combined"></i></em><?php endif; ?></span><span><?=e($item['unit'])?></span><span><?=number_format((float)$item['price'],2,',',' ')?> ₽</span><strong><?=number_format($sum,2,',',' ')?> ₽</strong><div class="row-actions"><button class="edit-label" type="button" title="Редактировать" onclick="editRow(<?=$item['id']?>)">Изменить</button><form id="edit<?=$item['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="update_item"><input type="hidden" name="item_id" value="<?=$item['id']?>"><input name="name" value="<?=e($item['name'])?>"><input name="quantity" value="<?=e((string)$item['quantity'])?>"><input name="unit" value="<?=e($item['unit'])?>"><input name="price" value="<?=e((string)$item['price'])?>"></form><button type="button" title="Удалить" onclick="if(confirm('Удалить позицию?'))document.getElementById('delete<?=$item['id']?>').submit()"><i class="fa-solid fa-trash-can"></i></button><form id="delete<?=$item['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_item"><input type="hidden" name="item_id" value="<?=$item['id']?>"></form></div></div><?php endforeach;?>
+<button class="add-row" type="button" data-work-catalog data-category-id="<?=$cat['id']?>" data-bs-toggle="modal" data-bs-target="#workCatalogModal"><i class="fa-solid fa-plus"></i> Добавить работу</button></div></div>
 <form id="delcat<?=$cat['id']?>" data-ajax-estimate method="post" style="display:none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_category"><input type="hidden" name="category_id" value="<?=$cat['id']?>"></form>
 <div class="modal fade" id="item<?=$cat['id']?>" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form method="post" data-ajax-estimate><div class="modal-header"><h5 class="modal-title">Добавить позицию</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="item"><input type="hidden" name="category_id" value="<?=$cat['id']?>"><label class="form-label">Наименование</label><input class="form-control mb-3" name="name" required placeholder="Штукатурка стен по маякам"><div class="form-grid"><div><label class="form-label">Количество</label><input class="form-control" name="quantity" value="1"></div><div><label class="form-label">Единица</label><input class="form-control" name="unit" value="м²"></div><div><label class="form-label">Цена</label><input class="form-control" name="price" value="0"></div></div></div><div class="modal-footer"><button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button><button class="primary-button">Добавить</button></div></form></div></div></div>
 <?php endforeach;?>
-<?php if(!$cats):?><div class="empty-state module-panel"><i class="bi bi-list-columns-reverse fs-2 text-primary"></i><h3 class="mt-3">Смета пока пустая</h3><p class="text-muted">Создайте первый раздел и добавьте работы или материалы.</p><button class="primary-button" data-bs-toggle="modal" data-bs-target="#categoryModal">Создать раздел</button></div><?php endif;?>
+<?php if(!$cats):?><div class="empty-state module-panel"><i class="fa-solid fa-list fs-2 text-primary"></i><h3 class="mt-3">Смета пока пустая</h3><p class="text-muted">Создайте первый раздел и добавьте работы или материалы.</p><button class="primary-button" data-bs-toggle="modal" data-bs-target="#categoryModal">Создать раздел</button></div><?php endif;?>
 <div class="estimate-totals"><div><span>Прямые затраты</span><b><?=number_format($total,2,',',' ')?> ₽</b></div><div><span>Накладные расходы (НР) · 15%</span><b><?=number_format($estimateOverhead,2,',',' ')?> ₽</b></div><div><span>Сметная прибыль (СП) · 8%</span><b><?=number_format($estimateProfit,2,',',' ')?> ₽</b></div><div><span>Коэффициенты</span><b>× 1.000</b></div><div><span>НДС · 20%</span><b><?=number_format($estimateVat,2,',',' ')?> ₽</b></div><div class="grand-total"><span>Итого в текущем уровне цен</span><strong><?=number_format($estimateGrandTotal,2,',',' ')?> ₽</strong></div></div></div>
-<div class="mt-4 d-flex justify-content-between align-items-center"><a class="text-button" href="workspace.php?view=scan&id=<?=$id?>"><i class="bi bi-stars"></i> Смета из файла</a><form method="post" onsubmit="return confirm('Удалить проект и всю смету?')"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_project"><button class="text-danger border-0 bg-transparent small">Удалить смету</button></form></div>
+<div class="mt-4 d-flex justify-content-between align-items-center"><a class="text-button" href="workspace.php?view=scan&id=<?=$id?>"><i class="fa-solid fa-wand-magic-sparkles"></i> Смета из файла</a><form method="post" onsubmit="return confirm('Удалить проект и всю смету?')"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_project"><button class="text-danger border-0 bg-transparent small">Удалить смету</button></form></div>
 </section>
 <div class="modal fade" id="categoryModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form method="post"><div class="modal-header"><h5 class="modal-title">Новый раздел</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="category"><label class="form-label">Название</label><input class="form-control" name="name" required placeholder="Материалы, Работы, Электрика..."></div><div class="modal-footer"><button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button><button class="primary-button">Создать</button></div></form></div></div></div>
 <div class="modal fade" id="templateModal" tabindex="-1" aria-hidden="true">
@@ -116,16 +116,16 @@ $pageTitle=$project['name'];require __DIR__.'/includes/app_header.php';
    <span class="estimate-template-meta"><b><?=count($templateItemsForCard)?></b> позиций · готовая структура</span>
    <span class="estimate-template-items-hidden"><?php foreach($templateItemsForCard as $ti): ?><span class="estimate-template-item"><?=e($ti['name'])?> · <?=e($ti['unit'])?></span><?php endforeach; ?></span>
   </span>
-  <span class="estimate-template-check"><i class="bi bi-check-lg"></i></span>
+  <span class="estimate-template-check"><i class="fa-solid fa-check"></i></span>
  </label>
  <?php endforeach;?>
  </div>
  <div class="estimate-template-preview" id="estimateTemplatePreview" hidden></div>
- <div class="estimate-template-note"><i class="bi bi-info-circle"></i><span>Шаблон ничего не блокирует: после добавления можно удалить любой раздел или позицию, изменить количество и цену, а также добавить свои работы.</span></div>
+ <div class="estimate-template-note"><i class="fa-solid fa-circle-info"></i><span>Шаблон ничего не блокирует: после добавления можно удалить любой раздел или позицию, изменить количество и цену, а также добавить свои работы.</span></div>
 </div>
 <div class="modal-footer">
  <button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button>
- <button class="primary-button" id="applyEstimateTemplate" type="submit" disabled><i class="bi bi-plus-lg"></i> Добавить в смету</button>
+ <button class="primary-button" id="applyEstimateTemplate" type="submit" disabled><i class="fa-solid fa-plus"></i> Добавить в смету</button>
 </div>
 </form>
 </div></div></div>
@@ -138,14 +138,14 @@ $pageTitle=$project['name'];require __DIR__.'/includes/app_header.php';
 </div>
 <div class="modal-body">
  <input type="hidden" id="workCatalogCategory">
- <div class="work-catalog-search"><i class="bi bi-search"></i><input id="workCatalogSearch" type="search" placeholder="Поиск работы..." autocomplete="off"></div>
+ <div class="work-catalog-search"><i class="fa-solid fa-magnifying-glass"></i><input id="workCatalogSearch" type="search" placeholder="Поиск работы..." autocomplete="off"></div>
  <div class="work-catalog-list" id="workCatalogList">
  <?php foreach($templates as $tpl):?>
  <button type="button" class="work-catalog-item" data-template-id="<?=$tpl['id']?>" data-name="<?=e(mb_strtolower($tpl['name'].' '.$tpl['categoryName']))?>">
-  <span class="work-catalog-icon"><i class="bi bi-tools"></i></span>
+  <span class="work-catalog-icon"><i class="fa-solid fa-screwdriver-wrench"></i></span>
   <span class="work-catalog-info"><strong><?=e($tpl['name'])?></strong><small><?=e($tpl['categoryName'])?> · <?=e($tpl['unit'])?></small></span>
   <span class="work-catalog-price"><?=number_format((float)$tpl['price'],0,',',' ')?> ₽</span>
-  <span class="work-catalog-check"><i class="bi bi-check-lg"></i></span>
+  <span class="work-catalog-check"><i class="fa-solid fa-check"></i></span>
  </button>
  <?php endforeach;?>
  </div>
@@ -157,7 +157,7 @@ $pageTitle=$project['name'];require __DIR__.'/includes/app_header.php';
 </div>
 <div class="modal-footer">
  <button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button>
- <button class="primary-button" id="workCatalogAdd" type="button" disabled><i class="bi bi-plus-lg"></i> Добавить в смету</button>
+ <button class="primary-button" id="workCatalogAdd" type="button" disabled><i class="fa-solid fa-plus"></i> Добавить в смету</button>
 </div>
 </div></div></div>
 
@@ -168,7 +168,7 @@ function showEstimateToast(message,type='success'){
  let host=document.getElementById('estimateToastHost');
  if(!host){host=document.createElement('div');host.id='estimateToastHost';host.className='estimate-toast-host';document.body.appendChild(host);}
  const toast=document.createElement('div');toast.className='estimate-toast estimate-toast-'+type;
- toast.innerHTML='<span class="estimate-toast-icon"><i class="bi '+(type==='error'?'bi-exclamation-triangle-fill':'bi-check-circle-fill')+'"></i></span><span class="estimate-toast-text">'+String(message).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))+'</span><button type="button" class="estimate-toast-close" aria-label="Закрыть"><i class="bi bi-x"></i></button>';
+ toast.innerHTML='<span class="estimate-toast-icon"><i class="bi '+(type==='error'?'bi-exclamation-triangle-fill':'bi-check-circle-fill')+'"></i></span><span class="estimate-toast-text">'+String(message).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))+'</span><button type="button" class="estimate-toast-close" aria-label="Закрыть"><i class="fa-solid fa-xmark"></i></button>';
  host.appendChild(toast);requestAnimationFrame(()=>toast.classList.add('is-visible'));
  const close=()=>{toast.classList.remove('is-visible');setTimeout(()=>toast.remove(),220)};toast.querySelector('.estimate-toast-close').onclick=close;setTimeout(close,4200);
 }
@@ -181,7 +181,7 @@ document.addEventListener('change',e=>{
   const preview=document.getElementById('estimateTemplatePreview');
   if(card&&preview){
    const items=[...card.querySelectorAll('.estimate-template-item')].map(x=>x.textContent.trim()).filter(Boolean);
-   preview.hidden=false;preview.innerHTML='<div class="estimate-template-preview-title"><i class="bi bi-list-check"></i><span>В шаблоне '+items.length+' позиций</span></div><div class="estimate-template-preview-list">'+items.map(x=>'<span>'+x.replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))+'</span>').join('')+'</div>';
+   preview.hidden=false;preview.innerHTML='<div class="estimate-template-preview-title"><i class="fa-solid fa-list-check"></i><span>В шаблоне '+items.length+' позиций</span></div><div class="estimate-template-preview-list">'+items.map(x=>'<span>'+x.replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))+'</span>').join('')+'</div>';
   }
  }
 });
@@ -198,7 +198,7 @@ document.getElementById('estimateTemplateForm')?.addEventListener('submit',async
   await refreshEstimate();
   const modal=document.getElementById('templateModal');const instance=bootstrap.Modal.getInstance(modal);if(instance)instance.hide();
  }catch(err){showEstimateToast(err.message||'Ошибка добавления','error');}
- finally{btn.disabled=!form.querySelector('input[name="estimate_template_id"]:checked');btn.innerHTML='<i class="bi bi-plus-lg"></i> Добавить в смету';}
+ finally{btn.disabled=!form.querySelector('input[name="estimate_template_id"]:checked');btn.innerHTML='<i class="fa-solid fa-plus"></i> Добавить в смету';}
 });
 
 async function estimateAjax(form){
@@ -254,7 +254,7 @@ function editRow(id){
  const f=document.getElementById('edit'+id);if(!f)return;
  const row=f.parentElement.closest('.table-row');f.remove();document.body.appendChild(f);
  const n=f.querySelector('[name="name"]').value,q=f.querySelector('[name="quantity"]').value,u=f.querySelector('[name="unit"]').value,p=f.querySelector('[name="price"]').value;
- row.innerHTML='<div class="work-name"><i class="work-dot"></i><input class="cell-input js-name" value="'+n.replace(/"/g,'&quot;')+'"></div><div><input class="cell-input js-qty" value="'+q+'"></div><div><input class="cell-input js-unit" value="'+u+'"></div><div><input class="cell-input js-price" value="'+p+'"></div><strong>—</strong><div class="row-actions"><button class="save-row" type="button" onclick="saveInline('+id+')"><i class="bi bi-check-lg"></i></button><button class="cancel-row" type="button" onclick="cancelInline('+id+')"><i class="bi bi-x-lg"></i></button></div>';
+ row.innerHTML='<div class="work-name"><i class="work-dot"></i><input class="cell-input js-name" value="'+n.replace(/"/g,'&quot;')+'"></div><div><input class="cell-input js-qty" value="'+q+'"></div><div><input class="cell-input js-unit" value="'+u+'"></div><div><input class="cell-input js-price" value="'+p+'"></div><strong>—</strong><div class="row-actions"><button class="save-row" type="button" onclick="saveInline('+id+')"><i class="fa-solid fa-check"></i></button><button class="cancel-row" type="button" onclick="cancelInline('+id+')"><i class="fa-solid fa-xmark-lg"></i></button></div>';
  row.dataset.itemId=String(id); row.classList.add('is-editing');
 }
 function saveInline(id){
@@ -383,20 +383,20 @@ document.addEventListener('DOMContentLoaded',()=>{
    <div class="modal-body">
     <div class="export-choice-grid">
      <a class="export-choice-card" href="export.php?id=<?=$id?>&download=1">
-      <span class="export-choice-icon"><i class="bi bi-file-earmark-pdf"></i></span>
-      <span><strong>Смета</strong><small>Готовый PDF-файл сметы</small></span><i class="bi bi-arrow-up-right"></i>
+      <span class="export-choice-icon"><i class="fa-solid fa-file-pdf"></i></span>
+      <span><strong>Смета</strong><small>Готовый PDF-файл сметы</small></span><i class="fa-solid fa-arrow-up-right-from-square"></i>
      </a>
      <a class="export-choice-card" href="export.php?id=<?=$id?>&format=xlsx&download=1">
-      <span class="export-choice-icon"><i class="bi bi-file-earmark-excel"></i></span>
-      <span><strong>Excel XLSX</strong><small>Готовый файл для Excel</small></span><i class="bi bi-arrow-down"></i>
+      <span class="export-choice-icon"><i class="fa-solid fa-file-excel"></i></span>
+      <span><strong>Excel XLSX</strong><small>Готовый файл для Excel</small></span><i class="fa-solid fa-arrow-down"></i>
      </a>
      <a class="export-choice-card" href="export.php?id=<?=$id?>&format=ks2&download=1">
-      <span class="export-choice-icon"><i class="bi bi-file-earmark-text"></i></span>
-      <span><strong>КС-2 PDF</strong><small>Готовый PDF акт выполненных работ</small></span><i class="bi bi-arrow-down"></i>
+      <span class="export-choice-icon"><i class="fa-solid fa-file-lines"></i></span>
+      <span><strong>КС-2 PDF</strong><small>Готовый PDF акт выполненных работ</small></span><i class="fa-solid fa-arrow-down"></i>
      </a>
      <a class="export-choice-card" href="export.php?id=<?=$id?>&format=ks3&download=1">
-      <span class="export-choice-icon"><i class="bi bi-file-earmark-spreadsheet"></i></span>
-      <span><strong>КС-3 PDF</strong><small>Готовый PDF справка о стоимости</small></span><i class="bi bi-arrow-down"></i>
+      <span class="export-choice-icon"><i class="fa-solid fa-file-excel"></i></span>
+      <span><strong>КС-3 PDF</strong><small>Готовый PDF справка о стоимости</small></span><i class="fa-solid fa-arrow-down"></i>
      </a>
     </div>
    </div>
@@ -420,7 +420,7 @@ document.addEventListener('DOMContentLoaded',()=>{
      <div><label class="form-label">Email заказчика</label><input class="form-control" type="email" name="clientEmail" value="<?=e((string)($project['clientEmail']??''))?>" placeholder="client@example.com"></div>
     </div>
    </div>
-   <div class="modal-footer"><button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button><button class="primary-button" type="submit"><i class="bi bi-check2"></i> Сохранить</button></div>
+   <div class="modal-footer"><button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button><button class="primary-button" type="submit"><i class="fa-solid fa-check"></i> Сохранить</button></div>
   </form>
  </div></div>
 </div>
