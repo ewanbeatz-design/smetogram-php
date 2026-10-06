@@ -28,9 +28,16 @@ $totalWithVat=$total+$overhead+$profit+$vat;
 $docNo=(string)($_GET['no']??($id.'-'.date('Y')));
 $date=(string)($_GET['date']??date('d.m.Y'));
 $period=(string)($_GET['period']??date('m.Y'));
+$download=(int)($_GET['download']??0)===1;
+if($download && in_array($format,['ks2','ks3'],true)){
+    $suffix=$format==='ks2'?'ks2':'ks3';
+    header('Content-Type:text/html; charset=UTF-8');
+    header('Content-Disposition:attachment; filename="smetogram-'.$id.'-'.$suffix.'.html"');
+}
 
 function money(float $v): string { return number_format($v,2,',',' '); }
 function docHead(array $p,string $title,string $no,string $date): void {
+    echo '<div class="doc-brand"><span class="doc-brand-mark">S</span><span>сметограм</span></div>';
     echo '<div class="doc-head"><div><div class="doc-title">'.e($title).'</div><div class="doc-sub">по проекту: '.e($p['name']).'</div></div><div class="doc-meta">№ '.e($no).'<br>от '.e($date).'</div></div>';
 }
 
@@ -55,7 +62,7 @@ if($format==='csv'){
 <style>
 @page{size:<?= $format==='ks2'?'A4 landscape':'A4' ?>;margin:10mm}
 *{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#111;font-size:10px;margin:0}
-.doc{width:100%}.doc-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px}.doc-title{font-size:18px;font-weight:700;text-transform:uppercase}.doc-sub{font-size:11px;margin-top:4px}.doc-meta{text-align:right;font-size:11px;line-height:1.6}
+.doc{width:100%}.doc-brand{display:flex;align-items:center;gap:7px;margin-bottom:12px;font-size:13px;font-weight:800;letter-spacing:-.03em;color:#172554}.doc-brand-mark{width:24px;height:24px;border-radius:7px;background:#4F46E5;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}.doc-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:10px;margin-bottom:12px}.doc-title{font-size:18px;font-weight:700;text-transform:uppercase}.doc-sub{font-size:11px;margin-top:4px}.doc-meta{text-align:right;font-size:11px;line-height:1.6}
 .info{width:100%;border-collapse:collapse;margin-bottom:10px}.info td{padding:3px 5px;border:1px solid #999}.info .label{width:22%;font-weight:700;background:#f5f5f5}
 table.data{width:100%;border-collapse:collapse}table.data th,table.data td{border:1px solid #555;padding:4px 5px;vertical-align:middle}table.data th{text-align:center;font-size:8px;background:#f1f1f1}table.data td.num{text-align:right;white-space:nowrap}.center{text-align:center}.total-row{font-weight:700;background:#f5f5f5}.note{font-size:8px;color:#555;margin-top:7px}.sign{display:flex;gap:45px;margin-top:22px}.sign>div{flex:1}.line{border-bottom:1px solid #111;height:22px;margin-bottom:4px}.muted{font-size:8px;color:#555}.export-toolbar{position:fixed;right:16px;top:16px;z-index:20;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.print,.export-btn{display:inline-flex;align-items:center;justify-content:center;background:#111;color:#fff;border:0;padding:9px 13px;border-radius:7px;cursor:pointer;text-decoration:none;font-size:12px;font-weight:600}.export-btn{background:#fff;color:#111;border:1px solid #bbb}.export-btn:hover{background:#f5f5f5;color:#111}.print:hover{background:#222}
 @media print{.export-toolbar{display:none}.page-break{page-break-before:always}}
