@@ -270,5 +270,78 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     deleteRoomPhoto(form);
   });
 
+  let aiEstimatePayload=null;
+
+  function openAiEstimateModal(button){
+    const modalEl=document.getElementById('aiEstimateModal');
+    if(!modalEl || !window.bootstrap)return;
+    aiEstimatePayload={
+      projectId:button.dataset.projectId,
+      roomId:button.dataset.roomId,
+      roomName:button.dataset.roomName||'Комната',
+      photoIds:(button.dataset.photoIds||'').split(',').map(Number).filter(Boolean)
+    };
+    document.getElementById('aiEstimateTitle').textContent='Расчёт: '+aiEstimatePayload.roomName;
+    document.getElementById('aiEstimateSummary').textContent='Анализируем фотографии помещения…';
+    document.getElementById('aiEstimateLoading').classList.remove('d-none');
+    document.getElementById('aiEstimateResult').classList.add('d-none');
+    document.getElementById('aiEstimateItems').innerHTML='';
+    document.getElementById('aiEstimateFooter').innerHTML='<button type="button" class="outline-button" data-bs-dismiss="modal">Закрыть</button>';
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    runAiEstimate();
+  }
+
+  async function runAiEstimate(){
+    if(!aiEstimatePayload)return;
+    const csrf=document.querySelector('input[name="csrf"]')?.value||'';
+    const fd=new FormData();
+    fd.append('csrf',csrf);fd.append('project_id',aiEstimatePayload.projectId);fd.append('room_id',aiEstimatePayload.roomId);
+    aiEstimatePayload.photoIds.forEach(id=>fd.append('photo_ids[]',id));
+    try{
+      const res=await fetch('ai_estimate.php',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd,credentials:'same-origin'});
+      const data=await res.json().catch(()=>null);
+      if(!res.ok||!data?.ok)throw new Error(data?.error||'Не удалось выполнить AI-анализ.');
+      aiEstimatePayload.items=data.items||[];
+      document.getElementById('aiEstimateLoading').classList.add('d-none');
+      document.getElementById('aiEstimateResult').classList.remove('d-none');
+      document.getElementById('aiEstimateSummary').textContent=data.summary||('Найдено позиций: '+aiEstimatePayload.items.length);
+      const list=document.getElementById('aiEstimateItems');
+      if(!aiEstimatePayload.items.length){
+        list.innerHTML='<div class="ai-estimate-empty"><i class="bi bi-search"></i><span>Уверенно определить работы по этим фото не удалось.</span></div>';
+        return;
+      }
+      list.innerHTML=aiEstimatePayload.items.map((item,i)=>'<label class="ai-estimate-item"><input type="checkbox" checked data-ai-index="'+i+'"><span class="ai-estimate-item-main"><strong>'+escapeHtml(item.name)+'</strong><small>'+escapeHtml(item.reason||'Определено по фото')+'</small></span><span class="ai-estimate-item-values"><b>'+formatEstimateNumber(item.quantity)+'</b> '+escapeHtml(item.unit)+'<em>'+formatEstimateMoney(item.price)+'</em></span></label>').join('');
+      document.getElementById('aiEstimateFooter').innerHTML='<button type="button" class="outline-button" data-bs-dismiss="modal">Отмена</button><button type="button" class="primary-button" id="aiEstimateApply"><i class="bi bi-check2"></i> Добавить выбранное в смету</button>';
+      document.getElementById('aiEstimateApply').addEventListener('click',applyAiEstimate);
+    }catch(error){
+      document.getElementById('aiEstimateLoading').classList.add('d-none');
+      document.getElementById('aiEstimateSummary').textContent=error?.message||'Ошибка AI.';
+    }
+  }
+
+  function escapeHtml(value){
+    return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+  }
+  function formatEstimateNumber(value){return Number(value||0).toLocaleString('ru-RU',{maximumFractionDigits:3});}
+  function formatEstimateMoney(value){const n=Number(value||0);return n>0?n.toLocaleString('ru-RU',{maximumFractionDigits:0})+' ₽':'Цена уточняется';}
+
+  async function applyAiEstimate(){
+    const selected=[...document.querySelectorAll('#aiEstimateItems [data-ai-index]:checked')].map(el=>aiEstimatePayload.items[Number(el.dataset.aiIndex)]).filter(Boolean);
+    if(!selected.length){alert('Выберите хотя бы одну позицию.');return;}
+    const csrf=document.querySelector('input[name="csrf"]')?.value||'';
+    const fd=new FormData();fd.append('csrf',csrf);fd.append('project_id',aiEstimatePayload.projectId);fd.append('op','ai_batch');fd.append('items_json',JSON.stringify(selected));
+    const button=document.getElementById('aiEstimateApply');if(button){button.disabled=true;button.classList.add('is-loading');button.innerHTML='<i class="bi bi-arrow-repeat"></i> Добавляем…';}
+    try{
+      const res=await fetch('api.php?action=estimate_action',{method:'POST',body:fd,credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}});
+      const data=await res.json().catch(()=>null);if(!res.ok||!data?.ok)throw new Error(data?.error||'Не удалось добавить позиции.');
+      window.location.href='project.php?id='+encodeURIComponent(aiEstimatePayload.projectId);
+    }catch(error){alert(error?.message||'Не удалось добавить позиции.');if(button){button.disabled=false;button.classList.remove('is-loading');button.innerHTML='<i class="bi bi-check2"></i> Добавить выбранное в смету';}}
+  }
+
+  document.addEventListener('click',e=>{
+    const button=e.target.closest('.room-ai-estimate');
+    if(button){e.preventDefault();openAiEstimateModal(button);}
+  });
+
   initRoomFancybox();
 })();
