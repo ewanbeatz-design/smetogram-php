@@ -73,7 +73,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                         ?'Этап полностью оплачен.'
                         :'Аванс добавлен: '.number_format($paymentAmount,0,',',' ').' ₽.'
                 ];
-            }            }elseif($stageAction==='delete'){
+            }elseif($stageAction==='delete'){
                 if(!can_manage_project($pdo,$user,$pid)){
                     throw new RuntimeException('Редактировать этапы может только владелец проекта.');
                 }
