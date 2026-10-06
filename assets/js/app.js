@@ -565,10 +565,13 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
    const amount=Number(x.paymentMilestone||0)>0?Number(x.paymentMilestone).toLocaleString('ru-RU')+' ₽':'Без суммы';
    const dates=[date(x.startsAt),date(x.endsAt)].filter(Boolean);
    const cls='stage-status-'+String(x.status||'planned').replace('_','-');
-   const paymentButton=Number(x.paymentMilestone||0)>0
-    ? '<button type="button" class="stage-payment '+(x.paymentStatus==='paid'?'is-paid':'')+'" data-stage-payment="'+x.id+'" data-payment-status="'+(x.paymentStatus==='paid'?'paid':'pending')+'"><i class="bi bi-'+(x.paymentStatus==='paid'?'check2-circle':'credit-card')+'"></i><span>'+(x.paymentStatus==='paid'?'Оплачено':'Оплатить')+'</span></button>'
+   const total=Number(x.paymentMilestone||0);
+   const paid=Math.min(total,Math.max(0,Number(x.paidAmount||0)));
+   const remaining=Math.max(0,total-paid);
+   const paymentInfo=total>0
+    ? '<div class="stage-payment-box '+(remaining<=0?'is-paid':'')+'"><div class="stage-payment-summary"><span><i class="bi bi-wallet2"></i> Оплачено <strong>'+paid.toLocaleString('ru-RU')+' ₽</strong> из '+total.toLocaleString('ru-RU')+' ₽</span><strong class="stage-payment-remaining">'+(remaining>0?'Остаток '+remaining.toLocaleString('ru-RU')+' ₽':'Оплачено полностью')+'</strong></div>'+(remaining>0?'<div class="stage-payment-actions"><input class="stage-payment-input" data-stage-payment-input="'+x.id+'" inputmode="decimal" placeholder="Аванс / платёж" aria-label="Сумма оплаты"><button type="button" class="stage-payment" data-stage-payment="'+x.id+'"><i class="bi bi-plus-circle"></i><span>Внести оплату</span></button></div>':'<div class="stage-payment-complete"><i class="bi bi-check2-circle"></i> Все платежи по этапу внесены</div>')+'</div>'
     : '';
-   return '<div class="stage-manager-item"><div class="stage-manager-item-main"><div class="stage-manager-item-title"><strong>'+esc(x.title)+'</strong><span class="stage-status '+cls+'">'+esc(labels[x.status]||x.status)+'</span></div><div class="stage-manager-item-meta"><span><i class="bi bi-calendar3"></i> '+esc(dates.length?dates.join(' — '):'Даты не указаны')+'</span><span><i class="bi bi-wallet2"></i> '+esc(amount)+'</span></div></div><div class="stage-manager-item-actions">'+paymentButton+'<button type="button" class="stage-edit" data-stage-edit="'+x.id+'"><i class="bi bi-pencil"></i><span>Изменить</span></button><button type="button" class="stage-delete" data-stage-delete="'+x.id+'"><i class="bi bi-trash3"></i></button></div></div>';
+   return '<div class="stage-manager-item"><div class="stage-manager-item-main"><div class="stage-manager-item-title"><strong>'+esc(x.title)+'</strong><span class="stage-status '+cls+'">'+esc(labels[x.status]||x.status)+'</span></div><div class="stage-manager-item-meta"><span><i class="bi bi-calendar3"></i> '+esc(dates.length?dates.join(' — '):'Даты не указаны')+'</span><span><i class="bi bi-wallet2"></i> Общая сумма '+esc(amount)+'</span></div>'+paymentInfo+'</div><div class="stage-manager-item-actions"><button type="button" class="stage-edit" data-stage-edit="'+x.id+'"><i class="bi bi-pencil"></i><span>Изменить</span></button><button type="button" class="stage-delete" data-stage-delete="'+x.id+'"><i class="bi bi-trash3"></i></button></div></div>';
   }).join('');
  }
  async function load(){
@@ -611,16 +614,21 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
    e.preventDefault();
    paymentBtn.disabled=true;
    try{
+    const input=document.querySelector('[data-stage-payment-input="'+paymentBtn.dataset.stagePayment+'"]');
+    const raw=String(input?.value||'').replace(/\\s/g,'').replace(',','.');
+    const amount=Number(raw);
+    if(!Number.isFinite(amount)||amount<=0)throw new Error('Укажите сумму оплаты.');
     const fd=new FormData();
     fd.append('csrf',$('[data-stage-form] input[name="csrf"]').value);
     fd.append('stage_action','payment');
     fd.append('project_id',projectId);
     fd.append('stage_id',paymentBtn.dataset.stagePayment);
-    fd.append('payment_status',paymentBtn.dataset.paymentStatus==='paid'?'pending':'paid');
+    fd.append('payment_amount',String(amount));
     const r=await fetch('dashboard.php',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest'},body:fd,credentials:'same-origin'});
     const d=await r.json();
-    if(!r.ok||!d.ok)throw new Error(d.message||'Не удалось изменить статус оплаты.');
-    await load();
+    if(!r.ok||!d.ok)throw new Error(d.message||'Не удалось внести оплату.');
+    const items=await load();updateCard(items);
+    if(input)input.value='';
     window.smetogramAlert(d.message,'success');
    }catch(err){
     window.smetogramAlert(err.message,'error');
