@@ -698,6 +698,8 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     const amountBtn=e.target.closest('[data-stage-save-amount]');
     const payBtn=e.target.closest('[data-stage-payment]');
     if(!amountBtn&&!payBtn)return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
     const btn=amountBtn||payBtn,stageId=btn.dataset.stageSaveAmount||btn.dataset.stagePayment;
     const card=btn.closest('[data-payment-stage-card]');if(!card)return;
     btn.disabled=true;
@@ -712,5 +714,5 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
         await stageRequest(stageId,'payment',{payment_amount:amount});
       }
     }catch(err){window.smetogramAlert?.(err.message||'Не удалось сохранить.','error',4200);}finally{btn.disabled=false;}
-  });
+  },true);
 })();
