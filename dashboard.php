@@ -20,8 +20,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
  }
  }
  }
-$q=$pdo->prepare("SELECT p.*,COALESCE((SELECT SUM(i.quantity*i.price) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id),0) total,(SELECT COUNT(*) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id) item_count FROM projects p WHERE p.ownerId=? ORDER BY p.updatedAt DESC");
-$q->execute([$user['id']]);$all=$q->fetchAll();
+$projectSql="SELECT p.*,COALESCE((SELECT SUM(i.quantity*i.price) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id),0) total,(SELECT COUNT(*) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id) item_count FROM projects p";
+if(is_admin($user)){
+    $q=$pdo->query($projectSql." ORDER BY p.updatedAt DESC");
+}else{
+    $q=$pdo->prepare($projectSql." WHERE p.ownerId=? OR EXISTS(SELECT 1 FROM projectmembers pm WHERE pm.projectId=p.id AND pm.userId=?) ORDER BY p.updatedAt DESC");
+    $q->execute([$user['id'],$user['id']]);
+}
+$all=$q->fetchAll();
 $query=trim($_GET['q']??'');$status=$_GET['status']??'all';
 $projects=array_values(array_filter($all,function($p)use($query,$status){$hay=mb_strtolower(($p['name']??'').' '.($p['city']??'').' '.($p['clientName']??'').' '.($p['workType']??''));return ($query===''||mb_strpos($hay,mb_strtolower($query))!==false)&&($status==='all'||$p['status']===$status);}));
 $active=count(array_filter($all,fn($p)=>in_array($p['status'],['in_progress','draft'],true)));$review=count(array_filter($all,fn($p)=>$p['status']==='review'));$totalBudget=array_sum(array_map(fn($p)=>(float)$p['total'],$all));
