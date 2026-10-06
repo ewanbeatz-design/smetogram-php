@@ -14,19 +14,19 @@ require __DIR__.'/includes/app_header.php';
 <section class="page-wrap document-page">
   <div class="module-heading">
     <div><div class="eyebrow">ДОКУМЕНТООБОРОТ</div><h1><?=e($doc['title'])?></h1><p class="lede"><?=e($doc['projectName'].' · '.($doc['city']??'').' · '.($doc['clientName']??''))?></p></div>
-    <div class="module-icon"><i class="bi bi-file-earmark-text"></i></div>
+    <div class="module-icon"><i class="fa-solid fa-file-lines"></i></div>
   </div>
   <div class="document-detail-grid">
     <div class="module-panel">
-      <div class="panel-heading"><div><h2>Файлы документа</h2><p><?=e(mb_strtoupper((string)$doc['type']))?> · <?=e((string)$doc['status'])?></p></div><div class="d-flex gap-2"><a class="outline-button" href="workspace.php?view=documents&id=<?= (int)$doc['projectId'] ?>"><i class="bi bi-arrow-left"></i> Документы</a><label class="primary-button mb-0"><i class="bi bi-upload"></i> Загрузить<input hidden type="file" name="document_file" form="documentUploadForm" onchange="document.getElementById('documentUploadForm').submit()"></label></div></div>
+      <div class="panel-heading"><div><h2>Файлы документа</h2><p><?=e(mb_strtoupper((string)$doc['type']))?> · <?=e((string)$doc['status'])?></p></div><div class="d-flex gap-2"><a class="outline-button" href="workspace.php?view=documents&id=<?= (int)$doc['projectId'] ?>"><i class="fa-solid fa-arrow-left"></i> Документы</a><label class="primary-button mb-0"><i class="fa-solid fa-upload"></i> Загрузить<input hidden type="file" name="document_file" form="documentUploadForm" onchange="document.getElementById('documentUploadForm').submit()"></label></div></div>
       <form id="documentUploadForm" method="post" action="workspace.php?view=documents&amp;id=<?= (int)$doc['projectId'] ?>" enctype="multipart/form-data" class="d-none"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="upload_document"><input type="hidden" name="document_id" value="<?= (int)$doc['id'] ?>"></form>
       <?php if(!$files): ?><div class="empty-state">Файл ещё не загружен. Вернитесь в документы проекта и добавьте файл.</div>
       <?php else: foreach($files as $file): ?>
         <div class="document-row">
-          <div class="member-avatar"><i class="bi bi-file-earmark"></i></div>
+          <div class="member-avatar"><i class="fa-solid fa-file"></i></div>
           <div><strong><?=e($file['originalName'])?></strong><span><?=e($file['mime'])?> · <?=number_format(((int)$file['sizeBytes'])/1024/1024,2,',',' ')?> МБ</span></div>
           <em><?=e($file['createdAt'])?></em>
-          <a class="outline-button" target="_blank" href="document_file.php?id=<?= (int)$file['id'] ?>"><i class="bi bi-box-arrow-up-right"></i> Открыть</a>
+          <a class="outline-button" target="_blank" href="document_file.php?id=<?= (int)$file['id'] ?>"><i class="fa-solid fa-arrow-up-right-from-square"></i> Открыть</a>
         </div>
       <?php endforeach; endif; ?>
     </div>
