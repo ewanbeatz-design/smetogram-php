@@ -504,7 +504,6 @@ require __DIR__ . '/includes/app_header.php';
         <a href="workspace.php?view=payments&id=<?= $projectId ?>" class="<?= $view==='payments'?'active':'' ?>"><i class="bi bi-wallet2"></i> Оплаты</a>
         <a href="workspace.php?view=acceptance&id=<?= $projectId ?>" class="<?= $view==='acceptance'?'active':'' ?>"><i class="bi bi-check2-circle"></i> Приёмка</a>
         <a href="workspace.php?view=analytics&id=<?= $projectId ?>" class="<?= $view==='analytics'?'active':'' ?>"><i class="bi bi-bar-chart"></i> Аналитика</a>
-        <a href="workspace.php?view=scan&id=<?= $projectId ?>" class="<?= $view==='scan'?'active':'' ?>"><i class="bi bi-stars"></i> ИИ</a>
     </div>   <?php if ($error !== ''): ?>
         <div class="alert alert-danger"><?= e($error) ?></div>
     <?php endif; ?>
