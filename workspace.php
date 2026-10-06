@@ -793,7 +793,7 @@ require __DIR__ . '/includes/app_header.php';
                                 <form method="post" class="ms-2"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="delete_room"><input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>"><button class="icon-button" type="submit" title="Удалить"><i class="bi bi-trash3"></i></button></form>
                             </div>
                             <div class="room-photo-actions">
-                                <button type="button" class="outline-button room-ai-estimate" data-project-id="<?= (int)$projectId ?>" data-room-id="<?= (int)$room['id'] ?>" data-room-name="<?= e($room['name']) ?>" data-photo-ids="<?= e(implode(',',array_map(static fn($p)=>(int)$p['id'],$roomPhotos[(int)$room['id']]??[]))) ?>" <?= empty($roomPhotos[(int)$room['id']])?'disabled':'' ?>><i class="bi bi-stars"></i> Рассчитать по фото</button>
+                                
                                 <form method="post" enctype="multipart/form-data" class="room-photo-upload">
                                     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
                                     <input type="hidden" name="action" value="upload_room_photo">
