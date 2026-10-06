@@ -92,12 +92,15 @@ $pageTitle=$project['name'];require __DIR__.'/includes/app_header.php';
    <strong><?=e($tpl['name'])?></strong>
    <small><?=e($tpl['description'])?></small>
    <?php $tc=$pdo->prepare("SELECT COUNT(*) FROM estimatetemplateitems WHERE templateId=?");$tc->execute([$tpl['id']]); ?>
-   <span class="estimate-template-meta"><b><?=$tc->fetchColumn()?></b> позиций · готовая структура</span>
+   <?php $templateItemStmt=$pdo->prepare("SELECT name,unit FROM estimatetemplateitems WHERE templateId=? ORDER BY sortOrder,id");$templateItemStmt->execute([$tpl['id']]);$templateItemsForCard=$templateItemStmt->fetchAll(); ?>
+   <span class="estimate-template-meta"><b><?=count($templateItemsForCard)?></b> позиций · готовая структура</span>
+   <span class="estimate-template-items-hidden"><?php foreach($templateItemsForCard as $ti): ?><span class="estimate-template-item"><?=e($ti['name'])?> · <?=e($ti['unit'])?></span><?php endforeach; ?></span>
   </span>
   <span class="estimate-template-check"><i class="bi bi-check-lg"></i></span>
  </label>
  <?php endforeach;?>
  </div>
+ <div class="estimate-template-preview" id="estimateTemplatePreview" hidden></div>
  <div class="estimate-template-note"><i class="bi bi-info-circle"></i><span>Шаблон ничего не блокирует: после добавления можно удалить любой раздел или позицию, изменить количество и цену, а также добавить свои работы.</span></div>
 </div>
 <div class="modal-footer">
@@ -141,9 +144,26 @@ $pageTitle=$project['name'];require __DIR__.'/includes/app_header.php';
 <script>
 const projectId=<?=json_encode($id)?>;
 
+function showEstimateToast(message,type='success'){
+ let host=document.getElementById('estimateToastHost');
+ if(!host){host=document.createElement('div');host.id='estimateToastHost';host.className='estimate-toast-host';document.body.appendChild(host);}
+ const toast=document.createElement('div');toast.className='estimate-toast estimate-toast-'+type;
+ toast.innerHTML='<span class="estimate-toast-icon"><i class="bi '+(type==='error'?'bi-exclamation-triangle-fill':'bi-check-circle-fill')+'"></i></span><span class="estimate-toast-text">'+String(message).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))+'</span><button type="button" class="estimate-toast-close" aria-label="Закрыть"><i class="bi bi-x"></i></button>';
+ host.appendChild(toast);requestAnimationFrame(()=>toast.classList.add('is-visible'));
+ const close=()=>{toast.classList.remove('is-visible');setTimeout(()=>toast.remove(),220)};toast.querySelector('.estimate-toast-close').onclick=close;setTimeout(close,4200);
+}
+
 document.addEventListener('change',e=>{
  const radio=e.target.closest('#estimateTemplateForm input[name="estimate_template_id"]');
- if(radio){const btn=document.getElementById('applyEstimateTemplate');if(btn)btn.disabled=false;}
+ if(radio){
+  const btn=document.getElementById('applyEstimateTemplate');if(btn)btn.disabled=false;
+  const card=radio.closest('.estimate-template-card');
+  const preview=document.getElementById('estimateTemplatePreview');
+  if(card&&preview){
+   const items=[...card.querySelectorAll('.estimate-template-item')].map(x=>x.textContent.trim()).filter(Boolean);
+   preview.hidden=false;preview.innerHTML='<div class="estimate-template-preview-title"><i class="bi bi-list-check"></i><span>В шаблоне '+items.length+' позиций</span></div><div class="estimate-template-preview-list">'+items.map(x=>'<span>'+x.replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]))+'</span>').join('')+'</div>';
+  }
+ }
 });
 document.getElementById('estimateTemplateForm')?.addEventListener('submit',async e=>{
  e.preventDefault();
@@ -157,7 +177,7 @@ document.getElementById('estimateTemplateForm')?.addEventListener('submit',async
   if(!res.ok||!data.ok)throw new Error(data.error||'Не удалось добавить шаблон');
   await refreshEstimate();
   const modal=document.getElementById('templateModal');const instance=bootstrap.Modal.getInstance(modal);if(instance)instance.hide();
- }catch(err){alert(err.message||'Ошибка добавления');}
+ }catch(err){showEstimateToast(err.message||'Ошибка добавления','error');}
  finally{btn.disabled=!form.querySelector('input[name="estimate_template_id"]:checked');btn.innerHTML='<i class="bi bi-plus-lg"></i> Добавить в смету';}
 });
 
@@ -174,7 +194,7 @@ async function estimateAjax(form){
   if(!res.ok||!data.ok)throw new Error(data.error||'Не удалось сохранить');
   await refreshEstimate();
   return true;
- }catch(err){alert(err.message||'Ошибка сохранения');return false}
+ }catch(err){showEstimateToast(err.message||'Ошибка сохранения','error');return false}
 }
 async function refreshEstimate(){
  const res=await fetch('project.php?id='+encodeURIComponent(projectId),{headers:{'X-Requested-With':'XMLHttpRequest'}});
