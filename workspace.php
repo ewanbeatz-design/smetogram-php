@@ -438,6 +438,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = $e->getMessage();
     }
 
+    $isAjaxPost = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    if ($isAjaxPost && $action === 'upload_room_photo') {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'ok' => $error === '',
+            'message' => $error !== '' ? $error : $notice
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     if ($error === '') {
         if ($notice !== '') {
             $_SESSION['flash_notice'] = $notice;
@@ -787,13 +797,15 @@ require __DIR__ . '/includes/app_header.php';
                                     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
                                     <input type="hidden" name="action" value="upload_room_photo">
                                     <input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>">
-                                    <label class="outline-button room-camera-button"><i class="bi bi-camera"></i> Сфотографировать<input type="file" name="room_photo" accept="image/*" capture="environment" onchange="this.form.submit()"></label>
+                                    <label class="outline-button room-camera-button"><i class="bi bi-camera"></i> Сфотографировать<input type="file" name="room_photo" accept="image/*" capture="environment"></label>
+                                    <div class="room-photo-progress" aria-hidden="true"><div class="room-photo-progress-track"><span></span></div><strong>0%</strong></div>
                                 </form>
                                 <form method="post" enctype="multipart/form-data" class="room-photo-upload">
                                     <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
                                     <input type="hidden" name="action" value="upload_room_photo">
                                     <input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>">
-                                    <label class="outline-button"><i class="bi bi-images"></i> Добавить фото<input type="file" name="room_photo" accept="image/*" onchange="this.form.submit()"></label>
+                                    <label class="outline-button"><i class="bi bi-images"></i> Добавить фото<input type="file" name="room_photo" accept="image/*"></label>
+                                    <div class="room-photo-progress" aria-hidden="true"><div class="room-photo-progress-track"><span></span></div><strong>0%</strong></div>
                                 </form>
                             </div>
                             <?php if (!empty($roomPhotos[(int)$room['id']])): ?>
