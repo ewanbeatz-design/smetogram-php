@@ -22,9 +22,9 @@ if($action==='search'){
 if($action==='estimate_action'){
  check_csrf();
  $id=(int)($_POST['project_id']??0);
- $q=$pdo->prepare("SELECT id FROM projects WHERE id=? AND ownerId=? LIMIT 1");
- $q->execute([$id,$user['id']]);
- if(!$q->fetch()){http_response_code(403);echo json_encode(['ok'=>false,'error'=>'Проект не найден'],JSON_UNESCAPED_UNICODE);exit;}
+ $q=$pdo->prepare("SELECT id FROM projects WHERE id=? LIMIT 1");
+ $q->execute([$id]);
+ if(!$q->fetch() || !can_manage_project($pdo,$user,$id)){http_response_code(403);echo json_encode(['ok'=>false,'error'=>'Недостаточно прав для изменения проекта'],JSON_UNESCAPED_UNICODE);exit;}
  $op=$_POST['op']??'';
  if($op==='category'){
   $name=trim((string)($_POST['name']??''));
