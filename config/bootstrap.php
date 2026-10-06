@@ -83,6 +83,7 @@ try {
         $addColumn($pdo,'projects','workType',"VARCHAR(120) NOT NULL DEFAULT 'Строительство'");
         $addColumn($pdo,'projects','status',"VARCHAR(32) NOT NULL DEFAULT 'draft'");
         $addColumn($pdo,'projects','deadline',"DATETIME NULL");
+        $addColumn($pdo,'projects','estimateDate',"DATE NULL");
         $addColumn($pdo,'projects','budget',"DECIMAL(14,2) NOT NULL DEFAULT 0");
         $addColumn($pdo,'projects','createdAt',"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP");
         $addColumn($pdo,'projects','updatedAt',"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
