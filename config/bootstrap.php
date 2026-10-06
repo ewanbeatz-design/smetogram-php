@@ -134,6 +134,11 @@ try {
         $addColumn($pdo,'estimateitems','createdAt',"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP");
         $addColumn($pdo,'estimateitems','updatedAt',"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
     }
+    // Связь позиции сметы с геометрией замеров. Если quantitySource=measurement,
+    // количество пересчитывается автоматически при изменении замеров помещения.
+    $addColumn($pdo,'estimateitems','quantitySource',"VARCHAR(30) NOT NULL DEFAULT 'manual'");
+    $addColumn($pdo,'estimateitems','measurementType',"VARCHAR(30) NULL");
+    $addColumn($pdo,'estimateitems','measurementRoomIds',"TEXT NULL");
 
     $simpleTables = [
         'scheduletasks' => "CREATE TABLE scheduletasks (
@@ -415,6 +420,42 @@ try {
 
 } catch (Throwable $e) {}
 
+function measurement_type_for_name(string $name,string $unit=''):?string{
+    $n=mb_strtolower(trim($name),'UTF-8');
+    if(preg_match('/плинтус|периметр|м\.п\.?/u',$n)) return 'perimeter';
+    if(preg_match('/потол|натяжн|потолоч/u',$n)) return 'ceiling';
+    if(preg_match('/стен|обо[и́]и|обои|штукатур|шпакл|покраск.*стен|грунтов.*стен|выравнив.*стен/u',$n)) return 'walls';
+    if(preg_match('/пол|ламинат|линолеум|паркет|стяжк|керамогранит|плитк|напольн|гидроизоляц.*пол/u',$n)) return 'floor';
+    return null;
+}
+function project_measurement_quantities(PDO $pdo,int $projectId):array{
+    $q=$pdo->prepare("SELECT id,length_m,width_m,height_m FROM smetogram_rooms WHERE project_id=? ORDER BY id");
+    $q->execute([$projectId]); $rooms=$q->fetchAll();
+    $out=['floor'=>0.0,'walls'=>0.0,'ceiling'=>0.0,'perimeter'=>0.0,'roomIds'=>[]];
+    foreach($rooms as $r){
+        $l=(float)$r['length_m']; $w=(float)$r['width_m']; $h=(float)$r['height_m'];
+        if($l<=0||$w<=0||$h<=0) continue;
+        $floor=$l*$w; $perimeter=2*($l+$w);
+        $out['floor']+=$floor; $out['ceiling']+=$floor;
+        $out['walls']+=$perimeter*$h; $out['perimeter']+=$perimeter;
+        $out['roomIds'][]=(int)$r['id'];
+    }
+    foreach(['floor','walls','ceiling','perimeter'] as $k)$out[$k]=round($out[$k],3);
+    return $out;
+}
+function refresh_measurement_estimate_items(PDO $pdo,int $projectId):void{
+    $m=project_measurement_quantities($pdo,$projectId);
+    $q=$pdo->prepare("SELECT i.id,i.measurementType FROM estimateitems i INNER JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=? AND i.quantitySource='measurement'");
+    $q->execute([$projectId]); $items=$q->fetchAll();
+    if(!$items)return;
+    $roomIds=implode(',',array_map('intval',$m['roomIds']));
+    $u=$pdo->prepare("UPDATE estimateitems SET quantity=?,measurementRoomIds=? WHERE id=?");
+    foreach($items as $it){
+        $type=(string)($it['measurementType']??'');
+        $qty=isset($m[$type])?(float)$m[$type]:0;
+        $u->execute([$qty,$roomIds,(int)$it['id']]);
+    }
+}
 function e(?string $v):string{return htmlspecialchars($v??'',ENT_QUOTES,'UTF-8');}
 function redirect(string $u):never{header('Location: '.$u);exit;}
 function csrf_token():string{if(empty($_SESSION['csrf']))$_SESSION['csrf']=bin2hex(random_bytes(32));return $_SESSION['csrf'];}
