@@ -75,6 +75,9 @@ function ai_call(array $config, string $system, string $userText, ?string $image
 if($_SERVER['REQUEST_METHOD']==='POST'){
     check_csrf();
     $action=$_POST['action']??'';
+    if($action==='room_estimate'){
+        require __DIR__.'/ai_estimate.php';
+    }
     if($action==='chat'){
         if(!$project) ai_json_response(['ok'=>false,'error'=>'Сначала выберите проект'],422);
         $prompt=trim($_POST['prompt']??'');
