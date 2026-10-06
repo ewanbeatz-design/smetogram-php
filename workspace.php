@@ -34,12 +34,13 @@ if (isset($_SESSION['flash_error'])) {
 }
 
 if ($projectId > 0) {
-    $q = $pdo->prepare('SELECT * FROM projects WHERE id = ? AND ownerId = ? LIMIT 1');
-    $q->execute([$projectId, $user['id']]);
+    $q = $pdo->prepare('SELECT * FROM projects WHERE id = ? LIMIT 1');
+    $q->execute([$projectId]);
     $project = $q->fetch();
-    if (!$project) {
+    if (!$project || !can_access_project($pdo,$user,$projectId)) {
         redirect('dashboard.php');
     }
+    $canManageProject = can_manage_project($pdo,$user,$projectId);
 }
 
 $notifyProject = function(string $type, string $title, string $body = '', ?string $url = null) use ($pdo, $projectId, $user, $project): void {
@@ -133,9 +134,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $notice = 'Этап сохранён.';
             $notifyProject('schedule','Добавлен этап',$title,'workspace.php?view=schedule&id='.$projectId);
         } elseif ($action === 'add_member') {
-            if (!$project) {
-                throw new RuntimeException('Сначала откройте проект.');
-            }
+            if (!$project) throw new RuntimeException('Сначала откройте проект.');
+            if (empty($canManageProject)) throw new RuntimeException('Назначать сотрудников может только владелец проекта или главный администратор.');
+            $assignedUserId = (int)($_POST['user_id'] ?? 0);
             $email = trim((string)($_POST['email'] ?? ''));
             $phone = trim((string)($_POST['phone'] ?? ''));
             $role = (string)($_POST['role'] ?? 'client');
@@ -143,14 +144,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!in_array($role, $roles, true)) {
                 $role = 'client';
             }
-            if ($email === '' && $phone === '') {
-                throw new RuntimeException('Укажите email или телефон.');
+            if ($assignedUserId > 0) {
+                $uq = $pdo->prepare('SELECT id,email,name,username FROM users WHERE id=? LIMIT 1');
+                $uq->execute([$assignedUserId]);
+                $assignedUser = $uq->fetch();
+                if (!$assignedUser) throw new RuntimeException('Сотрудник не найден.');
+                $dq = $pdo->prepare('SELECT id FROM projectmembers WHERE projectId=? AND userId=? LIMIT 1');
+                $dq->execute([$projectId,$assignedUserId]);
+                if ($dq->fetchColumn()) throw new RuntimeException('Этот сотрудник уже назначен на проект.');
+                $q = $pdo->prepare('INSERT INTO projectmembers (projectId,userId,invitedEmail,role,inviteToken,joinedAt) VALUES (?,?,?,?,?,CURRENT_TIMESTAMP)');
+                $q->execute([$projectId,$assignedUserId,$assignedUser['email'] ?: null,$role,bin2hex(random_bytes(12))]);
+                $notice = 'Сотрудник назначен на проект.';
+                $notifyProject('team','Назначен сотрудник',(string)($assignedUser['name'] ?: $assignedUser['username'] ?: $assignedUser['email'] ?: 'Сотрудник'),'workspace.php?view=team&id='.$projectId);
+            } else {
+                if ($email === '' && $phone === '') throw new RuntimeException('Укажите сотрудника из списка или email/телефон для приглашения.');
+                $q = $pdo->prepare('INSERT INTO projectmembers (projectId,invitedEmail,invitedPhone,role,inviteToken) VALUES (?,?,?,?,?)');
+                $q->execute([$projectId, $email !== '' ? $email : null, $phone !== '' ? $phone : null, $role, bin2hex(random_bytes(12))]);
+                $notice = 'Приглашение создано.';
+                $notifyProject('team','Изменена команда проекта',$email !== '' ? $email : $phone,'workspace.php?view=team&id='.$projectId);
             }
-
-            $q = $pdo->prepare('INSERT INTO projectmembers (projectId,invitedEmail,invitedPhone,role,inviteToken) VALUES (?,?,?,?,?)');
-            $q->execute([$projectId, $email !== '' ? $email : null, $phone !== '' ? $phone : null, $role, bin2hex(random_bytes(12))]);
-            $notice = 'Участник добавлен.';
-            $notifyProject('team','Изменена команда проекта',$email !== '' ? $email : $phone,'workspace.php?view=team&id='.$projectId);
         } elseif ($action === 'add_doc') {
             if (!$project) {
                 throw new RuntimeException('Сначала откройте проект.');
