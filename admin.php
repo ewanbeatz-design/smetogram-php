@@ -64,6 +64,6 @@ $pageTitle='Сотрудники и доступ';require __DIR__.'/includes/app
     </div>
   </div>
 
-  <div class="bottom-callout mt-4"><i class="bi bi-people"></i><div><strong>Назначение на проект</strong><p>Откройте проект → Команда → Назначить сотрудника. Там можно выбрать пользователя и дать ему роль: прораб, бригада, дизайнер или заказчик.</p></div></div>
+  <div class="bottom-callout mt-4"><i class="fa-solid fa-users"></i><div><strong>Назначение на проект</strong><p>Откройте проект → Команда → Назначить сотрудника. Там можно выбрать пользователя и дать ему роль: прораб, бригада, дизайнер или заказчик.</p></div></div>
 </section>
 <?php require __DIR__.'/includes/app_footer.php'; ?>
