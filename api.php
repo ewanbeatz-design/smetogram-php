@@ -92,7 +92,19 @@ if($action==='estimate_action'){
   $q=$pdo->prepare("DELETE i FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE i.id=? AND c.projectId=?");$q->execute([(int)($_POST['item_id']??0),$id]);
  }elseif($op==='delete_category'){
   $cat=(int)($_POST['category_id']??0);$q=$pdo->prepare("DELETE i FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.id=? AND c.projectId=?");$q->execute([$cat,$id]);$q=$pdo->prepare("DELETE FROM estimatecategories WHERE id=? AND projectId=?");$q->execute([$cat,$id]);
- }elseif($op==='status'){
+ }elseif($op==='ai_batch'){
+  $items=json_decode((string)($_POST['items_json']??'[]'),true);
+  if(!is_array($items)||!$items){http_response_code(422);echo json_encode(['ok'=>false,'error'=>'Нет позиций для добавления'],JSON_UNESCAPED_UNICODE);exit;}
+  $categoryName='AI-анализ фото';
+  $q=$pdo->prepare("SELECT id FROM estimatecategories WHERE projectId=? AND name=? LIMIT 1");$q->execute([$id,$categoryName]);$cat=(int)$q->fetchColumn();
+  if(!$cat){$q=$pdo->prepare("SELECT COALESCE(MAX(sortOrder),0)+1 FROM estimatecategories WHERE projectId=?");$q->execute([$id]);$sort=(int)$q->fetchColumn();$q=$pdo->prepare("INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)");$q->execute([$id,$categoryName,$sort]);$cat=(int)$pdo->lastInsertId();}
+  $q=$pdo->prepare("INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source,quantitySource,measurementType,measurementRoomIds) VALUES(?,?,?,?,?,?,?,?,?)");
+  foreach($items as $it){
+    $name=trim((string)($it['name']??''));$qty=(float)($it['quantity']??0);$unit=trim((string)($it['unit']??'шт.'));$price=(float)($it['price']??0);$type=(string)($it['measurementType']??'manual');
+    if($name===''||$qty<=0)continue;
+    $q->execute([$cat,$name,$qty,$unit,$price,'ai_photo',$type!=='manual'?'measurement':'manual',$type,$type!=='manual'?implode(',',array_map('intval',project_measurement_quantities($pdo,$id)['roomIds'])):null]);
+  }
+}elseif($op==='status'){
   $allowed=['draft','in_progress','review','completed','archived'];$st=(string)($_POST['status']??'draft');
   if(!in_array($st,$allowed,true)){http_response_code(422);echo json_encode(['ok'=>false,'error'=>'Недопустимый статус'],JSON_UNESCAPED_UNICODE);exit;}
   $q=$pdo->prepare("UPDATE projects SET status=? WHERE id=? AND ownerId=?");$q->execute([$st,$id,$user['id']]);
