@@ -301,7 +301,8 @@ function redirect(string $u):never{header('Location: '.$u);exit;}
 function csrf_token():string{if(empty($_SESSION['csrf']))$_SESSION['csrf']=bin2hex(random_bytes(32));return $_SESSION['csrf'];}
 function check_csrf():void{if(!hash_equals($_SESSION['csrf']??'',$_POST['csrf']??'')){http_response_code(419);exit('Сессия формы устарела. Обновите страницу.');}}
 function current_user():?array{return $_SESSION['user']??null;}
-function is_admin(array $user):bool{return strtolower(trim((string)($user['role']??'')))==='admin';}
+function is_owner(array $user):bool{return (string)($user['telegramId']??'')==='8791175199';}
+function is_admin(array $user):bool{return is_owner($user) || strtolower(trim((string)($user['role']??'')))==='admin';}
 function can_access_project(PDO $pdo,array $user,int $projectId):bool{
     if($projectId<=0)return false;
     if(is_admin($user))return true;
@@ -353,18 +354,12 @@ function require_auth():array{
     $q->execute([(int)($session['id']??0)]);
     $fresh=$q->fetch();
     if(!$fresh){unset($_SESSION['user']);redirect('login.php');}
-    // Однократно назначаем владельца системы: самого первого зарегистрированного пользователя,
-    // если в базе ещё нет администратора. После этого права меняются только через админку.
-    try{
-        $hasAdmin=(int)$pdo->query("SELECT COUNT(*) FROM users WHERE role='admin'")->fetchColumn();
-        if($hasAdmin===0){
-            $first=(int)$pdo->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetchColumn();
-            if($first>0){
-                $pdo->prepare("UPDATE users SET role='admin' WHERE id=?")->execute([$first]);
-                if((int)$fresh['id']===$first)$fresh['role']='admin';
-            }
-        }
-    }catch(Throwable $e){}
+    // Владелец системы определяется по Telegram ID, а не по порядку регистрации.
+    // Его права нельзя потерять из-за смены роли в админке.
+    if((string)($fresh['telegramId']??'')==='8791175199' && (string)($fresh['role']??'')!=='admin'){
+        try{$pdo->prepare("UPDATE users SET role='admin' WHERE id=?")->execute([(int)$fresh['id']]);}catch(Throwable $e){}
+        $fresh['role']='admin';
+    }
     $_SESSION['user']=[
         'id'=>(int)$fresh['id'],'name'=>(string)($fresh['name']??''),'email'=>(string)($fresh['email']??''),
         'role'=>(string)($fresh['role']??'user'),'subscriptionPlan'=>(string)($fresh['subscriptionPlan']??'free'),
