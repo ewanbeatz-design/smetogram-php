@@ -509,7 +509,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    if ($isAjaxPost && in_array($action, ['upload_room_photo', 'delete_room_photo'], true)) {
+    if ($isAjaxPost && in_array($action, ['upload_room_photo', 'delete_room_photo', 'upload_acceptance_photo', 'delete_acceptance_photo'], true)) {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'ok' => $error === '',
