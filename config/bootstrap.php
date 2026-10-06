@@ -252,6 +252,7 @@ try {
     $addColumn($pdo,'users','telegramId',"BIGINT UNSIGNED NULL");
     $addColumn($pdo,'users','telegramUsername',"VARCHAR(255) NULL");
     $addColumn($pdo,'users','username',"VARCHAR(255) NULL");
+    $addColumn($pdo,'smetogram_payments','stageId',"BIGINT UNSIGNED NULL");
     if (!$tableExists($pdo,'smetogram_notifications')) {
         $pdo->exec("CREATE TABLE smetogram_notifications (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
