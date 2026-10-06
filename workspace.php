@@ -249,6 +249,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $q = $pdo->prepare('DELETE FROM smetogram_rooms WHERE id=? AND user_id=? AND project_id=?');
             $q->execute([$roomId, $user['id'], $projectId]);
             $notice = 'Замер удалён.';
+        } elseif ($action === 'add_measurement_to_estimate') {
+            if (!$project) throw new RuntimeException('Сначала откройте проект.');
+            if (empty($canManageProject)) throw new RuntimeException('Добавлять позиции в смету может только владелец проекта или администратор.');
+            $roomId = (int)($_POST['room_id'] ?? 0);
+            $q = $pdo->prepare('SELECT * FROM smetogram_rooms WHERE id=? AND project_id=? LIMIT 1');
+            $q->execute([$roomId, $projectId]);
+            $room = $q->fetch();
+            if (!$room) throw new RuntimeException('Замер помещения не найден.');
+
+            $length = (float)$room['length_m'];
+            $width = (float)$room['width_m'];
+            $height = (float)$room['height_m'];
+            $floor = round($length * $width, 3);
+            $walls = round(2 * ($length + $width) * $height, 3);
+            $ceiling = $floor;
+            $perimeter = round(2 * ($length + $width), 3);
+            $roomName = (string)$room['name'];
+
+            $q = $pdo->prepare('SELECT id FROM estimatecategories WHERE projectId=? AND name=? LIMIT 1');
+            $q->execute([$projectId, 'Замеры помещений']);
+            $categoryId = (int)$q->fetchColumn();
+            if (!$categoryId) {
+                $q = $pdo->prepare('SELECT COALESCE(MAX(sortOrder),0)+1 FROM estimatecategories WHERE projectId=?');
+                $q->execute([$projectId]);
+                $sortOrder = (int)$q->fetchColumn();
+                $q = $pdo->prepare('INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)');
+                $q->execute([$projectId, 'Замеры помещений', $sortOrder]);
+                $categoryId = (int)$pdo->lastInsertId();
+            }
+
+            $items = [
+                ['Площадь пола — '.$roomName, $floor, 'м²'],
+                ['Площадь стен — '.$roomName, $walls, 'м²'],
+                ['Площадь потолка — '.$roomName, $ceiling, 'м²'],
+                ['Периметр — '.$roomName, $perimeter, 'м.п.']
+            ];
+            $exists = $pdo->prepare('SELECT id FROM estimateitems WHERE categoryId=? AND name=? LIMIT 1');
+            $insert = $pdo->prepare('INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source) VALUES(?,?,?,?,?,?)');
+            $added = 0;
+            foreach ($items as [$name,$quantity,$unit]) {
+                $exists->execute([$categoryId, $name]);
+                if ($exists->fetchColumn()) continue;
+                $insert->execute([$categoryId,$name,$quantity,$unit,0,'measurement']);
+                $added++;
+            }
+            $notice = $added > 0
+                ? 'Замеры помещения добавлены в смету. Количество уже заполнено — осталось указать расценки.'
+                : 'Эти замеры уже есть в смете.';
         } elseif ($action === 'save_profile') {
             $name = trim((string)($_POST['name'] ?? ''));
             $email = strtolower(trim((string)($_POST['email'] ?? '')));
@@ -673,12 +721,28 @@ require __DIR__ . '/includes/app_header.php';
                             <div class="member-avatar"><i class="bi bi-rulers"></i></div>
                             <div><strong><?= e($room['name']) ?></strong><span><?= e((string)$room['length_m']) ?> × <?= e((string)$room['width_m']) ?> × <?= e((string)$room['height_m']) ?> м · стены <?= number_format($walls,1,',',' ') ?> м²</span></div>
                             <em><?= number_format($area,1,',',' ') ?> м²</em>
+                            <?php if (!empty($canManageProject)): ?>
+                            <form method="post" class="ms-2 d-flex gap-2">
+                                <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+                                <input type="hidden" name="action" value="add_measurement_to_estimate">
+                                <input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>">
+                                <button class="outline-button measurement-estimate-button" type="submit"><i class="bi bi-calculator"></i> В смету</button>
+                            </form>
+                            <?php endif; ?>
                             <form method="post" class="ms-2"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="delete_room"><input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>"><button class="icon-button" type="submit" title="Удалить"><i class="bi bi-trash3"></i></button></form>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </div>
-            <div class="module-panel"><h2>Как использовать</h2><p class="panel-copy">Сохраните размеры комнат, а затем используйте площадь и площадь стен при добавлении позиций в смету.</p></div>
+            <div class="module-panel">
+                <h2>Замеры → смета</h2>
+                <p class="panel-copy">Нажмите «В смету» у помещения — Сметограм автоматически добавит площадь пола, площадь стен, потолка и периметр с готовыми количествами.</p>
+                <div class="generated-row"><i class="bi bi-check-circle"></i><span>Пол — длина × ширина</span></div>
+                <div class="generated-row"><i class="bi bi-check-circle"></i><span>Стены — 2 × (длина + ширина) × высота</span></div>
+                <div class="generated-row"><i class="bi bi-check-circle"></i><span>Потолок — площадь пола</span></div>
+                <div class="generated-row"><i class="bi bi-check-circle"></i><span>Периметр — 2 × (длина + ширина)</span></div>
+                <p class="panel-copy mt-3 mb-0">Расценка ставится уже в смете. Позиции можно редактировать или удалить как обычные работы.</p>
+            </div>
         </div>
         <div class="modal fade" id="roomModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post">
             <div class="modal-header"><h5>Новая комната</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
