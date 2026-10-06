@@ -1429,3 +1429,30 @@ html,body{min-height:100%;margin:0}
 /* Автоматическое количество из замеров */
 .estimate-measurement-badge{display:inline-grid;place-items:center;width:19px;height:19px;margin-left:7px;border-radius:6px;background:#EEF2FF;color:#4F46E5;font-size:10px;vertical-align:middle;cursor:help}
 .estimate-measurement-badge i{font-size:10px}
+
+/* Export format chooser */
+.export-choice-modal .modal-dialog{max-width:620px}
+.export-choice-modal .modal-content{padding:0;border:1px solid #E2E8F0;border-radius:20px;overflow:hidden;box-shadow:0 24px 70px rgba(15,23,42,.18)}
+.export-choice-modal .modal-header{padding:24px 24px 18px;border-bottom:1px solid #F1F5F9}
+.export-choice-modal .modal-title{margin:6px 0 5px;font-size:23px;letter-spacing:-.04em;color:#172554}
+.export-choice-subtitle{margin:0;color:#94A3B8;font-size:11px;line-height:1.5}
+.export-choice-modal .modal-body{padding:18px 24px 20px}
+.export-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.export-choice-card{position:relative;display:flex;align-items:center;gap:12px;padding:15px;border:1px solid #E2E8F0;border-radius:14px;background:#fff;color:#334155;transition:.18s;text-decoration:none}
+.export-choice-card:hover{border-color:#A5B4FC;background:#FAFAFF;transform:translateY(-1px);box-shadow:0 8px 22px rgba(15,23,42,.06);color:#172554}
+.export-choice-card>span:nth-child(2){min-width:0;display:flex;flex-direction:column;gap:4px;flex:1}
+.export-choice-card strong{font-size:12px}
+.export-choice-card small{font-size:9px;color:#94A3B8;line-height:1.35}
+.export-choice-card>i:last-child{color:#94A3B8;font-size:12px}
+.export-choice-icon{width:40px;height:40px;flex:0 0 40px;border-radius:11px;background:#EEF2FF;color:#4F46E5;display:grid;place-items:center;font-size:18px}
+.export-choice-card:hover .export-choice-icon{background:#4F46E5;color:#fff}
+.export-choice-modal .modal-footer{padding:0 24px 20px;border-top:0}
+@media(max-width:600px){
+ .export-choice-modal .modal-dialog{width:calc(100% - 20px);margin:10px auto}
+ .export-choice-grid{grid-template-columns:1fr}
+ .export-choice-modal .modal-header{padding:20px 18px 15px}
+ .export-choice-modal .modal-body{padding:14px 18px 16px}
+ .export-choice-modal .modal-footer{padding:0 18px 18px}
+ .export-choice-modal .modal-title{font-size:21px}
+ .export-choice-card{min-height:66px}
+}
