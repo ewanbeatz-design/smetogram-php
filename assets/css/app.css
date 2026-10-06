@@ -1632,3 +1632,28 @@ html,body{min-height:100%;margin:0}
 .stage-payment-input:focus{border-color:rgba(47,113,64,.45);box-shadow:0 0 0 3px rgba(47,113,64,.08);}
 .stage-payment-complete{display:flex;align-items:center;gap:7px;margin-top:8px;color:#2f7140;font-size:12px;font-weight:700;}
 @media(max-width:575.98px){.stage-payment span{display:none;}.stage-payment{width:36px;justify-content:center;padding:0;}}
+
+/* Payments: estimate-linked stages */
+.payments-main-panel .panel-heading{align-items:flex-start;}
+.payments-main-panel .panel-heading .eyebrow{margin-bottom:5px;}
+.payment-stage-list{display:grid;gap:14px;margin-top:20px;}
+.payment-stage-card{border:1px solid rgba(50,58,49,.10);border-radius:18px;background:#fff;padding:18px;}
+.payment-stage-card-head{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:12px;align-items:center;}
+.payment-stage-title-wrap{min-width:0;display:grid;gap:3px;}
+.payment-stage-title-wrap strong{font-size:15px;color:#303631;}
+.payment-stage-title-wrap span{font-size:11px;color:#7a827d;font-weight:700;}
+.payment-stage-card-head em{font-style:normal;font-size:11px;font-weight:800;color:#657069;white-space:nowrap;}
+.payment-stage-edit-grid{display:grid;grid-template-columns:minmax(180px,1.4fr) minmax(120px,.8fr) minmax(120px,.8fr) minmax(180px,1fr);gap:12px;margin-top:18px;align-items:end;}
+.payment-stage-edit-grid label,.payment-stage-stat{display:grid;gap:6px;min-width:0;}
+.payment-stage-edit-grid label>span,.payment-stage-stat>span{font-size:11px;color:#7a827d;font-weight:700;}
+.payment-input-wrap{display:flex;align-items:center;border:1px solid #dfe4df;border-radius:11px;background:#fbfcfb;overflow:hidden;}
+.payment-input-wrap input{width:100%;min-width:0;border:0;outline:0;background:transparent;padding:10px 11px;font:inherit;color:#303631;}
+.payment-input-wrap b{padding-right:10px;color:#858d87;font-size:12px;}
+.payment-stage-stat{padding:10px 0;}
+.payment-stage-stat strong{font-size:14px;color:#303631;}
+.payment-stage-card .payment-stage-progress{height:7px;background:#edf0ed;border-radius:99px;overflow:hidden;margin-top:15px;}
+.payment-stage-card .payment-stage-progress span{display:block;height:100%;background:#557c61;border-radius:inherit;transition:width .25s ease;}
+.payment-stage-actions{display:flex;gap:9px;align-items:center;justify-content:flex-end;margin-top:14px;flex-wrap:wrap;}
+.payment-complete-note{font-size:12px;font-weight:800;color:#557c61;}
+@media (max-width:900px){.payment-stage-edit-grid{grid-template-columns:1fr 1fr;}.payment-stage-edit-grid label:first-child{grid-column:1/-1;}}
+@media (max-width:576px){.payment-stage-card{padding:14px;}.payment-stage-card-head{grid-template-columns:38px minmax(0,1fr);}.payment-stage-card-head em{grid-column:2;}.payment-stage-edit-grid{grid-template-columns:1fr;}.payment-stage-edit-grid label:first-child{grid-column:auto;}.payment-stage-actions>*{width:100%;justify-content:center;}.payment-metrics{grid-template-columns:1fr;}}
