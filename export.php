@@ -6,8 +6,10 @@ $user=require_auth();
 $id=(int)($_GET['id']??0);
 $format=(string)($_GET['format']??'print');
 
-$q=$pdo->prepare("SELECT * FROM projects WHERE id=? AND ownerId=? LIMIT 1");
-$q->execute([$id,$user['id']]);
+$q=$pdo->prepare("SELECT * FROM projects WHERE id=? LIMIT 1");
+$q->execute([$id]);
+$p=$q->fetch();
+if(!$p || !can_access_project($pdo,$user,$id)) redirect('dashboard.php');
 $p=$q->fetch();
 if(!$p) redirect('dashboard.php');
 
