@@ -698,110 +698,125 @@ require __DIR__ . '/includes/app_header.php';
 
     <?php elseif ($view === 'payments'): ?>
         <?php
-        $payments=[];
-        $stagePayments=[];
-        $paid=0;
-        $pending=0;
+        /*
+         * Оплаты строятся напрямую из сметы:
+         * каждый раздел сметы с суммой становится этапом проекта один раз.
+         * После импорта сумму этапа можно вручную подогнать — повторный вход
+         * в раздел «Оплаты» её не перезаписывает.
+         */
         if($project){
-            $q=$pdo->prepare("SELECT st.id,st.title,st.paymentMilestone,
+            $cq=$pdo->prepare("SELECT c.id,c.name,COALESCE(SUM(i.quantity*i.price),0) total
+                FROM estimatecategories c
+                LEFT JOIN estimateitems i ON i.categoryId=c.id
+                WHERE c.projectId=?
+                GROUP BY c.id
+                ORDER BY c.sortOrder,c.id");
+            $cq->execute([$projectId]);
+            $estimateStages=$cq->fetchAll();
+            $existing=$pdo->prepare("SELECT id FROM scheduletasks WHERE projectId=? AND estimateCategoryId=? LIMIT 1");
+            $ins=$pdo->prepare("INSERT INTO scheduletasks(projectId,title,status,paymentMilestone,estimateCategoryId) VALUES(?,?,?,?,?)");
+            foreach($estimateStages as $es){
+                $total=(float)$es['total'];
+                if($total<=0) continue;
+                $existing->execute([$projectId,(int)$es['id']]);
+                if(!$existing->fetchColumn()){
+                    $ins->execute([$projectId,(string)$es['name'],'planned',$total,(int)$es['id']]);
+                }
+            }
+        }
+
+        $stagePayments=[];$payments=[];$paid=0;$pending=0;$totalStageAmount=0;
+        if($project){
+            $q=$pdo->prepare("SELECT st.id,st.title,st.paymentMilestone,st.estimateCategoryId,
                 COALESCE((SELECT sp.paidAmount FROM smetogram_payments sp WHERE sp.projectId=st.projectId AND sp.stageId=st.id AND sp.type='stage' ORDER BY sp.id DESC LIMIT 1),0) AS paidAmount,
                 COALESCE((SELECT sp.status FROM smetogram_payments sp WHERE sp.projectId=st.projectId AND sp.stageId=st.id AND sp.type='stage' ORDER BY sp.id DESC LIMIT 1),'pending') AS paymentStatus
                 FROM scheduletasks st
                 WHERE st.projectId=? AND COALESCE(st.paymentMilestone,0)>0
-                ORDER BY st.startsAt IS NULL,st.startsAt,st.id");
-            $q->execute([$projectId]);
-            $stagePayments=$q->fetchAll();
-
+                ORDER BY st.estimateCategoryId IS NULL,st.id");
+            $q->execute([$projectId]);$stagePayments=$q->fetchAll();
             foreach($stagePayments as $stagePay){
                 $total=(float)$stagePay['paymentMilestone'];
                 $stagePaid=min($total,max(0,(float)$stagePay['paidAmount']));
-                $paid += $stagePaid;
-                $pending += max(0,$total-$stagePaid);
+                $totalStageAmount+=$total;$paid+=$stagePaid;$pending+=max(0,$total-$stagePaid);
             }
-
-            // Отдельные ручные платежи проекта, не привязанные к этапам.
             $q=$pdo->prepare("SELECT sp.* FROM smetogram_payments sp WHERE sp.projectId=? AND (sp.stageId IS NULL OR sp.stageId=0) ORDER BY sp.id DESC");
-            $q->execute([$projectId]);
-            $payments=$q->fetchAll();
+            $q->execute([$projectId]);$payments=$q->fetchAll();
             foreach($payments as $pay){
-                if($pay['status']==='paid') $paid+=(float)$pay['amount'];
-                else $pending+=(float)$pay['amount'];
+                if($pay['status']==='paid') $paid+=(float)$pay['amount']; else $pending+=(float)$pay['amount'];
             }
         }
         ?>
         <div class="module-grid">
-            <div class="module-panel">
+            <div class="module-panel payments-main-panel">
                 <div class="panel-heading">
-                    <div><h2>Оплаты проекта</h2><p>Общая сумма этапов, полученные авансы и остаток к оплате.</p></div>
-                    <?php if($project): ?><button class="primary-button" data-bs-toggle="modal" data-bs-target="#paymentModal"><i class="bi bi-plus-lg"></i> Добавить оплату</button><?php endif; ?>
+                    <div>
+                        <div class="eyebrow">СМЕТА → ОПЛАТЫ</div>
+                        <h2>Оплаты проекта</h2>
+                        <p>Этапы автоматически взяты из разделов сметы. Сумму каждого этапа можно подогнать под договор и затем вносить авансы.</p>
+                    </div>
+                    <?php if($project): ?><button class="outline-button" type="button" data-bs-toggle="modal" data-bs-target="#paymentModal"><i class="bi bi-plus-lg"></i> Другой платёж</button><?php endif; ?>
                 </div>
-                <div class="metric-grid">
-                    <div class="metric-card"><span>Получено</span><strong><?=number_format($paid,0,',',' ')?> ₽</strong></div>
-                    <div class="metric-card"><span>Осталось получить</span><strong><?=number_format($pending,0,',',' ')?> ₽</strong></div>
+
+                <div class="metric-grid payment-metrics">
+                    <div class="metric-card"><span>Всего по этапам</span><strong><?=number_format($totalStageAmount,0,',',' ')?> ₽</strong><small>после корректировок</small></div>
+                    <div class="metric-card"><span>Получено</span><strong><?=number_format($paid,0,',',' ')?> ₽</strong><small>включая авансы</small></div>
+                    <div class="metric-card"><span>Осталось</span><strong><?=number_format($pending,0,',',' ')?> ₽</strong><small>к получению</small></div>
                 </div>
 
                 <?php if($stagePayments): ?>
                     <div class="payment-stage-list">
-                        <?php foreach($stagePayments as $stagePay): ?>
-                            <?php
-                            $total=(float)$stagePay['paymentMilestone'];
-                            $stagePaid=min($total,max(0,(float)$stagePay['paidAmount']));
-                            $remaining=max(0,$total-$stagePaid);
-                            $percent=$total>0?min(100,round($stagePaid/$total*100)):0;
-                            ?>
-                            <div class="payment-stage-row">
-                                <div class="payment-stage-icon"><i class="bi bi-wallet2"></i></div>
-                                <div class="payment-stage-main">
-                                    <div class="payment-stage-head">
-                                        <strong><?=e($stagePay['title'])?></strong>
-                                        <span><?=number_format($percent,0,',',' ')?>%</span>
-                                    </div>
-                                    <div class="payment-stage-total">Общая сумма <b><?=number_format($total,0,',',' ')?> ₽</b></div>
-                                    <div class="payment-stage-progress"><span style="width:<?=$percent?>%"></span></div>
-                                    <div class="payment-stage-values">
-                                        <span>Получено <b><?=number_format($stagePaid,0,',',' ')?> ₽</b></span>
-                                        <span>Остаток <b><?=number_format($remaining,0,',',' ')?> ₽</b></span>
-                                    </div>
+                    <?php foreach($stagePayments as $stagePay):
+                        $total=(float)$stagePay['paymentMilestone'];
+                        $stagePaid=min($total,max(0,(float)$stagePay['paidAmount']));
+                        $remaining=max(0,$total-$stagePaid);
+                        $percent=$total>0?min(100,round($stagePaid/$total*100)):0;
+                    ?>
+                        <article class="payment-stage-card" data-payment-stage-card="<?=$stagePay['id']?>">
+                            <div class="payment-stage-card-head">
+                                <div class="payment-stage-icon"><i class="bi bi-list-check"></i></div>
+                                <div class="payment-stage-title-wrap">
+                                    <strong><?=e($stagePay['title'])?></strong>
+                                    <span><?= $stagePay['estimateCategoryId'] ? 'Из сметы' : 'Добавлен вручную' ?></span>
                                 </div>
                                 <em><?= $remaining<=0 ? 'Оплачено' : ($stagePaid>0 ? 'Аванс' : 'Не оплачено') ?></em>
                             </div>
-                        <?php endforeach; ?>
+                            <div class="payment-stage-edit-grid">
+                                <label><span>Общая сумма этапа</span><div class="payment-input-wrap"><input type="text" inputmode="decimal" value="<?=number_format($total,0,',',' ')?>" data-stage-amount="<?=$stagePay['id']?>"><b>₽</b></div></label>
+                                <div class="payment-stage-stat"><span>Получено</span><strong data-stage-paid="<?=$stagePay['id']?>"><?=number_format($stagePaid,0,',',' ')?> ₽</strong></div>
+                                <div class="payment-stage-stat"><span>Осталось</span><strong data-stage-remaining="<?=$stagePay['id']?>"><?=number_format($remaining,0,',',' ')?> ₽</strong></div>
+                                <label><span>Аванс / платёж</span><div class="payment-input-wrap"><input type="text" inputmode="decimal" placeholder="150 000" data-stage-payment-input="<?=$stagePay['id']?>"><b>₽</b></div></label>
+                            </div>
+                            <div class="payment-stage-progress"><span data-stage-progress="<?=$stagePay['id']?>" style="width:<?=$percent?>%"></span></div>
+                            <div class="payment-stage-actions">
+                                <button type="button" class="outline-button" data-stage-save-amount="<?=$stagePay['id']?>"><i class="bi bi-pencil"></i> Сохранить сумму</button>
+                                <?php if($remaining>0): ?><button type="button" class="primary-button" data-stage-payment="<?=$stagePay['id']?>"><i class="bi bi-plus-circle"></i> Внести оплату</button><?php else: ?><span class="payment-complete-note"><i class="bi bi-check2-circle"></i> Этап оплачен полностью</span><?php endif; ?>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
                     </div>
                 <?php else: ?>
-                    <div class="empty-state">У этапов проекта пока не указана общая сумма.</div>
+                    <div class="empty-state"><i class="bi bi-receipt fs-2"></i><h3 class="mt-3">В смете пока нет этапов с суммой</h3><p>Добавьте разделы и работы в смету — они автоматически появятся здесь как этапы.</p><a class="primary-button" href="project.php?id=<?=$projectId?>">Открыть смету</a></div>
                 <?php endif; ?>
 
                 <?php if($payments): ?>
-                    <div class="payment-manual-list">
-                        <h3>Другие платежи</h3>
-                        <?php foreach($payments as $pay): ?>
-                            <div class="document-row">
-                                <div class="member-avatar"><i class="bi bi-credit-card"></i></div>
-                                <div><strong><?=e($pay['title'])?></strong><span><?=number_format((float)$pay['amount'],0,',',' ')?> ₽</span></div>
-                                <em><?= $pay['status']==='paid' ? 'Оплачено' : 'Ожидает оплаты' ?></em>
-                                <?php if($pay['status']==='pending'): ?>
-                                    <form method="post">
-                                        <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
-                                        <input type="hidden" name="action" value="mark_payment">
-                                        <input type="hidden" name="payment_id" value="<?= (int)$pay['id']?>">
-                                        <button class="outline-button">Оплачено</button>
-                                    </form>
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
+                    <div class="payment-manual-list"><h3>Другие платежи</h3>
+                    <?php foreach($payments as $pay): ?>
+                        <div class="document-row"><div class="member-avatar"><i class="bi bi-credit-card"></i></div><div><strong><?=e($pay['title'])?></strong><span><?=number_format((float)$pay['amount'],0,',',' ')?> ₽</span></div><em><?= $pay['status']==='paid' ? 'Оплачено' : 'Ожидает оплаты' ?></em>
+                        <?php if($pay['status']==='pending'): ?><form method="post"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="mark_payment"><input type="hidden" name="payment_id" value="<?= (int)$pay['id']?>"><button class="outline-button">Оплачено</button></form><?php endif; ?></div>
+                    <?php endforeach; ?></div>
                 <?php endif; ?>
             </div>
+
             <div class="module-panel">
-                <h2>Контроль оплат</h2>
-                <p class="panel-copy">По каждому этапу отдельно видно: общая сумма → сколько уже получено → сколько осталось.</p>
-                <?php foreach($stagePayments as $stagePay): ?>
-                    <?php $total=(float)$stagePay['paymentMilestone']; $stagePaid=min($total,max(0,(float)$stagePay['paidAmount'])); ?>
-                    <div class="generated-row"><i class="bi bi-check2-circle"></i><span><?=e($stagePay['title'])?> · <?=number_format($stagePaid,0,',',' ')?> / <?=number_format($total,0,',',' ')?> ₽</span></div>
-                <?php endforeach; ?>
+                <div class="eyebrow">ФИНАНСЫ</div>
+                <h2>Как это работает</h2>
+                <div class="generated-row"><i class="bi bi-1-circle"></i><span><b>Смета</b> — разделы автоматически становятся этапами.</span></div>
+                <div class="generated-row"><i class="bi bi-2-circle"></i><span><b>Сумма</b> — при необходимости подгоняете под договор.</span></div>
+                <div class="generated-row"><i class="bi bi-3-circle"></i><span><b>Аванс</b> — например 150 000 из 500 000 ₽.</span></div>
+                <div class="generated-row"><i class="bi bi-4-circle"></i><span><b>Остаток</b> — Сметограм считает автоматически.</span></div>
             </div>
         </div>
-        <?php if($project): ?><div class="modal fade" id="paymentModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post"><div class="modal-header"><h5>Новая оплата</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="add_payment"><input class="form-control mb-3" name="title" required placeholder="Например: Дополнительные работы"><input class="form-control" name="amount" required placeholder="150000"></div><div class="modal-footer"><button class="primary-button">Сохранить</button></div></form></div></div></div><?php endif; ?>
+        <?php if($project): ?><div class="modal fade" id="paymentModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post"><div class="modal-header"><h5>Другой платёж</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="add_payment"><input class="form-control mb-3" name="title" required placeholder="Например: Дополнительные работы"><input class="form-control" name="amount" required placeholder="150000"></div><div class="modal-footer"><button class="primary-button">Сохранить</button></div></form></div></div></div><?php endif; ?>
 
     <?php elseif ($view === 'chat'): ?>
         <?php
