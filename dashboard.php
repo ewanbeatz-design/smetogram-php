@@ -20,7 +20,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             if($stageAction==='amount'){
                 if(!can_manage_project($pdo,$user,$pid)) throw new RuntimeException('Изменять сумму этапа может только владелец проекта.');
                 $sid=(int)($_POST['stage_id']??0);
-                $amount=(float)str_replace(',','.',(string)($_POST['stage_amount']??'0'));
+                $rawAmount=str_replace(["\u{00A0}"," ",'₽'],'',(string)($_POST['stage_amount']??'0'));
+                $amount=(float)str_replace(',','.',$rawAmount);
                 if($amount<0) throw new RuntimeException('Сумма этапа не может быть отрицательной.');
                 $q=$pdo->prepare('SELECT id,title FROM scheduletasks WHERE id=? AND projectId=? LIMIT 1');
                 $q->execute([$sid,$pid]); $stage=$q->fetch();
