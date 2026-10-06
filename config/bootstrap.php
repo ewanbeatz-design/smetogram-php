@@ -346,6 +346,7 @@ function subscription_label(array $user):string{
 }
 
 function require_auth():array{
+    global $pdo;
     $session=current_user();
     if(!$session)redirect('login.php');
     $q=$pdo->prepare('SELECT * FROM users WHERE id=? LIMIT 1');
