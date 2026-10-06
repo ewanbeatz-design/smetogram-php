@@ -1,4 +1,62 @@
-document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');if(i)i.value=i.value.replace(/[^0-9.,]/g,'').replace(',','.');});document.addEventListener('click',e=>{const b=e.target.closest('[data-confirm]');if(b&&!confirm(b.dataset.confirm))e.preventDefault();});
+/* Global beautiful alerts / confirmations */
+(function(){
+  if(window.__smetogramAlertsReady)return;
+  window.__smetogramAlertsReady=true;
+  function ensureHost(){
+    let host=document.querySelector('.estimate-toast-host');
+    if(!host){
+      host=document.createElement('div');
+      host.className='estimate-toast-host';
+      host.setAttribute('aria-live','polite');
+      host.setAttribute('aria-atomic','false');
+      document.body.appendChild(host);
+    }
+    return host;
+  }
+  function showAlert(message,type='info',duration=4200){
+    const host=ensureHost();
+    const toast=document.createElement('div');
+    toast.className='estimate-toast estimate-toast-'+(type==='error'?'error':type==='success'?'success':'info');
+    const icon=type==='error'?'bi-exclamation-triangle-fill':type==='success'?'bi-check-circle-fill':'bi-info-circle-fill';
+    toast.innerHTML='<span class="estimate-toast-icon"><i class="bi '+icon+'"></i></span><span class="estimate-toast-text"></span><button type="button" class="estimate-toast-close" aria-label="Закрыть"><i class="bi bi-x-lg"></i></button>';
+    toast.querySelector('.estimate-toast-text').textContent=String(message??'');
+    host.appendChild(toast);
+    requestAnimationFrame(()=>toast.classList.add('is-visible'));
+    const close=()=>{toast.classList.remove('is-visible');setTimeout(()=>toast.remove(),220)};
+    toast.querySelector('.estimate-toast-close').addEventListener('click',close);
+    if(duration>0)setTimeout(close,duration);
+    return toast;
+  }
+  window.smetogramAlert=showAlert;
+  window.alert=function(message){showAlert(message,'info');};
+  window.smetogramConfirm=function(message,onConfirm){
+    document.querySelector('.smetogram-confirm-backdrop')?.remove();
+    const backdrop=document.createElement('div');
+    backdrop.className='smetogram-confirm-backdrop';
+    backdrop.innerHTML='<div class="smetogram-confirm" role="dialog" aria-modal="true" aria-labelledby="smetogramConfirmTitle"><div class="smetogram-confirm-icon"><i class="bi bi-question-lg"></i></div><div class="smetogram-confirm-copy"><strong id="smetogramConfirmTitle">Подтвердите действие</strong><p></p></div><div class="smetogram-confirm-actions"><button type="button" class="outline-button smetogram-confirm-cancel">Отмена</button><button type="button" class="primary-button smetogram-confirm-ok">Продолжить</button></div></div>';
+    backdrop.querySelector('p').textContent=String(message??'Вы уверены?');
+    document.body.appendChild(backdrop);
+    const close=()=>{backdrop.classList.remove('is-visible');setTimeout(()=>backdrop.remove(),180)};
+    backdrop.addEventListener('click',e=>{if(e.target===backdrop)close()});
+    backdrop.querySelector('.smetogram-confirm-cancel').addEventListener('click',close);
+    backdrop.querySelector('.smetogram-confirm-ok').addEventListener('click',()=>{close();if(typeof onConfirm==='function')onConfirm()});
+    requestAnimationFrame(()=>backdrop.classList.add('is-visible'));
+    setTimeout(()=>backdrop.querySelector('.smetogram-confirm-ok')?.focus(),30);
+    const onKey=e=>{if(e.key==='Escape'){close();document.removeEventListener('keydown',onKey)}};
+    document.addEventListener('keydown',onKey);
+  };
+  document.addEventListener('click',e=>{
+    const button=e.target.closest('[data-confirm]');
+    if(!button)return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    window.smetogramConfirm(button.dataset.confirm||'Подтвердите действие.',()=>{
+      if(button.tagName==='A' && button.href) window.location.href=button.href;
+      else if(button.form) button.form.requestSubmit(button);
+    });
+  },true);
+})();
+document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');if(i)i.value=i.value.replace(/[^0-9.,]/g,'').replace(',','.');});
 (function(){
  const $=s=>document.querySelector(s);
  const backdrop=$('#globalSearchBackdrop'), toggle=$('#globalSearchToggle'), close=$('#globalSearchClose');
@@ -183,7 +241,20 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
         if(bar) bar.style.width='100%';
         if(percent) percent.textContent='100%';
         skeleton?.classList.add('is-complete');
-        setTimeout(()=>window.location.reload(),220);
+        setTimeout(()=>{
+          const card=skeleton?.closest('.room-photo-card');
+          const grid=card?.querySelector('.room-photo-grid');
+          if(grid && skeleton){
+            skeleton.classList.remove('room-photo-thumb-skeleton','has-preview');
+            skeleton.classList.add('is-complete');
+            skeleton.innerHTML='<span class="room-photo-skeleton-icon"><i class="bi bi-check-lg"></i></span>';
+            setTimeout(()=>skeleton.remove(),700);
+          }
+          progress?.classList.remove('is-uploading');
+          buttons?.forEach(b=>{b.classList.remove('is-uploading');b.style.pointerEvents='';});
+          input.value='';
+          window.smetogramAlert?.('Фотография успешно добавлена.','success',2600);
+        },220);
         return;
       }
       const message=data?.message||'Не удалось загрузить фотографию.';
@@ -288,7 +359,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
         if(!next||!current)throw new Error('Раздел вернул некорректную страницу.');
         current.replaceWith(next);
         if(push)history.pushState({workspace:true},'',url);
-        window.scrollTo({top:0,behavior:'instant'});
+        window.scrollTo({top:0,behavior:'auto'});
         document.dispatchEvent(new CustomEvent('workspace:loaded'));
       }catch(error){
         // If AJAX navigation fails, fall back to the normal link behavior.
