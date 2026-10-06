@@ -59,8 +59,8 @@ if ($user && !empty($user['name'])) {
   <a class="<?=($view==='projects'?'active':'')?>" href="dashboard.php">
     <i class="bi bi-grid-1x2"></i><span>Проекты</span>
   </a>
-  <a class="<?=($projectId && $view==='projects'?'':'')?>" href="project.php?id=<?=$projectId?>">
-    <i class="bi bi-calculator"></i><span>Смета</span>
+  <a class="<?=($projectId && $view==='projects'?'':'')?>" href="<?= $projectId ? 'project.php?id='.$projectId : 'workspace.php?view=scan' ?>">
+    <i class="bi bi-calculator"></i><span><?= $projectId ? 'Смета' : 'Импорт' ?></span>
   </a>
   <a class="<?=($view==='schedule'?'active':'')?>" href="workspace.php?view=schedule<?=($projectId?'&id='.$projectId:'')?>">
     <i class="bi bi-calendar3"></i><span>График</span>
