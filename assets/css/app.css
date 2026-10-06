@@ -1394,3 +1394,27 @@ html,body{min-height:100%;margin:0}
 /* Workspace project counter */
 .workspace-project-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;margin-left:5px;border-radius:999px;background:rgba(91,75,255,.10);color:#5B4BFF;font-size:11px;font-weight:800;line-height:1;vertical-align:middle}
 @media(max-width:760px){.workspace-project-count{min-width:20px;height:20px;font-size:10px}}
+
+/* Ready-made estimate templates */
+.estimate-template-modal .modal-content{border:0;border-radius:22px;overflow:hidden;box-shadow:0 24px 70px rgba(15,23,42,.18)}
+.estimate-template-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.estimate-template-card{position:relative;display:flex;align-items:flex-start;gap:14px;padding:18px;border:1px solid #E5E7EB;border-radius:16px;background:#fff;cursor:pointer;transition:.18s ease}
+.estimate-template-card:hover{border-color:#C7D2FE;background:#FAFAFF;transform:translateY(-1px)}
+.estimate-template-card:has(input:checked){border-color:#6366F1;background:#F5F3FF;box-shadow:0 0 0 2px rgba(99,102,241,.10)}
+.estimate-template-card input{position:absolute;opacity:0;pointer-events:none}
+.estimate-template-icon{width:44px;height:44px;flex:0 0 44px;border-radius:13px;background:#F3F4F6;display:flex;align-items:center;justify-content:center;font-size:20px;color:#4F46E5}
+.estimate-template-card:has(input:checked) .estimate-template-icon{background:#4F46E5;color:#fff}
+.estimate-template-content{min-width:0;display:flex;flex-direction:column;gap:5px;padding-right:24px}
+.estimate-template-content strong{font-size:14px;color:#111827;line-height:1.3}
+.estimate-template-content small{font-size:12px;color:#6B7280;line-height:1.45}
+.estimate-template-meta{font-size:11px;color:#9CA3AF;margin-top:3px}
+.estimate-template-meta b{color:#4F46E5}
+.estimate-template-check{position:absolute;right:16px;top:18px;width:22px;height:22px;border-radius:50%;border:1px solid #D1D5DB;color:transparent;display:flex;align-items:center;justify-content:center;font-size:12px}
+.estimate-template-card:has(input:checked) .estimate-template-check{border-color:#4F46E5;background:#4F46E5;color:#fff}
+.estimate-template-note{margin-top:16px;padding:12px 14px;border-radius:12px;background:#F8FAFC;color:#64748B;display:flex;gap:9px;align-items:flex-start;font-size:12px;line-height:1.45}
+.estimate-template-note i{color:#6366F1;margin-top:1px}
+@media(max-width:700px){
+ .estimate-template-grid{grid-template-columns:1fr}
+ .estimate-template-card{padding:15px}
+ .estimate-template-modal .modal-dialog{margin:10px}
+}
