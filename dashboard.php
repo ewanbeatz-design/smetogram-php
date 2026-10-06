@@ -11,13 +11,36 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
         check_csrf();
 
         $stageAction=(string)($_POST['stage_action']??'');
-        if(in_array($stageAction,['add','update','delete','payment'],true)){
+        if(in_array($stageAction,['add','update','delete','payment','amount'],true)){
             $pid=(int)($_POST['project_id']??0);
             if($pid<=0 || !can_access_project($pdo,$user,$pid)){
                 throw new RuntimeException('Нет доступа к проекту.');
             }
 
-            if($stageAction==='payment'){
+            if($stageAction==='amount'){
+                if(!can_manage_project($pdo,$user,$pid)) throw new RuntimeException('Изменять сумму этапа может только владелец проекта.');
+                $sid=(int)($_POST['stage_id']??0);
+                $amount=(float)str_replace(',','.',(string)($_POST['stage_amount']??'0'));
+                if($amount<0) throw new RuntimeException('Сумма этапа не может быть отрицательной.');
+                $q=$pdo->prepare('SELECT id,title FROM scheduletasks WHERE id=? AND projectId=? LIMIT 1');
+                $q->execute([$sid,$pid]); $stage=$q->fetch();
+                if(!$stage) throw new RuntimeException('Этап не найден.');
+                $q=$pdo->prepare("SELECT id,paidAmount FROM smetogram_payments WHERE projectId=? AND stageId=? AND type='stage' ORDER BY id DESC LIMIT 1");
+                $q->execute([$pid,$sid]); $payment=$q->fetch();
+                $paid=(float)($payment['paidAmount']??0);
+                if($paid>$amount+0.0001) throw new RuntimeException('Новая сумма меньше уже полученного аванса: '.number_format($paid,0,',',' ').' ₽.');
+                $q=$pdo->prepare('UPDATE scheduletasks SET paymentMilestone=? WHERE id=? AND projectId=?');
+                $q->execute([$amount,$sid,$pid]);
+                if($payment){
+                    $status=$paid>=$amount&&$amount>0?'paid':($paid>0?'partial':'pending');
+                    $q=$pdo->prepare('UPDATE smetogram_payments SET amount=?,status=?,paidAt=? WHERE id=? AND projectId=?');
+                    $q->execute([$amount,$status,$status==='paid'?date('Y-m-d H:i:s'):null,(int)$payment['id'],$pid]);
+                }elseif($amount>0){
+                    $q=$pdo->prepare('INSERT INTO smetogram_payments(projectId,userId,type,stageId,title,amount,paidAmount,status) VALUES(?,?,?,?,?,?,?,?)');
+                    $q->execute([$pid,(int)$user['id'],'stage',$sid,'Этап: '.$stage['title'],$amount,0,'pending']);
+                }
+                $payload=['ok'=>true,'amount'=>$amount,'paidAmount'=>$paid,'remaining'=>max(0,$amount-$paid),'message'=>'Сумма этапа обновлена.'];
+            }elseif($stageAction==='payment'){
                 if(!can_manage_project($pdo,$user,$pid)){
                     throw new RuntimeException('Нет доступа к оплате этапа.');
                 }
@@ -28,7 +51,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     throw new RuntimeException('Укажите сумму оплаты.');
                 }
 
-                $q=$pdo->prepare('SELECT id,title,paymentMilestone FROM scheduletasks WHERE id=? AND projectId=? LIMIT 1');
+                $q=$pdo->prepare('SELECT id,title,paymentMilestone,estimateCategoryId FROM scheduletasks WHERE id=? AND projectId=? LIMIT 1');
                 $q->execute([$sid,$pid]);
                 $stage=$q->fetch();
                 if(!$stage) throw new RuntimeException('Этап не найден.');
@@ -166,7 +189,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                     $q->execute([(int)$existingPayment['id'],$pid]);
                 }
 
-                $q=$pdo->prepare('SELECT id,title,startsAt,endsAt,status,paymentMilestone FROM scheduletasks WHERE id=? AND projectId=? LIMIT 1');
+                $q=$pdo->prepare('SELECT id,title,startsAt,endsAt,status,paymentMilestone,estimateCategoryId FROM scheduletasks WHERE id=? AND projectId=? LIMIT 1');
                 $q->execute([$sid,$pid]);
                 $item=$q->fetch();
 
@@ -243,7 +266,7 @@ if(is_admin($user)){
     $q->execute([$user['id'],$user['id']]);
 }
 $all=$q->fetchAll();
-if(isset($_GET['stages_for'])){ $sid=(int)$_GET['stages_for']; if($sid<=0||!can_access_project($pdo,$user,$sid)){http_response_code(403);header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>false,'message'=>'Нет доступа к проекту.'],JSON_UNESCAPED_UNICODE);exit;} $sq=$pdo->prepare("SELECT st.id,st.title,st.startsAt,st.endsAt,st.status,st.paymentMilestone,
+if(isset($_GET['stages_for'])){ $sid=(int)$_GET['stages_for']; if($sid<=0||!can_access_project($pdo,$user,$sid)){http_response_code(403);header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>false,'message'=>'Нет доступа к проекту.'],JSON_UNESCAPED_UNICODE);exit;} $sq=$pdo->prepare("SELECT st.id,st.title,st.startsAt,st.endsAt,st.status,st.paymentMilestone,st.estimateCategoryId,
 COALESCE((SELECT sp.status FROM smetogram_payments sp WHERE sp.projectId=st.projectId AND sp.stageId=st.id AND sp.type='stage' ORDER BY sp.id DESC LIMIT 1),'none') AS paymentStatus,
 COALESCE((SELECT sp.paidAmount FROM smetogram_payments sp WHERE sp.projectId=st.projectId AND sp.stageId=st.id AND sp.type='stage' ORDER BY sp.id DESC LIMIT 1),0) AS paidAmount FROM scheduletasks st WHERE st.projectId=? ORDER BY st.startsAt IS NULL,st.startsAt,st.id");$sq->execute([$sid]);header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>true,'items'=>$sq->fetchAll()],JSON_UNESCAPED_UNICODE);exit; }
 
