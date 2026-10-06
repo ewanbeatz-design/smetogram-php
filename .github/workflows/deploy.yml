@@ -50,9 +50,8 @@ jobs:
                     'url' => 'https://сметограм.рф',
                 ],
                 'ai' => [
-                    'api_key' => '${{secrets.OPENAI_API_KEY}}',
-                    'model' => '${{secrets.OPENAI_MODEL}}',
-                    'base_url' => '${{secrets.OPENAI_BASE_URL}}',
+                    'groq_api_key' => '${{secrets.GROQ_API_KEY}}',
+                    'groq_vision_model' => '${{secrets.GROQ_VISION_MODEL}}',
                 ],
                 'telegram' => [
                     'bot_username' => 'smetogram_auth_bot',
