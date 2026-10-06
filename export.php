@@ -1,6 +1,11 @@
 <?php
 declare(strict_types=1);
 require __DIR__.'/config/bootstrap.php';
+require __DIR__.'/XlsxWriter.php';
+require __DIR__.'/vendor/autoload.php';
+
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 $user=require_auth();
 $id=(int)($_GET['id']??0);
@@ -30,15 +35,25 @@ $date=(string)($_GET['date']??date('d.m.Y'));
 $period=(string)($_GET['period']??date('m.Y'));
 $download=(int)($_GET['download']??0)===1;
 if($download && in_array($format,['print','ks2','ks3'],true)){
-    $suffix=$format==='print'?'smeta':$format;
-    header('Content-Type:text/html; charset=UTF-8');
-    header('Content-Disposition:attachment; filename="smetogram-'.$id.'-'.$suffix.'.html"');
+    ob_start();
 }
 
 function money(float $v): string { return number_format($v,2,',',' '); }
 function docHead(array $p,string $title,string $no,string $date): void {
     echo '<div class="doc-brand"><span class="doc-brand-mark">S</span><span>сметограм</span></div>';
     echo '<div class="doc-head"><div><div class="doc-title">'.e($title).'</div><div class="doc-sub">по проекту: '.e($p['name']).'</div></div><div class="doc-meta">№ '.e($no).'<br>от '.e($date).'</div></div>';
+}
+
+if($format==='xlsx'){
+    $xlsxRows=[['Смета — '.$p['name']],['Раздел','Наименование','Количество','Ед.','Цена','Сумма','Источник количества']];
+    foreach($rows as $r){$xlsxRows[]=[(string)$r['category'],(string)$r['name'],(string)$r['quantity'],(string)$r['unit'],money((float)$r['price']),money((float)$r['total']),($r['quantitySource']??'')==='measurement'?'Автоматически из замеров':'Вручную'];}
+    $xlsxRows[]=[];
+    $xlsxRows[]=['','Прямые затраты','','','',money($total)];
+    $xlsxRows[]=['','Накладные расходы 15%','','','',money($overhead)];
+    $xlsxRows[]=['','Сметная прибыль 8%','','','',money($profit)];
+    $xlsxRows[]=['','НДС 20%','','','',money($vat)];
+    $xlsxRows[]=['','ИТОГО С НДС','','','',money($totalWithVat)];
+    xlsx_download('smetogram-'.$id.'.xlsx',$xlsxRows);
 }
 
 if($format==='csv'){
@@ -135,3 +150,17 @@ table.data{width:100%;border-collapse:collapse}table.data th,table.data td{borde
 <?php endif; ?>
 </div>
 </body></html>
+<?php
+if($download && in_array($format,['print','ks2','ks3'],true)){
+    $pdfHtml=ob_get_clean();
+    $options=new Options();
+    $options->set('isRemoteEnabled',false);
+    $options->set('defaultFont','DejaVu Sans');
+    $dompdf=new Dompdf($options);
+    $dompdf->loadHtml($pdfHtml,'UTF-8');
+    $dompdf->setPaper('A4',$format==='ks2'?'landscape':'portrait');
+    $dompdf->render();
+    $suffix=$format==='ks2'?'ks2':($format==='ks3'?'ks3':'smeta');
+    $dompdf->stream('smetogram-'.$id.'-'.$suffix.'.pdf',['Attachment'=>true]);
+    exit;
+}
