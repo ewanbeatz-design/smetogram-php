@@ -4,7 +4,7 @@ if (!isset($pageTitle)) $pageTitle = 'Сметограм';
 $user = current_user();
 $view = $_GET['view'] ?? 'projects';
 $projectId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-$isProjectPage = basename((string)($_SERVER['PHP_SELF'] ?? '')) === 'project.php';
+$currentPage = basename((string)($_SERVER['PHP_SELF'] ?? ''));\n$isProjectPage = $currentPage === 'project.php';
 $projectCount = 0;
 if ($user) {
     try {
@@ -46,6 +46,9 @@ if ($user && !empty($user['name'])) {
   <div class="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
   <nav class="nav-list">
     <a class="nav-item <?=($view==='projects'?'active':'')?>" href="dashboard.php"><span class="nav-icon"><i class="bi bi-grid-1x2"></i></span><span class="nav-label">Мои проекты</span><span class="nav-count"><?= (int)$projectCount ?></span></a>
+    <?php if ($projectId): ?>
+    <a class="nav-item <?=($currentPage==='catalog.php'?'active':'')?>" href="catalog.php?id=<?=$projectId?>"><span class="nav-icon"><i class="bi bi-journal-text"></i></span><span class="nav-label">Каталог</span></a>
+    <?php endif; ?>
     <a class="nav-item <?=($view==='scan'?'active':'')?>" href="workspace.php?view=scan<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-file-earmark-arrow-up"></i></span><span class="nav-label">Смета из файла</span></a>
     <a class="nav-item <?=($view==='measurements'?'active':'')?>" href="workspace.php?view=measurements<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-rulers"></i></span><span class="nav-label">Замеры</span></a>
     <a class="nav-item <?=($view==='schedule'?'active':'')?>" href="workspace.php?view=schedule<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="bi bi-calendar3"></i></span><span class="nav-label">График работ</span></a>
