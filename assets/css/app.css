@@ -1477,3 +1477,35 @@ html,body{min-height:100%;margin:0}
 .room-photo-thumb.is-deleting{overflow:hidden;pointer-events:none}
 .room-photo-thumb.is-deleting .room-photo-delete{opacity:0}
 .room-photo-empty{margin-left:54px;border:1px dashed #CBD5E1;border-radius:9px;padding:11px 13px;color:#94A3B8;font-size:9px;display:flex;align-items:center;gap:7px}@media(max-width:700px){.room-photo-actions{padding-left:0}.room-photo-grid{padding-left:0;grid-template-columns:repeat(2,minmax(0,1fr))}.room-photo-empty{margin-left:0}.room-measure-row{display:grid!important;grid-template-columns:34px 1fr auto!important;gap:9px!important}.room-measure-row>form{grid-column:3;grid-row:1}.room-measure-row>em{grid-column:2;grid-row:2}.room-measure-row>div:nth-child(2){grid-column:2;grid-row:1}}
+/* AI estimate from room photos */
+.room-ai-estimate{border-color:#C7D2FE!important;color:#4338CA!important;background:#FAFAFF!important}
+.room-ai-estimate:hover{background:#EEF2FF!important;border-color:#A5B4FC!important}
+.room-ai-estimate:disabled{opacity:.45;cursor:not-allowed}
+.ai-estimate-modal-content{border:0!important;border-radius:22px!important;overflow:hidden;box-shadow:0 24px 70px rgba(15,23,42,.18)}
+.ai-estimate-modal-content .modal-header{padding:22px 24px 16px;border-bottom:1px solid #EEF2F7}
+.ai-estimate-modal-content .modal-header h5{margin:0 0 5px;font-size:20px;color:#172554}
+.ai-estimate-loading{min-height:260px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#475569}
+.ai-estimate-loading strong{font-size:14px;color:#1E293B}
+.ai-estimate-loading>span{font-size:11px;color:#94A3B8}
+.ai-estimate-spinner{width:54px;height:54px;border-radius:17px;display:grid;place-items:center;background:#EEF2FF;color:#4F46E5;font-size:23px;animation:aiEstimatePulse 1.4s ease-in-out infinite}
+@keyframes aiEstimatePulse{50%{transform:scale(1.06);box-shadow:0 0 0 10px rgba(79,70,229,.06)}}
+.ai-estimate-items{display:grid;gap:8px}
+.ai-estimate-item{display:grid;grid-template-columns:20px 1fr auto;gap:11px;align-items:center;padding:12px 13px;border:1px solid #E2E8F0;border-radius:13px;background:#fff;cursor:pointer}
+.ai-estimate-item:hover{border-color:#C7D2FE;background:#FAFAFF}
+.ai-estimate-item input{width:17px;height:17px;accent-color:#4F46E5}
+.ai-estimate-item-main{min-width:0;display:flex;flex-direction:column;gap:3px}
+.ai-estimate-item-main strong{font-size:12px;color:#334155}
+.ai-estimate-item-main small{font-size:9px;line-height:1.4;color:#94A3B8}
+.ai-estimate-item-values{display:flex;align-items:center;gap:5px;white-space:nowrap;font-size:10px;color:#64748B}
+.ai-estimate-item-values b{font-size:12px;color:#172554}
+.ai-estimate-item-values em{font-style:normal;margin-left:8px;padding-left:8px;border-left:1px solid #E2E8F0;color:#4F46E5;font-weight:800}
+.ai-estimate-note{display:flex;gap:8px;margin-top:12px;padding:11px 13px;border-radius:11px;background:#F8FAFC;color:#64748B;font-size:10px;line-height:1.45}
+.ai-estimate-note i{color:#4F46E5}
+.ai-estimate-empty{padding:35px 15px;text-align:center;color:#94A3B8;font-size:11px}.ai-estimate-empty i{display:block;font-size:25px;margin-bottom:8px;color:#CBD5E1}
+#aiEstimateApply.is-loading{opacity:.7;pointer-events:none}
+@media(max-width:700px){
+ .ai-estimate-modal-content .modal-header{padding:18px 16px 14px}
+ .ai-estimate-item{grid-template-columns:20px 1fr;gap:9px}
+ .ai-estimate-item-values{grid-column:2;justify-content:flex-start}
+ .ai-estimate-item-values em{margin-left:5px;padding-left:5px}
+}
