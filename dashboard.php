@@ -11,8 +11,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
    } else {
   $name=trim($_POST['name']??'');$city=trim($_POST['city']??'');$client=trim($_POST['clientName']??'');$work=trim($_POST['workType']??'Строительство');$deadline=trim($_POST['deadline']??'');
   if($name===''){$error='Введите название проекта.';}else{
-   $q=$pdo->prepare("INSERT INTO projects(ownerId,name,city,clientName,workType,status,deadline,budget) VALUES(?,?,?,?,?,?,?,?)");
-   $q->execute([$user['id'],$name,$city,$client,$work,'in_progress',$deadline!==''?$deadline:null,0]);
+   $q=$pdo->prepare("INSERT INTO projects(ownerId,name,city,clientName,workType,status,estimateDate,deadline,budget) VALUES(?,?,?,?,?,?,?,?,?)");
+   $q->execute([$user['id'],$name,$city,$client,$work,'in_progress',date('Y-m-d'),$deadline!==''?$deadline:null,0]);
    $pid=(int)$pdo->lastInsertId();
    $q=$pdo->prepare("INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)");$q->execute([$pid,'Общестроительные работы',1]);
    redirect('project.php?id='.$pid);
