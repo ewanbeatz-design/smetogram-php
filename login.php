@@ -40,7 +40,7 @@ require __DIR__.'/includes/header.php';
         <div class="telegram-login-box">
         <?php if ($telegramReady): ?>
           <a href="telegram-start.php" class="telegram-login-button" id="telegramLoginButton">
-            <i class="bi bi-telegram"></i>
+            <i class="fa-brands fa-telegram"></i>
             <span>Войти через Telegram</span>
           </a>
           <?php if (!empty($_SESSION['telegram_login_error'])): ?>
@@ -54,7 +54,7 @@ require __DIR__.'/includes/header.php';
 
       <div class="auth-login-security"><span class="auth-security-dot"></span><div><strong>Быстрый и безопасный вход</strong><small>Telegram подтверждает вашу личность без пароля и SMS-кода.</small></div></div>
       <p class="auth-phone-note">Продолжая, вы входите в Сметограм через Telegram. Мы не получаем ваш пароль Telegram.</p>
-      <a href="guide.php" class="auth-guide-button"><i class="bi bi-book"></i><span>Как пользоваться Сметограмом</span><i class="bi bi-arrow-up-right ms-auto"></i></a>
+      <a href="guide.php" class="auth-guide-button"><i class="fa-solid fa-book"></i><span>Как пользоваться Сметограмом</span><i class="fa-solid fa-arrow-up-right-from-square ms-auto"></i></a>
     </div>
 
     <div class="auth-login-footer">
