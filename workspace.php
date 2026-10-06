@@ -439,7 +439,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $isAjaxPost = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
-    if ($isAjaxPost && $action === 'upload_room_photo') {
+    if ($isAjaxPost && in_array($action, ['upload_room_photo', 'delete_room_photo'], true)) {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'ok' => $error === '',
@@ -813,7 +813,7 @@ require __DIR__ . '/includes/app_header.php';
                                 <?php foreach ($roomPhotos[(int)$room['id']] as $photo): ?>
                                     <div class="room-photo-thumb">
                                         <a href="<?= e($photo['path']) ?>" data-fancybox="room-<?= (int)$room['id'] ?>" data-caption="<?= e($room['name']) ?>"><img src="<?= e($photo['path']) ?>" alt="<?= e($room['name']) ?>" loading="lazy"></a>
-                                        <form method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="delete_room_photo"><input type="hidden" name="photo_id" value="<?= (int)$photo['id'] ?>"><button type="submit" class="room-photo-delete" title="Удалить"><i class="bi bi-x"></i></button></form>
+                                        <form method="post" class="room-photo-delete-form"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="delete_room_photo"><input type="hidden" name="photo_id" value="<?= (int)$photo['id'] ?>"><button type="submit" class="room-photo-delete" title="Удалить" aria-label="Удалить фотографию"><i class="bi bi-x-lg"></i></button></form>
                                     </div>
                                 <?php endforeach; ?>
                                 </div>
