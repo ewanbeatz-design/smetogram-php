@@ -3,8 +3,9 @@ declare(strict_types=1);
 require __DIR__.'/config/bootstrap.php';
 $user=require_auth();
 $id=(int)($_GET['id']??0);
-$q=$pdo->prepare('SELECT d.*,p.name AS projectName,p.city,p.clientName FROM projectdocuments d INNER JOIN projects p ON p.id=d.projectId WHERE d.id=? AND p.ownerId=? LIMIT 1');
-$q->execute([$id,$user['id']]); $doc=$q->fetch();
+$q=$pdo->prepare('SELECT d.*,p.name AS projectName,p.city,p.clientName FROM projectdocuments d INNER JOIN projects p ON p.id=d.projectId WHERE d.id=? LIMIT 1');
+$q->execute([$id]); $doc=$q->fetch();
+if(!$doc || !can_access_project($pdo,$user,(int)$doc['projectId'])){http_response_code(404);exit('Документ не найден.');} $doc=$q->fetch();
 if(!$doc){http_response_code(404);exit('Документ не найден.');}
 $f=$pdo->prepare('SELECT * FROM smetogram_document_files WHERE documentId=? AND projectId=? ORDER BY createdAt DESC,id DESC');
 $f->execute([$id,$doc['projectId']]); $files=$f->fetchAll();
