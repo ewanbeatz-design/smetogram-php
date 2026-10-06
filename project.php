@@ -382,11 +382,11 @@ document.addEventListener('DOMContentLoaded',()=>{
    </div>
    <div class="modal-body">
     <div class="export-choice-grid">
-     <a class="export-choice-card" href="export.php?id=<?=$id?>" target="_blank">
+     <a class="export-choice-card" href="export.php?id=<?=$id?>&download=1">
       <span class="export-choice-icon"><i class="bi bi-file-earmark-pdf"></i></span>
       <span><strong>Смета</strong><small>Открыть печать и сохранить в PDF</small></span><i class="bi bi-arrow-up-right"></i>
      </a>
-     <a class="export-choice-card" href="export.php?id=<?=$id?>&format=csv">
+     <a class="export-choice-card" href="export.php?id=<?=$id?>&format=csv&download=1">
       <span class="export-choice-icon"><i class="bi bi-filetype-csv"></i></span>
       <span><strong>CSV</strong><small>Для Excel и обработки данных</small></span><i class="bi bi-arrow-down"></i>
      </a>
