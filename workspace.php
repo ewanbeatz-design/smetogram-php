@@ -462,17 +462,23 @@ require __DIR__ . '/includes/app_header.php';
     <?php elseif ($view === 'team'): ?>
         <?php
         $members = [];
+        $assignableUsers = [];
         if ($project) {
-            $q = $pdo->prepare('SELECT * FROM projectmembers WHERE projectId=? ORDER BY id');
+            $q = $pdo->prepare('SELECT m.*,u.name AS userName,u.email AS userEmail,u.username AS userUsername FROM projectmembers m LEFT JOIN users u ON u.id=m.userId WHERE m.projectId=? ORDER BY m.id');
             $q->execute([$projectId]);
             $members = $q->fetchAll();
+            if (!empty($canManageProject)) {
+                $uq = $pdo->prepare('SELECT id,name,email,username FROM users WHERE id<>? ORDER BY name IS NULL,name,id');
+                $uq->execute([(int)$project['ownerId']]);
+                $assignableUsers = $uq->fetchAll();
+            }
         }
         ?>
         <div class="module-grid">
             <div class="module-panel">
                 <div class="panel-heading">
                     <div><h2>Участники</h2><p>Роли и контакты проекта.</p></div>
-                    <?php if ($project): ?><button class="primary-button" data-bs-toggle="modal" data-bs-target="#memberModal"><i class="bi bi-person-plus"></i> Пригласить</button><?php endif; ?>
+                    <?php if ($project && !empty($canManageProject)): ?><button class="primary-button" data-bs-toggle="modal" data-bs-target="#memberModal"><i class="bi bi-person-plus"></i> Назначить сотрудника</button><?php endif; ?>
                 </div>
                 <?php if (!$members): ?>
                     <div class="empty-state">Участников пока нет.</div>
@@ -480,7 +486,7 @@ require __DIR__ . '/includes/app_header.php';
                     <?php foreach ($members as $member): ?>
                         <div class="member-row">
                             <div class="member-avatar"><?= e(mb_strtoupper(mb_substr($member['role'], 0, 2))) ?></div>
-                            <div><strong><?= e($member['invitedEmail'] ?: ($member['invitedPhone'] ?: 'Участник')) ?></strong><span><?= e(['owner'=>'Владелец','foreman'=>'Прораб','contractor'=>'Бригада','designer'=>'Дизайнер','client'=>'Заказчик'][$member['role']] ?? $member['role']) ?></span></div>
+                            <div><strong><?= e($member['userName'] ?: ($member['userUsername'] ? '@'.$member['userUsername'] : ($member['invitedEmail'] ?: ($member['invitedPhone'] ?: 'Участник')))) ?></strong><span><?= e(['owner'=>'Владелец','foreman'=>'Прораб','contractor'=>'Бригада','designer'=>'Дизайнер','client'=>'Заказчик'][$member['role']] ?? $member['role']) ?></span></div>
                             <em><?= e($member['joinedAt'] ? 'Активен' : 'Приглашён') ?></em>
                         </div>
                     <?php endforeach; ?>
@@ -491,14 +497,19 @@ require __DIR__ . '/includes/app_header.php';
 
         <?php if ($project): ?>
         <div class="modal fade" id="memberModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post">
-            <div class="modal-header"><h5>Пригласить участника</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-header"><h5>Назначить сотрудника</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
                 <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="add_member">
+                <?php if ($assignableUsers): ?>
+                <label class="form-label">Сотрудник с аккаунтом</label>
+                <select class="form-select mb-3" name="user_id"><option value="0">Выбрать сотрудника…</option><?php foreach ($assignableUsers as $employee): ?><option value="<?=$employee['id']?>"><?=e($employee['name'] ?: ($employee['username'] ? '@'.$employee['username'] : ($employee['email'] ?: 'Пользователь #'.$employee['id'])))?></option><?php endforeach; ?></select>
+                <div class="small text-muted mb-3">Или создайте приглашение для человека, у которого ещё нет аккаунта:</div>
+                <?php endif; ?>
                 <input class="form-control mb-3" type="email" name="email" placeholder="email@example.ru">
                 <input class="form-control mb-3" name="phone" placeholder="+7 999 000-00-00">
                 <select class="form-select" name="role"><option value="client">Заказчик</option><option value="foreman">Прораб</option><option value="contractor">Бригада</option><option value="designer">Дизайнер</option></select>
             </div>
-            <div class="modal-footer"><button class="primary-button">Создать приглашение</button></div>
+            <div class="modal-footer"><button class="primary-button">Назначить сотрудника</button></div>
         </form></div></div></div>
         <?php endif; ?>
 
