@@ -1248,3 +1248,131 @@ html,body{min-height:100%;margin:0}
   .estimate-actions{gap:9px}
   .estimate-actions .text-button{font-size:8px}
 }
+
+/* 2026 MOBILE LAYOUT — FINAL */
+@media (max-width:760px){
+  :root{--mobile-gutter:16px}
+  html,body{width:100%;overflow-x:hidden}
+  body{background:#f7f8fb;padding-bottom:76px}
+  .app-shell{display:block;min-height:100vh}
+  .main-content{width:100%;min-width:0}
+  .topbar{
+    height:60px;padding:0 var(--mobile-gutter);
+    background:rgba(255,255,255,.92);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid #e9ebf0
+  }
+  .breadcrumbs{min-width:0;gap:8px}
+  .breadcrumbs strong{max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+  .mobile-menu{width:36px;height:36px;min-width:36px;border:1px solid #e3e6ec;background:#fff;border-radius:10px;color:#334155}
+  .topbar-actions{gap:5px}
+  .topbar-actions .icon-button{width:36px;height:36px;min-width:36px;border:1px solid #e3e6ec;background:#fff;border-radius:10px}
+  .top-avatar{width:32px;height:32px}
+  .page-wrap{max-width:none;width:100%;padding:24px var(--mobile-gutter) 30px}
+  .page-heading{gap:16px;margin-bottom:24px}
+  .page-heading h1,.module-heading h1{font-size:28px;line-height:1.08;margin:8px 0 4px}
+  .lede{font-size:12px;line-height:1.5}
+  .page-heading>.primary-button,.module-heading>.primary-button{width:100%;height:46px;border-radius:12px}
+  .metric-grid{display:flex;overflow-x:auto;gap:10px;margin:0 0 28px;padding-bottom:3px;scroll-snap-type:x mandatory}
+  .metric-card{min-width:calc(50vw - 22px);padding:14px;border-radius:14px;scroll-snap-align:start}
+  .metric-card strong{font-size:19px}
+  .section-title-row{display:block;padding-top:17px}
+  .section-title-row h2{font-size:17px}
+  .filter-row{margin-top:14px;gap:8px}
+  .project-search,.filter-select{height:44px;border-radius:11px}
+  .project-grid{gap:10px;margin-top:14px}
+  .project-card,.new-project-card{min-height:0;border-radius:15px;padding:16px}
+  .project-info{margin:22px 0 15px}
+  .project-info h3{font-size:16px}
+  .progress-meta{margin-top:20px}
+  .bottom-callout{margin-top:20px;padding:14px;border-radius:14px}
+  .bottom-callout .text-button{margin-left:auto}
+
+  .estimate-heading{gap:14px}
+  .back-button{height:34px}
+  .estimate-title-row{margin-top:4px;gap:11px}
+  .project-symbol{width:40px;height:40px;border-radius:11px}
+  .estimate-title-row h1{font-size:24px;margin:5px 0 2px}
+  .heading-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}
+  .heading-actions>*{width:100%;min-height:42px}
+  .estimate-summary{margin-top:22px;padding:18px;border-radius:16px;gap:17px}
+  .estimate-summary strong{font-size:25px}
+  .summary-stats{gap:10px}
+  .summary-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .summary-actions>*{width:100%;min-height:42px}
+  .estimate-toolbar{margin-top:25px;padding-bottom:12px;overflow:auto}
+  .toolbar-tabs{gap:22px;min-width:max-content}
+  .toolbar-tabs a,.toolbar-tabs button{font-size:11px}
+  .estimate-list{margin-top:18px}
+  .estimate-group{margin-bottom:16px}
+  .group-heading{padding:0 3px 9px;grid-template-columns:25px 1fr auto}
+  .group-heading h3{font-size:12px}
+  .estimate-table{border:0;border-radius:0;background:transparent;overflow:visible}
+  .table-row{
+    display:grid;grid-template-columns:1fr auto;gap:7px;
+    min-height:0;margin-bottom:8px;padding:13px;border:1px solid #e4e7ed!important;
+    border-radius:13px;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.03)
+  }
+  .table-row .work-name{grid-column:1/-1;min-width:0;font-size:12px;line-height:1.35}
+  .table-row .js-qty,.table-row .js-unit,.table-row .js-price,.table-row>span:nth-of-type(3),.table-row>span:nth-of-type(4){
+    display:block!important;font-size:10px
+  }
+  .table-row .row-actions{grid-column:2;grid-row:2;justify-content:flex-end}
+  .table-row .row-actions button{width:32px;height:32px;border-radius:9px;background:#f5f6f8}
+  .add-row{width:100%;min-height:44px;padding:10px 13px;border:1px dashed #cbd5e1;border-radius:11px;background:#fff}
+  .estimate-total{margin-top:8px;padding:16px 4px;gap:12px}
+  .estimate-total strong{font-size:17px}
+
+  .module-heading{margin-bottom:22px}
+  .module-grid{gap:10px}
+  .module-panel{padding:16px;border-radius:14px}
+  .panel-heading{gap:12px;margin-bottom:16px}
+  .panel-heading h2,.module-panel h2{font-size:15px}
+  .panel-heading>.primary-button,.panel-heading>.outline-button{min-height:40px}
+  .document-row,.member-row{gap:9px;padding:13px 0}
+  .document-row form,.member-row form{flex:none}
+  .chat-panel{min-height:calc(100vh - 110px)}
+  .chat-messages{min-height:300px}
+  .chat-compose{position:sticky;bottom:0;background:#fff;padding:10px 0 calc(10px + env(safe-area-inset-bottom))}
+  .upload-zone{min-height:220px;padding:24px}
+  .settings-nav{display:flex;overflow:auto;gap:5px;padding:5px}
+  .settings-nav a{white-space:nowrap;padding:9px 12px}
+  .settings-fields{gap:0;margin:18px 0}
+  .plans-grid{gap:10px}
+  .plan-card{padding:16px;border-radius:14px}
+  .empty-state{padding:45px 15px}
+
+  .modal-dialog,.modal-dialog.modal-lg{width:calc(100% - 20px);margin:10px auto}
+  .modal-content{padding:18px;border-radius:17px;max-height:calc(100vh - 20px);overflow:auto}
+  .modal-title,.modal-header h5{font-size:20px}
+}
+
+/* Bottom navigation is part of the mobile app shell, not page content. */
+.mobile-bottom-nav{
+  display:none;
+}
+@media(max-width:760px){
+  .mobile-bottom-nav{
+    position:fixed;display:grid;grid-template-columns:repeat(4,1fr);
+    left:10px;right:10px;bottom:10px;z-index:1100;
+    height:62px;padding:5px;
+    border:1px solid rgba(226,232,240,.95);border-radius:18px;
+    background:rgba(255,255,255,.94);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+    box-shadow:0 12px 35px rgba(15,23,42,.14),0 2px 8px rgba(15,23,42,.05)
+  }
+  .mobile-bottom-nav a{
+    min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:3px;border-radius:13px;color:#94a3b8;font-size:9px;font-weight:700;line-height:1
+  }
+  .mobile-bottom-nav a i{font-size:18px;line-height:1}
+  .mobile-bottom-nav a.active{background:#eef2ff;color:#4f46e5}
+  .mobile-bottom-nav a:active{transform:scale(.97)}
+  .sidebar{padding-top:22px}
+  .sidebar-open~.sidebar-backdrop{z-index:1050}
+  .sidebar{z-index:1060}
+}
+@media(max-width:360px){
+  .mobile-bottom-nav{left:7px;right:7px}
+  .mobile-bottom-nav a{font-size:8px}
+  .mobile-bottom-nav a i{font-size:17px}
+  .page-wrap{padding-left:13px;padding-right:13px}
+}
