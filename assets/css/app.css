@@ -1456,3 +1456,7 @@ html,body{min-height:100%;margin:0}
  .export-choice-modal .modal-title{font-size:21px}
  .export-choice-card{min-height:66px}
 }
+
+/* Export chooser branding */
+.export-modal-brand{display:flex;align-items:center;gap:8px;margin-bottom:8px;color:#172554;font-size:13px;font-weight:800;letter-spacing:-.03em}
+.export-modal-brand-mark{width:25px;height:25px;border-radius:7px;background:#4F46E5;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;box-shadow:0 5px 14px rgba(79,70,229,.20)}
