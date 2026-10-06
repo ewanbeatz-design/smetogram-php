@@ -2,10 +2,14 @@
 declare(strict_types=1);
 require __DIR__.'/config/bootstrap.php';
 $user=require_auth();$id=(int)($_GET['id']??0);
-$q=$pdo->prepare("SELECT * FROM projects WHERE id=? AND ownerId=?");$q->execute([$id,$user['id']]);$project=$q->fetch();if(!$project)redirect('dashboard.php');
+$q=$pdo->prepare("SELECT * FROM projects WHERE id=? LIMIT 1");$q->execute([$id]);$project=$q->fetch();
+if(!$project || !can_access_project($pdo,$user,$id))redirect('dashboard.php');
+$canManage=can_manage_project($pdo,$user,$id);
 $error='';
 if($_SERVER['REQUEST_METHOD']==='POST'){
- check_csrf();$action=$_POST['action']??'';
+ check_csrf();
+ if(!$canManage){http_response_code(403);exit('Недостаточно прав для изменения проекта.');}
+ $action=$_POST['action']??'';
  if($action==='category'){ $name=trim($_POST['name']??'');if($name!==''){$q=$pdo->prepare("INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)");$q->execute([$id,$name,(int)$pdo->query("SELECT COALESCE(MAX(sortOrder),0)+1 FROM estimatecategories WHERE projectId=".(int)$id)->fetchColumn()]);}redirect('project.php?id='.$id);}
  if($action==='template'){ $template=(int)($_POST['template_id']??0);$qty=(float)str_replace(',','.',$_POST['template_quantity']??$_POST['quantity']??1);if($qty<=0)$qty=1;$q=$pdo->prepare("SELECT * FROM estimateitemtemplates WHERE id=? LIMIT 1");$q->execute([$template]);$it=$q->fetch();if($it){$q=$pdo->prepare("SELECT id FROM estimatecategories WHERE projectId=? AND name=? LIMIT 1");$q->execute([$id,$it['categoryName']]);$cat=$q->fetchColumn();if(!$cat){$q=$pdo->prepare("SELECT COALESCE(MAX(sortOrder),0)+1 FROM estimatecategories WHERE projectId=?");$q->execute([$id]);$sort=(int)$q->fetchColumn();$q=$pdo->prepare("INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)");$q->execute([$id,$it['categoryName'],$sort]);$cat=$pdo->lastInsertId();}$q=$pdo->prepare("INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source) VALUES(?,?,?,?,?,?)");$q->execute([(int)$cat,$it['name'],$qty,$it['unit'],$it['price'],'template']);}redirect('project.php?id='.$id);}
  if($action==='item'){ $cat=(int)($_POST['category_id']??0);$q=$pdo->prepare("SELECT id FROM estimatecategories WHERE id=? AND projectId=?");$q->execute([$cat,$id]);if($q->fetch()){ $name=trim($_POST['name']??'');$qty=(float)str_replace(',','.',$_POST['quantity']??0);$unit=trim($_POST['unit']??'шт');$price=(float)str_replace(',','.',$_POST['price']??0);if($name!==''){$q=$pdo->prepare("INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source) VALUES(?,?,?,?,?,?)");$q->execute([$cat,$name,$qty,$unit,$price,'manual']);}}redirect('project.php?id='.$id);}
