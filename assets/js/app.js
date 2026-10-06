@@ -18,7 +18,7 @@
     const toast=document.createElement('div');
     toast.className='estimate-toast estimate-toast-'+(type==='error'?'error':type==='success'?'success':'info');
     const icon=type==='error'?'bi-exclamation-triangle-fill':type==='success'?'bi-check-circle-fill':'bi-info-circle-fill';
-    toast.innerHTML='<span class="estimate-toast-icon"><i class="bi '+icon+'"></i></span><span class="estimate-toast-text"></span><button type="button" class="estimate-toast-close" aria-label="Закрыть"><i class="bi bi-x-lg"></i></button>';
+    toast.innerHTML='<span class="estimate-toast-icon"><i class="bi '+icon+'"></i></span><span class="estimate-toast-text"></span><button type="button" class="estimate-toast-close" aria-label="Закрыть"><i class="fa-solid fa-xmark"></i></button>';
     toast.querySelector('.estimate-toast-text').textContent=String(message??'');
     host.appendChild(toast);
     requestAnimationFrame(()=>toast.classList.add('is-visible'));
@@ -33,7 +33,7 @@
     document.querySelector('.smetogram-confirm-backdrop')?.remove();
     const backdrop=document.createElement('div');
     backdrop.className='smetogram-confirm-backdrop';
-    backdrop.innerHTML='<div class="smetogram-confirm" role="dialog" aria-modal="true" aria-labelledby="smetogramConfirmTitle"><div class="smetogram-confirm-icon"><i class="bi bi-question-lg"></i></div><div class="smetogram-confirm-copy"><strong id="smetogramConfirmTitle">Подтвердите действие</strong><p></p></div><div class="smetogram-confirm-actions"><button type="button" class="outline-button smetogram-confirm-cancel">Отмена</button><button type="button" class="primary-button smetogram-confirm-ok">Продолжить</button></div></div>';
+    backdrop.innerHTML='<div class="smetogram-confirm" role="dialog" aria-modal="true" aria-labelledby="smetogramConfirmTitle"><div class="smetogram-confirm-icon"><i class="fa-solid fa-circle-question"></i></div><div class="smetogram-confirm-copy"><strong id="smetogramConfirmTitle">Подтвердите действие</strong><p></p></div><div class="smetogram-confirm-actions"><button type="button" class="outline-button smetogram-confirm-cancel">Отмена</button><button type="button" class="primary-button smetogram-confirm-ok">Продолжить</button></div></div>';
     backdrop.querySelector('p').textContent=String(message??'Вы уверены?');
     document.body.appendChild(backdrop);
     const close=()=>{backdrop.classList.remove('is-visible');setTimeout(()=>backdrop.remove(),180)};
@@ -101,7 +101,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
        hint.textContent='Результаты поиска';
        results.innerHTML=items.map(x=>{
          const url=String(x.url||'#').replace(/"/g,'%22');
-         return '<a class="global-search-result" href="'+url+'"><span class="global-result-icon"><i class="bi '+(x.type==="document"?'bi-file-earmark-text':x.type==="estimate"?'bi-list-check':'bi-folder2-open')+'"></i></span><span class="global-result-content"><strong>'+escapeHtml(x.title)+'</strong><span>'+escapeHtml(x.meta||'')+'</span><small>'+escapeHtml(x.group||'Проект')+'</small></span><i class="bi bi-chevron-right"></i></a>';
+         return '<a class="global-search-result" href="'+url+'"><span class="global-result-icon"><i class="bi '+(x.type==="document"?'bi-file-earmark-text':x.type==="estimate"?'bi-list-check':'bi-folder2-open')+'"></i></span><span class="global-result-content"><strong>'+escapeHtml(x.title)+'</strong><span>'+escapeHtml(x.meta||'')+'</span><small>'+escapeHtml(x.group||'Проект')+'</small></span><i class="fa-solid fa-chevron-right"></i></a>';
        }).join('');
      }catch(e){
        hint.textContent='Не удалось выполнить поиск.';
@@ -194,7 +194,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     }
     const skeleton=document.createElement('div');
     skeleton.className='room-photo-thumb room-photo-thumb-skeleton';
-    skeleton.innerHTML='<span class="room-photo-skeleton-shimmer"></span><span class="room-photo-skeleton-icon"><i class="bi bi-image"></i></span>';
+    skeleton.innerHTML='<span class="room-photo-skeleton-shimmer"></span><span class="room-photo-skeleton-icon"><i class="fa-solid fa-image"></i></span>';
     grid.prepend(skeleton);
 
     if(input.files?.[0]){
@@ -247,7 +247,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
           if(grid && skeleton){
             skeleton.classList.remove('room-photo-thumb-skeleton','has-preview');
             skeleton.classList.add('is-complete');
-            skeleton.innerHTML='<span class="room-photo-skeleton-icon"><i class="bi bi-check-lg"></i></span>';
+            skeleton.innerHTML='<span class="room-photo-skeleton-icon"><i class="fa-solid fa-check"></i></span>';
             setTimeout(()=>skeleton.remove(),700);
           }
           progress?.classList.remove('is-uploading');
@@ -319,7 +319,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
         if(grid && !grid.querySelector('.room-photo-thumb')){
           const empty=document.createElement('div');
           empty.className='room-photo-empty';
-          empty.innerHTML='<i class="bi bi-camera"></i><span>Фотографии комнаты ещё не добавлены</span>';
+          empty.innerHTML='<i class="fa-solid fa-camera"></i><span>Фотографии комнаты ещё не добавлены</span>';
           grid.replaceWith(empty);
         }
       },220);
@@ -556,11 +556,11 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
  function reset(){
   $('[data-stage-form]').reset(); $('[data-stage-project]').value=projectId; $('[data-stage-id]').value='';
   $('[data-stage-status]').value='planned'; $('[data-stage-form-title]').textContent='Новый этап';
-  $('[data-stage-submit]').innerHTML='<i class="bi bi-plus-lg"></i> Добавить этап'; $('[data-stage-cancel]').hidden=true;
+  $('[data-stage-submit]').innerHTML='<i class="fa-solid fa-plus"></i> Добавить этап'; $('[data-stage-cancel]').hidden=true;
  }
  function render(items){
   const list=$('[data-stage-list]');
-  if(!items.length){list.innerHTML='<div class="stage-manager-empty"><i class="bi bi-list-check"></i><strong>Этапов пока нет</strong><span>Добавьте первый этап ниже.</span></div>';return;}
+  if(!items.length){list.innerHTML='<div class="stage-manager-empty"><i class="fa-solid fa-list-check"></i><strong>Этапов пока нет</strong><span>Добавьте первый этап ниже.</span></div>';return;}
   list.innerHTML=items.map(x=>{
    const amount=Number(x.paymentMilestone||0)>0?Number(x.paymentMilestone).toLocaleString('ru-RU')+' ₽':'Без суммы';
    const dates=[date(x.startsAt),date(x.endsAt)].filter(Boolean);
@@ -569,9 +569,9 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
    const paid=Math.min(total,Math.max(0,Number(x.paidAmount||0)));
    const remaining=Math.max(0,total-paid);
    const paymentInfo=total>0
-    ? '<div class="stage-payment-box '+(remaining<=0?'is-paid':'')+'"><div class="stage-payment-summary"><span><i class="bi bi-wallet2"></i> Оплачено <strong>'+paid.toLocaleString('ru-RU')+' ₽</strong> из '+total.toLocaleString('ru-RU')+' ₽</span><strong class="stage-payment-remaining">'+(remaining>0?'Остаток '+remaining.toLocaleString('ru-RU')+' ₽':'Оплачено полностью')+'</strong></div>'+(remaining>0?'<div class="stage-payment-actions"><input class="stage-payment-input" data-stage-payment-input="'+x.id+'" inputmode="decimal" placeholder="Аванс / платёж" aria-label="Сумма оплаты"><button type="button" class="stage-payment" data-stage-payment="'+x.id+'"><i class="bi bi-plus-circle"></i><span>Внести оплату</span></button></div>':'<div class="stage-payment-complete"><i class="bi bi-check2-circle"></i> Все платежи по этапу внесены</div>')+'</div>'
+    ? '<div class="stage-payment-box '+(remaining<=0?'is-paid':'')+'"><div class="stage-payment-summary"><span><i class="fa-solid fa-wallet"></i> Оплачено <strong>'+paid.toLocaleString('ru-RU')+' ₽</strong> из '+total.toLocaleString('ru-RU')+' ₽</span><strong class="stage-payment-remaining">'+(remaining>0?'Остаток '+remaining.toLocaleString('ru-RU')+' ₽':'Оплачено полностью')+'</strong></div>'+(remaining>0?'<div class="stage-payment-actions"><input class="stage-payment-input" data-stage-payment-input="'+x.id+'" inputmode="decimal" placeholder="Аванс / платёж" aria-label="Сумма оплаты"><button type="button" class="stage-payment" data-stage-payment="'+x.id+'"><i class="fa-solid fa-circle-plus"></i><span>Внести оплату</span></button></div>':'<div class="stage-payment-complete"><i class="fa-solid fa-circle-check"></i> Все платежи по этапу внесены</div>')+'</div>'
     : '';
-   return '<div class="stage-manager-item"><div class="stage-manager-item-main"><div class="stage-manager-item-title"><strong>'+esc(x.title)+'</strong><span class="stage-status '+cls+'">'+esc(labels[x.status]||x.status)+'</span></div><div class="stage-manager-item-meta"><span><i class="bi bi-calendar3"></i> '+esc(dates.length?dates.join(' — '):'Даты не указаны')+'</span><span><i class="bi bi-wallet2"></i> Общая сумма '+esc(amount)+'</span></div>'+paymentInfo+'</div><div class="stage-manager-item-actions"><button type="button" class="stage-edit" data-stage-edit="'+x.id+'"><i class="bi bi-pencil"></i><span>Изменить</span></button><button type="button" class="stage-delete" data-stage-delete="'+x.id+'"><i class="bi bi-trash3"></i></button></div></div>';
+   return '<div class="stage-manager-item"><div class="stage-manager-item-main"><div class="stage-manager-item-title"><strong>'+esc(x.title)+'</strong><span class="stage-status '+cls+'">'+esc(labels[x.status]||x.status)+'</span></div><div class="stage-manager-item-meta"><span><i class="fa-solid fa-calendar-days"></i> '+esc(dates.length?dates.join(' — '):'Даты не указаны')+'</span><span><i class="fa-solid fa-wallet"></i> Общая сумма '+esc(amount)+'</span></div>'+paymentInfo+'</div><div class="stage-manager-item-actions"><button type="button" class="stage-edit" data-stage-edit="'+x.id+'"><i class="fa-solid fa-pen"></i><span>Изменить</span></button><button type="button" class="stage-delete" data-stage-delete="'+x.id+'"><i class="fa-solid fa-trash-can"></i></button></div></div>';
   }).join('');
  }
  async function load(){
@@ -591,7 +591,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
   $('[data-stage-id]').value=item.id; $('[data-stage-project]').value=projectId; $('[data-stage-title]').value=item.title||'';
   $('[data-stage-start]').value=date(item.startsAt); $('[data-stage-end]').value=date(item.endsAt);
   $('[data-stage-status]').value=item.status||'planned'; $('[data-stage-total]').value=Number(item.paymentMilestone||0)||'';
-  $('[data-stage-form-title]').textContent='Редактирование этапа'; $('[data-stage-submit]').innerHTML='<i class="bi bi-check2"></i> Сохранить изменения'; $('[data-stage-cancel]').hidden=false;
+  $('[data-stage-form-title]').textContent='Редактирование этапа'; $('[data-stage-submit]').innerHTML='<i class="fa-solid fa-check"></i> Сохранить изменения'; $('[data-stage-cancel]').hidden=false;
   $('[data-stage-title]').focus({preventScroll:true});
  }
  async function send(form){
@@ -681,7 +681,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
       const remEl=card.querySelector('[data-stage-remaining]');if(remEl)remEl.textContent=money(remaining);
       const bar=card.querySelector('[data-stage-progress]');if(bar)bar.style.width=percent+'%';
       const payInput=card.querySelector('[data-stage-payment-input]');if(payInput&&action==='payment')payInput.value='';
-      const payBtn=card.querySelector('[data-stage-payment]');if(payBtn){payBtn.disabled=remaining<=0;payBtn.innerHTML=remaining<=0?'<i class="bi bi-check2-circle"></i> Этап оплачен':'<i class="bi bi-plus-circle"></i> Внести оплату';}
+      const payBtn=card.querySelector('[data-stage-payment]');if(payBtn){payBtn.disabled=remaining<=0;payBtn.innerHTML=remaining<=0?'<i class="fa-solid fa-circle-check"></i> Этап оплачен':'<i class="fa-solid fa-circle-plus"></i> Внести оплату';}
       const status=card.querySelector('.payment-stage-card-head em');if(status)status.textContent=remaining<=0?'Оплачено':(paid>0?'Аванс':'Не оплачено');
       const metrics=[...document.querySelectorAll('.payment-metrics .metric-card strong')];
       if(metrics.length>=3){
