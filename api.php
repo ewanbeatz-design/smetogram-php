@@ -37,6 +37,30 @@ if($action==='estimate_action'){
   $name=trim((string)($_POST['name']??''));$qty=(float)str_replace(',','.',(string)($_POST['quantity']??0));$unit=trim((string)($_POST['unit']??'шт'));$price=(float)str_replace(',','.',(string)($_POST['price']??0));
   if($name===''){http_response_code(422);echo json_encode(['ok'=>false,'error'=>'Введите наименование'],JSON_UNESCAPED_UNICODE);exit;}
   $q=$pdo->prepare("INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source) VALUES(?,?,?,?,?,?)");$q->execute([$cat,$name,$qty,$unit,$price,'manual']);
+ }elseif($op==='estimate_template'){
+  $templateId=(int)($_POST['estimate_template_id']??0);
+  $q=$pdo->prepare("SELECT * FROM estimatetemplates WHERE id=? LIMIT 1");$q->execute([$templateId]);$preset=$q->fetch();
+  if(!$preset){http_response_code(422);echo json_encode(['ok'=>false,'error'=>'Шаблон сметы не найден'],JSON_UNESCAPED_UNICODE);exit;}
+  $q=$pdo->prepare("SELECT * FROM estimatetemplateitems WHERE templateId=? ORDER BY sortOrder,id");$q->execute([$templateId]);$rows=$q->fetchAll();
+  if(!$rows){http_response_code(422);echo json_encode(['ok'=>false,'error'=>'В шаблоне нет позиций'],JSON_UNESCAPED_UNICODE);exit;}
+  $pdo->beginTransaction();
+  try{
+   $categories=[];
+   $catStmt=$pdo->prepare("SELECT id FROM estimatecategories WHERE projectId=? AND name=? LIMIT 1");
+   $newCat=$pdo->prepare("INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)");
+   $nextSort=$pdo->prepare("SELECT COALESCE(MAX(sortOrder),0)+1 FROM estimatecategories WHERE projectId=?");
+   $itemStmt=$pdo->prepare("INSERT INTO estimateitems(categoryId,name,quantity,unit,price,source) VALUES(?,?,?,?,?,?)");
+   foreach($rows as $row){
+    $catName=(string)$row['categoryName'];
+    if(!isset($categories[$catName])){
+     $catStmt->execute([$id,$catName]);$catId=$catStmt->fetchColumn();
+     if(!$catId){$nextSort->execute([$id]);$sort=(int)$nextSort->fetchColumn();$newCat->execute([$id,$catName,$sort]);$catId=$pdo->lastInsertId();}
+     $categories[$catName]=(int)$catId;
+    }
+    $itemStmt->execute([$categories[$catName],$row['name'],1,$row['unit'],$row['price'],'estimate_template']);
+   }
+   $pdo->commit();
+  }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
  }elseif($op==='template'){
   $template=(int)($_POST['template_id']??0);$qty=(float)str_replace(',','.',(string)($_POST['template_quantity']??$_POST['quantity']??1));if($qty<=0)$qty=1;
   $q=$pdo->prepare("SELECT * FROM estimateitemtemplates WHERE id=? LIMIT 1");$q->execute([$template]);$it=$q->fetch();
