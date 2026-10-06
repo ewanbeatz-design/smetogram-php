@@ -706,8 +706,16 @@ require __DIR__ . '/includes/app_header.php';
             $q->execute([$projectId]);
             $payments=$q->fetchAll();
             foreach($payments as $pay){
-                if($pay['status']==='paid') $paid+=(float)$pay['amount'];
-                elseif($pay['status']==='pending') $pending+=(float)$pay['amount'];
+                $payTotal=(float)$pay['amount'];
+                $payPaid=(float)($pay['paidAmount']??($pay['status']==='paid'?$payTotal:0));
+                if($pay['stageId']) {
+                    $paid += $payPaid;
+                    $pending += max(0,$payTotal-$payPaid);
+                } elseif($pay['status']==='paid') {
+                    $paid += $payTotal;
+                } else {
+                    $pending += $payTotal;
+                }
             }
         }
         ?>
@@ -718,10 +726,10 @@ require __DIR__ . '/includes/app_header.php';
                 <div class="member-avatar"><i class="bi bi-credit-card"></i></div>
                 <div>
                     <strong><?=e($pay['stageTitle'] ?: $pay['title'])?></strong>
-                    <span><?=number_format((float)$pay['amount'],0,',',' ')?> ₽<?= $pay['stageId'] ? ' · Этап проекта' : '' ?></span>
+                    <span><?= $pay['stageId'] ? 'Оплачено '.number_format((float)($pay['paidAmount']??0),0,',',' ').' ₽ из '.number_format((float)$pay['amount'],0,',',' ').' ₽ · остаток '.number_format(max(0,(float)$pay['amount']-(float)($pay['paidAmount']??0)),0,',',' ').' ₽' : number_format((float)$pay['amount'],0,',',' ').' ₽' ?><?= $pay['stageId'] ? ' · Этап проекта' : '' ?></span>
                 </div>
-                <em><?= $pay['status']==='paid' ? 'Оплачено' : 'Ожидает оплаты' ?></em>
-                <?php if($pay['status']==='pending'): ?>
+                <em><?= $pay['stageId'] ? (($pay['paidAmount']??0)>0 && (float)$pay['paidAmount']<(float)$pay['amount'] ? 'Аванс' : ((float)($pay['paidAmount']??0)>=(float)$pay['amount'] ? 'Оплачено' : 'Не оплачено')) : ($pay['status']==='paid' ? 'Оплачено' : 'Ожидает оплаты') ?></em>
+                <?php if(!$pay['stageId'] && $pay['status']==='pending'): ?>
                     <form method="post">
                         <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
                         <input type="hidden" name="action" value="mark_payment">
