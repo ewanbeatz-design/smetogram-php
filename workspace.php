@@ -91,7 +91,21 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS smetogram_room_photos (
     INDEX(room_id), INDEX(project_id), INDEX(user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+/* Lightweight chat polling endpoint — no page reload. */
+if (isset($_GET['chat_poll']) && (string)$_GET['chat_poll'] === '1' && $projectId > 0) {
+    $pollChannel = (string)($_GET['channel'] ?? $channel);
+    if (!in_array($pollChannel, $allowedChannels, true)) $pollChannel = 'general';
+    $afterId = max(0, (int)($_GET['after'] ?? 0));
+    $q = $pdo->prepare('SELECT m.id,m.authorId,m.body,m.createdAt,u.name AS authorName FROM projectmessages m LEFT JOIN users u ON u.id=m.authorId WHERE m.projectId=? AND m.channel=? AND m.id>? ORDER BY m.id ASC LIMIT 100');
+    $q->execute([$projectId,$pollChannel,$afterId]);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['ok'=>true,'messages'=>$q->fetchAll()], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $isAjaxPost = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    $ajaxChatPayload = null;
     try {
         check_csrf();
         $action = (string)($_POST['action'] ?? '');
@@ -219,6 +233,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $q = $pdo->prepare('INSERT INTO projectmessages (projectId,authorId,channel,body) VALUES (?,?,?,?)');
             $q->execute([$projectId, $user['id'], $channel, $body]);
+            $messageId = (int)$pdo->lastInsertId();
+            $mq = $pdo->prepare('SELECT m.id,m.authorId,m.body,m.createdAt,u.name AS authorName FROM projectmessages m LEFT JOIN users u ON u.id=m.authorId WHERE m.id=? AND m.projectId=? LIMIT 1');
+            $mq->execute([$messageId,$projectId]);
+            $ajaxChatPayload = $mq->fetch() ?: null;
             $notice = 'Сообщение отправлено.';
             $notifyProject('message','Новое сообщение','Новое сообщение в канале проекта.','workspace.php?view=chat&id='.$projectId.'&channel='.rawurlencode($channel));
         } elseif ($action === 'add_stage') {
@@ -438,7 +456,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = $e->getMessage();
     }
 
-    $isAjaxPost = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    if ($isAjaxPost && $action === 'send_message') {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'ok' => $error === '',
+            'message' => $error !== '' ? $error : $notice,
+            'chatMessage' => $error === '' ? $ajaxChatPayload : null
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     if ($isAjaxPost && in_array($action, ['upload_room_photo', 'delete_room_photo'], true)) {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
