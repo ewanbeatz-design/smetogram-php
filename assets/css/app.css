@@ -1389,3 +1389,8 @@ html,body{min-height:100%;margin:0}
 /* Destructive estimate action */
 .danger-button{border:1px solid #FECACA;background:#FFF;color:#B91C1C;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 15px;font-size:12px;font-weight:700;white-space:nowrap;transition:.18s}.danger-button:hover{background:#FEF2F2;border-color:#FCA5A5;color:#991B1B}
 @media(max-width:900px){.heading-actions .danger-button{padding:10px 12px}.heading-actions form{width:auto}}
+
+
+/* Workspace project counter */
+.workspace-project-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;margin-left:5px;border-radius:999px;background:rgba(91,75,255,.10);color:#5B4BFF;font-size:11px;font-weight:800;line-height:1;vertical-align:middle}
+@media(max-width:760px){.workspace-project-count{min-width:20px;height:20px;font-size:10px}}
