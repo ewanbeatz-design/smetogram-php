@@ -641,13 +641,13 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
   if(editBtn){try{const items=await load();const item=items.find(x=>String(x.id)===String(editBtn.dataset.stageEdit));if(item)edit(item);}catch(err){window.smetogramAlert(err.message,'error');}return;}
   const del=e.target.closest('[data-stage-delete]');
   if(del){e.preventDefault();window.smetogramConfirm('Удалить этот этап проекта?',async()=>{
-   try{const fd=new FormData();fd.append('csrf',$('[data-stage-form] input[name="csrf"]').value);fd.append('stage_action','delete');fd.append('project_id',projectId);fd.append('stage_id',del.dataset.stageDelete);const r=await fetch('dashboard.php',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest'},body:fd,credentials:'same-origin'});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.message||'Не удалось удалить этап.');const items=await load();updateCard(items);window.smetogramAlert(d.message,'success');}catch(err){window.smetogramAlert(err.message,'error');}
+   try{const fd=new FormData();const csrfInput=document.querySelector('[data-stage-form] input[name="csrf"]');fd.append('csrf',csrfInput?csrfInput.value:'');fd.append('stage_action','delete');fd.append('project_id',projectId);fd.append('stage_id',del.dataset.stageDelete);const r=await fetch('dashboard.php',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest'},body:fd,credentials:'same-origin'});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.message||'Не удалось удалить этап.');const items=await load();updateCard(items);window.smetogramAlert(d.message,'success');}catch(err){window.smetogramAlert(err.message,'error');}
   });return;}
   if(e.target.closest('[data-stage-cancel]'))reset();
  });
  document.addEventListener('submit',async e=>{
   const form=e.target.closest('[data-stage-form]');if(!form)return;e.preventDefault();const b=$('[data-stage-submit]');b.disabled=true;
-  const action=form.querySelector('[data-stage-id]').value?'update':'add';form.querySelector('[name="stage_action"]').value=action;
+  const stageIdInput=form.querySelector('[data-stage-id]'); const action=stageIdInput&&stageIdInput.value?'update':'add';form.querySelector('[name="stage_action"]').value=action;
   try{await send(form);}catch(err){window.smetogramAlert(err.message,'error');}finally{b.disabled=false;}
  });
 })();
