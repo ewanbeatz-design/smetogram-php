@@ -713,7 +713,7 @@ require __DIR__ . '/includes/app_header.php';
             $messages = $q->fetchAll();
         }
         ?>
-        <div class="module-panel chat-panel chat-app" data-chat-root data-project-id="<?= (int)$projectId ?>" data-channel="<?= e($channel) ?>" data-last-id="<?= (int)($messages ? end($messages)['id'] : 0) ?>">
+        <div class="module-panel chat-panel chat-app" data-chat-root data-project-id="<?= (int)$projectId ?>" data-user-id="<?= (int)$user['id'] ?>" data-channel="<?= e($channel) ?>" data-last-id="<?= (int)($messages ? end($messages)['id'] : 0) ?>">
             <div class="chat-tabs">
                 <?php foreach (['foreman_client'=>'Прораб — заказчик','team'=>'Бригада','designer_client'=>'Дизайнер — заказчик','general'=>'Общий'] as $channelKey => $channelName): ?>
                     <a href="workspace.php?view=chat&id=<?= $projectId ?>&channel=<?= rawurlencode($channelKey) ?>" class="<?= $channel === $channelKey ? 'active' : '' ?>"><?= e($channelName) ?></a>
