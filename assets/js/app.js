@@ -209,5 +209,66 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     if(input) uploadRoomPhoto(input.form,input);
   });
 
+  async function deleteRoomPhoto(form){
+    const card=form.closest('.room-photo-thumb');
+    if(!card || form.dataset.deleting==='1') return;
+    form.dataset.deleting='1';
+    const button=form.querySelector('button[type="submit"]');
+    if(button){
+      button.disabled=true;
+      button.classList.add('is-deleting');
+    }
+    card.classList.add('is-deleting');
+
+    try{
+      const response=await fetch(window.location.href,{
+        method:'POST',
+        headers:{
+          'X-Requested-With':'XMLHttpRequest',
+          'Accept':'application/json'
+        },
+        body:new FormData(form),
+        credentials:'same-origin'
+      });
+      const data=await response.json().catch(()=>null);
+      if(!response.ok || !data?.ok){
+        throw new Error(data?.message || 'Не удалось удалить фотографию.');
+      }
+
+      card.style.height=card.offsetHeight+'px';
+      requestAnimationFrame(()=>{
+        card.style.height='0px';
+        card.style.margin='0';
+        card.style.opacity='0';
+        card.style.transform='scale(.94)';
+      });
+      setTimeout(()=>{
+        const grid=card.parentElement;
+        card.remove();
+        if(grid && !grid.querySelector('.room-photo-thumb')){
+          const empty=document.createElement('div');
+          empty.className='room-photo-empty';
+          empty.innerHTML='<i class="bi bi-camera"></i><span>Фотографии комнаты ещё не добавлены</span>';
+          grid.replaceWith(empty);
+        }
+      },220);
+    }catch(error){
+      alert(error?.message || 'Не удалось удалить фотографию.');
+      form.dataset.deleting='';
+      if(button){
+        button.disabled=false;
+        button.classList.remove('is-deleting');
+      }
+      card.classList.remove('is-deleting');
+    }
+  }
+
+  document.addEventListener('submit',e=>{
+    const form=e.target.closest('.room-photo-delete-form');
+    if(!form) return;
+    e.preventDefault();
+    deleteRoomPhoto(form);
+  });
+
   initRoomFancybox();
 })();
