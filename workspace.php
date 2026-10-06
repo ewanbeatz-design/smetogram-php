@@ -22,6 +22,14 @@ if ($projectId > 0) {
 $project = null;
 $error = '';
 $notice = '';
+$projectsCount = 0;
+if (is_admin($user)) {
+    $projectsCount = (int)$pdo->query('SELECT COUNT(*) FROM projects')->fetchColumn();
+} else {
+    $cq = $pdo->prepare('SELECT COUNT(DISTINCT p.id) FROM projects p LEFT JOIN projectmembers pm ON pm.projectId=p.id WHERE p.ownerId=? OR pm.userId=?');
+    $cq->execute([(int)$user['id'], (int)$user['id']]);
+    $projectsCount = (int)$cq->fetchColumn();
+}
 
 // POST/Redirect/GET: повторная загрузка страницы не повторяет INSERT.
 if (isset($_SESSION['flash_notice'])) {
@@ -371,7 +379,7 @@ require __DIR__ . '/includes/app_header.php';
     </div>
     <?php if ($project): ?>
     <div class="workspace-project-line">
-        <a href="dashboard.php" class="workspace-back"><i class="bi bi-arrow-left"></i> Проекты</a>
+        <a href="dashboard.php" class="workspace-back"><i class="bi bi-arrow-left"></i> Мои проекты <b class="workspace-project-count"><?= $projectsCount ?></b></a>
         <span class="workspace-project-name"><?= e($project['name']) ?></span>
         <span class="workspace-project-meta"><?= e(($project['city'] ?? '') . ' · ' . ($project['clientName'] ?? '')) ?></span>
     </div>
