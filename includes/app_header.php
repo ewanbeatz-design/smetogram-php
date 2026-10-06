@@ -4,6 +4,7 @@ if (!isset($pageTitle)) $pageTitle = 'Сметограм';
 $user = current_user();
 $view = $_GET['view'] ?? 'projects';
 $projectId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$isProjectPage = basename((string)($_SERVER['PHP_SELF'] ?? '')) === 'project.php';
 $projectCount = 0;
 if ($user) {
     try {
@@ -27,7 +28,7 @@ if ($user && !empty($user['name'])) {
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" rel="stylesheet">
-<link href="/assets/css/app.css?v=20261006-mobile2" rel="stylesheet">
+<link href="/assets/css/app.css?v=20261006-mobile3" rel="stylesheet">
 </head><body>
 <div class="app-shell">
 <aside class="sidebar" id="appSidebar">
@@ -54,13 +55,12 @@ if ($user && !empty($user['name'])) {
   <div class="profile"><div class="avatar"><?=e($initials)?></div><div><strong><?=e($user['name']??'Пользователь')?></strong><span><?=e($user['email']??'')?></span></div><a href="logout.php" class="muted-icon" title="Выйти"><i class="bi bi-box-arrow-right"></i></a></div>
 </aside>
 <div class="sidebar-backdrop" onclick="document.getElementById('appSidebar').classList.remove('sidebar-open')"></div>
-<!-- Mobile bottom navigation -->
 <nav class="mobile-bottom-nav" aria-label="Основная навигация">
-  <a class="<?=($view==='projects'?'active':'')?>" href="dashboard.php">
+  <a class="<?=($view==='projects' && !$isProjectPage?'active':'')?>" href="dashboard.php">
     <i class="bi bi-grid-1x2"></i><span>Проекты</span>
   </a>
-  <a class="<?=($projectId && $view==='projects'?'':'')?>" href="<?= $projectId ? 'project.php?id='.$projectId : 'workspace.php?view=scan' ?>">
-    <i class="bi bi-calculator"></i><span><?= $projectId ? 'Смета' : 'Импорт' ?></span>
+  <a class="<?=($isProjectPage?'active':'')?>" href="<?= $projectId ? 'project.php?id='.$projectId : 'workspace.php?view=scan' ?>">
+    <i class="bi bi-calculator"></i><span><?= $isProjectPage ? 'Смета' : 'Импорт' ?></span>
   </a>
   <a class="<?=($view==='schedule'?'active':'')?>" href="workspace.php?view=schedule<?=($projectId?'&id='.$projectId:'')?>">
     <i class="bi bi-calendar3"></i><span>График</span>
