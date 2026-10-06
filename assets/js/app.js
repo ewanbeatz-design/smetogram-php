@@ -87,3 +87,22 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
  });
  if(toggles.length){loadNotifications();setInterval(loadNotifications,10000)}
 })();
+(function(){
+  const sidebar=document.getElementById('appSidebar');
+  if(!sidebar) return;
+  sidebar.querySelectorAll('.nav-item[href]').forEach(link=>{
+    link.addEventListener('click',()=>{
+      if(window.matchMedia('(max-width: 760px)').matches){
+        sidebar.classList.remove('sidebar-open');
+      }
+    });
+  });
+  document.querySelector('.sidebar-backdrop')?.addEventListener('click',()=>{
+    sidebar.classList.remove('sidebar-open');
+  });
+  window.addEventListener('resize',()=>{
+    if(!window.matchMedia('(max-width: 760px)').matches){
+      sidebar.classList.remove('sidebar-open');
+    }
+  });
+})();
