@@ -651,3 +651,60 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
   try{await send(form);}catch(err){window.smetogramAlert(err.message,'error');}finally{b.disabled=false;}
  });
 })();
+
+/* Estimate -> stage payments: edit total and add cumulative advances without reload. */
+(function(){
+  if(window.__smetogramEstimatePaymentsReady)return;
+  window.__smetogramEstimatePaymentsReady=true;
+  const money=(n)=>Number(n||0).toLocaleString('ru-RU',{maximumFractionDigits:0})+' ₽';
+  const num=(v)=>Number(String(v??'').replace(/\\s/g,'').replace(',','.'));
+  async function stageRequest(stageId,action,extra={}){
+    const card=document.querySelector('[data-payment-stage-card="'+CSS.escape(String(stageId))+'"]');
+    const csrf=document.querySelector('input[name="csrf"]')?.value;
+    const fd=new FormData();fd.append('csrf',csrf||'');fd.append('stage_action',action);fd.append('project_id',new URLSearchParams(location.search).get('id')||'0');fd.append('stage_id',stageId);
+    Object.entries(extra).forEach(([k,v])=>fd.append(k,String(v)));
+    const res=await fetch('dashboard.php',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},body:fd,credentials:'same-origin'});
+    const data=await res.json().catch(()=>null);
+    if(!res.ok||!data?.ok)throw new Error(data?.message||'Не удалось сохранить оплату.');
+    if(card){
+      const total=Number(data.amount??card.querySelector('[data-stage-amount]')?.value??0);
+      const paid=Number(data.paidAmount??card.querySelector('[data-stage-paid]')?.textContent.replace(/\\D/g,'')??0);
+      const remaining=Math.max(0,total-paid),percent=total>0?Math.min(100,Math.round(paid/total*100)):0;
+      const amountInput=card.querySelector('[data-stage-amount]');if(amountInput&&action==='amount')amountInput.value=money(total).replace(' ₽','');
+      const paidEl=card.querySelector('[data-stage-paid]');if(paidEl)paidEl.textContent=money(paid);
+      const remEl=card.querySelector('[data-stage-remaining]');if(remEl)remEl.textContent=money(remaining);
+      const bar=card.querySelector('[data-stage-progress]');if(bar)bar.style.width=percent+'%';
+      const payInput=card.querySelector('[data-stage-payment-input]');if(payInput&&action==='payment')payInput.value='';
+      const payBtn=card.querySelector('[data-stage-payment]');if(payBtn){payBtn.disabled=remaining<=0;payBtn.innerHTML=remaining<=0?'<i class="bi bi-check2-circle"></i> Этап оплачен':'<i class="bi bi-plus-circle"></i> Внести оплату';}
+      const status=card.querySelector('.payment-stage-card-head em');if(status)status.textContent=remaining<=0?'Оплачено':(paid>0?'Аванс':'Не оплачено');
+      const metrics=[...document.querySelectorAll('.payment-metrics .metric-card strong')];
+      if(metrics.length>=3){
+        let totalAll=0,paidAll=0;
+        document.querySelectorAll('[data-payment-stage-card]').forEach(x=>{
+          totalAll+=num(x.querySelector('[data-stage-amount]')?.value);paidAll+=num(x.querySelector('[data-stage-paid]')?.textContent);
+        });
+        metrics[0].textContent=money(totalAll);metrics[1].textContent=money(paidAll);metrics[2].textContent=money(Math.max(0,totalAll-paidAll));
+      }
+    }
+    window.smetogramAlert?.(data.message||'Сохранено.','success',3200);
+  }
+  document.addEventListener('click',async e=>{
+    const amountBtn=e.target.closest('[data-stage-save-amount]');
+    const payBtn=e.target.closest('[data-stage-payment]');
+    if(!amountBtn&&!payBtn)return;
+    const btn=amountBtn||payBtn,stageId=btn.dataset.stageSaveAmount||btn.dataset.stagePayment;
+    const card=btn.closest('[data-payment-stage-card]');if(!card)return;
+    btn.disabled=true;
+    try{
+      if(amountBtn){
+        const input=card.querySelector('[data-stage-amount]'),amount=num(input?.value);
+        if(!Number.isFinite(amount)||amount<0)throw new Error('Укажите корректную сумму этапа.');
+        await stageRequest(stageId,'amount',{stage_amount:amount});
+      }else{
+        const input=card.querySelector('[data-stage-payment-input]'),amount=num(input?.value);
+        if(!Number.isFinite(amount)||amount<=0)throw new Error('Укажите сумму аванса / платежа.');
+        await stageRequest(stageId,'payment',{payment_amount:amount});
+      }
+    }catch(err){window.smetogramAlert?.(err.message||'Не удалось сохранить.','error',4200);}finally{btn.disabled=false;}
+  });
+})();
