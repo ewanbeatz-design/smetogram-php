@@ -4,28 +4,233 @@ require __DIR__.'/config/bootstrap.php';
 $user=require_auth();
 $error='';
 if($_SERVER['REQUEST_METHOD']==='POST'){
- $isAjaxPost=!empty($_SERVER['HTTP_X_REQUESTED_WITH'])&&strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH'])==='xmlhttprequest';
- try{check_csrf();$stageAction=(string)($_POST['stage_action']??'');if(in_array($stageAction,['add','update','delete'],true)){ $pid=(int)($_POST['project_id']??0);if($pid<=0||!can_access_project($pdo,$user,$pid))throw new RuntimeException('Нет доступа к проекту.');if(!is_admin($user)){ $mq=$pdo->prepare('SELECT 1 FROM projects WHERE id=? AND ownerId=? LIMIT 1');$mq->execute([$pid,(int)$user['id']]);if(!$mq->fetchColumn())throw new RuntimeException('Добавлять и редактировать этапы может только владелец проекта.'); }
- if($stageAction==='delete'){ $sid=(int)($_POST['stage_id']??0);$q=$pdo->prepare('DELETE FROM scheduletasks WHERE id=? AND projectId=?');$q->execute([$sid,$pid]);if(!$q->rowCount())throw new RuntimeException('Этап не найден.');$payload=['ok'=>true,'deleted'=>$sid,'message'=>'Этап удалён.']; }
- else { $title=trim((string)($_POST['title']??''));if($title==='')throw new RuntimeException('Введите название этапа.');$starts=trim((string)($_POST['startsAt']??''));$ends=trim((string)($_POST['endsAt']??''));$status=(string)($_POST['status']??'planned');if(!in_array($status,['planned','in_progress','done','blocked'],true))$status='planned';$payment=(float)str_replace(',','.',(string)($_POST['paymentMilestone']??'0'));if($payment<0)$payment=0;if($stageAction==='add'){$q=$pdo->prepare('INSERT INTO scheduletasks(projectId,title,startsAt,endsAt,status,paymentMilestone) VALUES(?,?,?,?,?,?)');$q->execute([$pid,$title,$starts!==''?$starts.' 00:00:00':null,$ends!==''?$ends.' 23:59:59':null,$status,$payment]);$sid=(int)$pdo->lastInsertId();}else{$sid=(int)($_POST['stage_id']??0);$q=$pdo->prepare('UPDATE scheduletasks SET title=?,startsAt=?,endsAt=?,status=?,paymentMilestone=? WHERE id=? AND projectId=?');$q->execute([$title,$starts!==''?$starts.' 00:00:00':null,$ends!==''?$ends.' 23:59:59':null,$status,$payment,$sid,$pid]);$check=$pdo->prepare('SELECT id FROM scheduletasks WHERE id=? AND projectId=?');$check->execute([$sid,$pid]);if(!$check->fetchColumn())throw new RuntimeException('Этап не найден.');}$q=$pdo->prepare('SELECT id,title,startsAt,endsAt,status,paymentMilestone FROM scheduletasks WHERE id=? AND projectId=? LIMIT 1');$q->execute([$sid,$pid]);$payload=['ok'=>true,'item'=>$q->fetch(),'message'=>$stageAction==='add'?'Этап добавлен.':'Этап обновлён.']; }
- if($isAjaxPost){header('Content-Type: application/json; charset=utf-8');echo json_encode($payload,JSON_UNESCAPED_UNICODE);exit;}redirect('dashboard.php'); } }catch(Throwable $e){if($isAjaxPost){http_response_code(422);header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>false,'message'=>$e->getMessage()],JSON_UNESCAPED_UNICODE);exit;}$error=$e->getMessage();}
+    $isAjaxPost=!empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+        && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH'])==='xmlhttprequest';
 
- check_csrf();
-  if(($_POST['action']??'')==='create_project'){
-   if(!can_create_project($pdo,$user)){
-    $error='Бесплатный доступ позволяет создать только одну смету. Чтобы создавать новые сметы, оформите подписку.';
-   } else {
-  $name=trim($_POST['name']??'');$city=trim($_POST['city']??'');$client=trim($_POST['clientName']??'');$work=trim($_POST['workType']??'Строительство');$deadline=trim($_POST['deadline']??'');
-  if($name===''){$error='Введите название проекта.';}else{
-   $q=$pdo->prepare("INSERT INTO projects(ownerId,name,city,clientName,workType,status,estimateDate,deadline,budget) VALUES(?,?,?,?,?,?,?,?,?)");
-   $q->execute([$user['id'],$name,$city,$client,$work,'in_progress',date('Y-m-d'),$deadline!==''?$deadline:null,0]);
-   $pid=(int)$pdo->lastInsertId();
-   $q=$pdo->prepare("INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)");$q->execute([$pid,'Общестроительные работы',1]);
-   redirect('project.php?id='.$pid);
-  }
- }
- }
- }
+    try {
+        check_csrf();
+
+        $stageAction=(string)($_POST['stage_action']??'');
+        if(in_array($stageAction,['add','update','delete','payment'],true)){
+            $pid=(int)($_POST['project_id']??0);
+            if($pid<=0 || !can_access_project($pdo,$user,$pid)){
+                throw new RuntimeException('Нет доступа к проекту.');
+            }
+
+            if($stageAction==='payment'){
+                if(!can_manage_project($pdo,$user,$pid)){
+                    throw new RuntimeException('Нет доступа к оплате этапа.');
+                }
+
+                $sid=(int)($_POST['stage_id']??0);
+                $paymentStatus=(string)($_POST['payment_status']??'paid');
+                $paymentStatus=$paymentStatus==='paid'?'paid':'pending';
+
+                $q=$pdo->prepare('SELECT id,title,paymentMilestone FROM scheduletasks WHERE id=? AND projectId=? LIMIT 1');
+                $q->execute([$sid,$pid]);
+                $stage=$q->fetch();
+
+                if(!$stage){
+                    throw new RuntimeException('Этап не найден.');
+                }
+
+                $amount=(float)$stage['paymentMilestone'];
+                if($amount<=0){
+                    throw new RuntimeException('У этапа не указана сумма оплаты.');
+                }
+
+                $q=$pdo->prepare("SELECT id FROM smetogram_payments WHERE projectId=? AND stageId=? AND type='stage' ORDER BY id DESC LIMIT 1");
+                $q->execute([$pid,$sid]);
+                $paymentId=(int)$q->fetchColumn();
+
+                if($paymentId){
+                    $q=$pdo->prepare('UPDATE smetogram_payments SET title=?,amount=?,status=?,paidAt=? WHERE id=? AND projectId=?');
+                    $q->execute([
+                        'Этап: '.$stage['title'],
+                        $amount,
+                        $paymentStatus,
+                        $paymentStatus==='paid'?date('Y-m-d H:i:s'):null,
+                        $paymentId,
+                        $pid
+                    ]);
+                }else{
+                    $q=$pdo->prepare('INSERT INTO smetogram_payments(projectId,userId,type,stageId,title,amount,status,paidAt) VALUES(?,?,?,?,?,?,?,?)');
+                    $q->execute([
+                        $pid,
+                        (int)$user['id'],
+                        'stage',
+                        $sid,
+                        'Этап: '.$stage['title'],
+                        $amount,
+                        $paymentStatus,
+                        $paymentStatus==='paid'?date('Y-m-d H:i:s'):null
+                    ]);
+                    $paymentId=(int)$pdo->lastInsertId();
+                }
+
+                $q=$pdo->prepare('INSERT INTO smetogram_payment_events(paymentId,eventType,payloadJson) VALUES(?,?,?)');
+                $q->execute([
+                    $paymentId,
+                    $paymentStatus==='paid'?'stage_paid':'stage_pending',
+                    json_encode(['stageId'=>$sid,'amount'=>$amount],JSON_UNESCAPED_UNICODE)
+                ]);
+
+                $payload=[
+                    'ok'=>true,
+                    'status'=>$paymentStatus,
+                    'message'=>$paymentStatus==='paid'
+                        ?'Этап отмечен как оплаченный.'
+                        :'Оплата этапа возвращена в ожидание.'
+                ];
+            }elseif($stageAction==='delete'){
+                if(!can_manage_project($pdo,$user,$pid)){
+                    throw new RuntimeException('Редактировать этапы может только владелец проекта.');
+                }
+
+                $sid=(int)($_POST['stage_id']??0);
+                $q=$pdo->prepare('DELETE FROM scheduletasks WHERE id=? AND projectId=?');
+                $q->execute([$sid,$pid]);
+
+                if(!$q->rowCount()){
+                    throw new RuntimeException('Этап не найден.');
+                }
+
+                $q=$pdo->prepare("DELETE FROM smetogram_payments WHERE projectId=? AND stageId=? AND type='stage'");
+                $q->execute([$pid,$sid]);
+
+                $payload=[
+                    'ok'=>true,
+                    'deleted'=>$sid,
+                    'message'=>'Этап удалён.'
+                ];
+            }else{
+                if(!can_manage_project($pdo,$user,$pid)){
+                    throw new RuntimeException('Добавлять и редактировать этапы может только владелец проекта.');
+                }
+
+                $title=trim((string)($_POST['title']??''));
+                if($title===''){
+                    throw new RuntimeException('Введите название этапа.');
+                }
+
+                $starts=trim((string)($_POST['startsAt']??''));
+                $ends=trim((string)($_POST['endsAt']??''));
+                $status=(string)($_POST['status']??'planned');
+                if(!in_array($status,['planned','in_progress','done','blocked'],true)){
+                    $status='planned';
+                }
+
+                $payment=(float)str_replace(',','.',(string)($_POST['paymentMilestone']??'0'));
+                if($payment<0){
+                    $payment=0;
+                }
+
+                if($stageAction==='add'){
+                    $q=$pdo->prepare('INSERT INTO scheduletasks(projectId,title,startsAt,endsAt,status,paymentMilestone) VALUES(?,?,?,?,?,?)');
+                    $q->execute([
+                        $pid,
+                        $title,
+                        $starts!==''?$starts.' 00:00:00':null,
+                        $ends!==''?$ends.' 23:59:59':null,
+                        $status,
+                        $payment
+                    ]);
+                    $sid=(int)$pdo->lastInsertId();
+                }else{
+                    $sid=(int)($_POST['stage_id']??0);
+                    $q=$pdo->prepare('UPDATE scheduletasks SET title=?,startsAt=?,endsAt=?,status=?,paymentMilestone=? WHERE id=? AND projectId=?');
+                    $q->execute([
+                        $title,
+                        $starts!==''?$starts.' 00:00:00':null,
+                        $ends!==''?$ends.' 23:59:59':null,
+                        $status,
+                        $payment,
+                        $sid,
+                        $pid
+                    ]);
+
+                    $q=$pdo->prepare('SELECT id FROM scheduletasks WHERE id=? AND projectId=? LIMIT 1');
+                    $q->execute([$sid,$pid]);
+                    if(!$q->fetchColumn()){
+                        throw new RuntimeException('Этап не найден.');
+                    }
+                }
+
+                $q=$pdo->prepare("SELECT id,status FROM smetogram_payments WHERE projectId=? AND stageId=? AND type='stage' ORDER BY id DESC LIMIT 1");
+                $q->execute([$pid,$sid]);
+                $existingPayment=$q->fetch();
+
+                if($payment>0){
+                    if($existingPayment){
+                        $q=$pdo->prepare('UPDATE smetogram_payments SET title=?,amount=? WHERE id=? AND projectId=?');
+                        $q->execute(['Этап: '.$title,$payment,(int)$existingPayment['id'],$pid]);
+                    }else{
+                        $q=$pdo->prepare('INSERT INTO smetogram_payments(projectId,userId,type,stageId,title,amount,status) VALUES(?,?,?,?,?,?,?)');
+                        $q->execute([$pid,(int)$user['id'],'stage',$sid,'Этап: '.$title,$payment,'pending']);
+                    }
+                }elseif($existingPayment){
+                    $q=$pdo->prepare('DELETE FROM smetogram_payments WHERE id=? AND projectId=?');
+                    $q->execute([(int)$existingPayment['id'],$pid]);
+                }
+
+                $q=$pdo->prepare('SELECT id,title,startsAt,endsAt,status,paymentMilestone FROM scheduletasks WHERE id=? AND projectId=? LIMIT 1');
+                $q->execute([$sid,$pid]);
+                $item=$q->fetch();
+
+                $q=$pdo->prepare("SELECT status FROM smetogram_payments WHERE projectId=? AND stageId=? AND type='stage' ORDER BY id DESC LIMIT 1");
+                $q->execute([$pid,$sid]);
+                $item['paymentStatus']=$q->fetchColumn()?:'none';
+
+                $payload=[
+                    'ok'=>true,
+                    'item'=>$item,
+                    'message'=>$stageAction==='add'?'Этап добавлен.':'Этап обновлён.'
+                ];
+            }
+
+            if($isAjaxPost){
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode($payload,JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            redirect('dashboard.php');
+        }
+
+        if(($_POST['action']??'')==='create_project'){
+            if(!can_create_project($pdo,$user)){
+                $error='Бесплатный доступ позволяет создать только одну смету. Чтобы создавать новые сметы, оформите подписку.';
+            }else{
+                $name=trim($_POST['name']??'');
+                $city=trim($_POST['city']??'');
+                $client=trim($_POST['clientName']??'');
+                $work=trim($_POST['workType']??'Строительство');
+                $deadline=trim($_POST['deadline']??'');
+
+                if($name===''){
+                    $error='Введите название проекта.';
+                }else{
+                    $q=$pdo->prepare("INSERT INTO projects(ownerId,name,city,clientName,workType,status,estimateDate,deadline,budget) VALUES(?,?,?,?,?,?,?,?,?)");
+                    $q->execute([$user['id'],$name,$city,$client,$work,'in_progress',date('Y-m-d'),$deadline!==''?$deadline:null,0]);
+                    $pid=(int)$pdo->lastInsertId();
+
+                    $q=$pdo->prepare("INSERT INTO estimatecategories(projectId,name,sortOrder) VALUES(?,?,?)");
+                    $q->execute([$pid,'Общестроительные работы',1]);
+
+                    redirect('project.php?id='.$pid);
+                }
+            }
+        }
+    }catch(Throwable $e){
+        if($isAjaxPost){
+            http_response_code(422);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['ok'=>false,'message'=>$e->getMessage()],JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        $error=$e->getMessage();
+    }
+
 $projectSql="SELECT p.*,
 COALESCE((SELECT SUM(i.quantity*i.price) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id),0) total,
 (SELECT COUNT(*) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id) item_count,
