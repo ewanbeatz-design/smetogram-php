@@ -526,3 +526,78 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     }
   }).observe(document.body,{childList:true,subtree:true});
 })();
+
+/* Project card stage manager — AJAX add/edit/delete. */
+(function(){
+ if(window.__smetogramCardStagesReady)return;
+ window.__smetogramCardStagesReady=true;
+ const $=(s,r=document)=>r.querySelector(s);
+ let projectId=0;
+ const esc=v=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+ const date=v=>{const m=String(v??'').match(/^\d{4}-\d{2}-\d{2}/);return m?m[0]:''};
+ const labels={planned:'Запланировано',in_progress:'В работе',done:'Завершено',blocked:'Заблокировано'};
+ const card=()=>document.querySelector('.project-card[data-project-id="'+projectId+'"]');
+ function reset(){
+  $('[data-stage-form]').reset(); $('[data-stage-project]').value=projectId; $('[data-stage-id]').value='';
+  $('[data-stage-status]').value='planned'; $('[data-stage-form-title]').textContent='Новый этап';
+  $('[data-stage-submit]').innerHTML='<i class="bi bi-plus-lg"></i> Добавить этап'; $('[data-stage-cancel]').hidden=true;
+ }
+ function render(items){
+  const list=$('[data-stage-list]');
+  if(!items.length){list.innerHTML='<div class="stage-manager-empty"><i class="bi bi-list-check"></i><strong>Этапов пока нет</strong><span>Добавьте первый этап ниже.</span></div>';return;}
+  list.innerHTML=items.map(x=>{
+   const amount=Number(x.paymentMilestone||0)>0?Number(x.paymentMilestone).toLocaleString('ru-RU')+' ₽':'Без суммы';
+   const dates=[date(x.startsAt),date(x.endsAt)].filter(Boolean);
+   const cls='stage-status-'+String(x.status||'planned').replace('_','-');
+   return '<div class="stage-manager-item"><div class="stage-manager-item-main"><div class="stage-manager-item-title"><strong>'+esc(x.title)+'</strong><span class="stage-status '+cls+'">'+esc(labels[x.status]||x.status)+'</span></div><div class="stage-manager-item-meta"><span><i class="bi bi-calendar3"></i> '+esc(dates.length?dates.join(' — '):'Даты не указаны')+'</span><span><i class="bi bi-wallet2"></i> '+esc(amount)+'</span></div></div><div class="stage-manager-item-actions"><button type="button" class="stage-edit" data-stage-edit="'+x.id+'"><i class="bi bi-pencil"></i><span>Изменить</span></button><button type="button" class="stage-delete" data-stage-delete="'+x.id+'"><i class="bi bi-trash3"></i></button></div></div>';
+  }).join('');
+ }
+ async function load(){
+  const r=await fetch('dashboard.php?stages_for='+encodeURIComponent(projectId),{headers:{'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'});
+  const d=await r.json(); if(!r.ok||!d.ok)throw new Error(d.message||'Не удалось загрузить этапы.');
+  render(d.items||[]); return d.items||[];
+ }
+ function updateCard(items){
+  const c=card();if(!c)return;
+  const count=items.length,done=items.filter(x=>x.status==='done').length,active=items.find(x=>x.status==='in_progress'),next=items.find(x=>x.status==='planned');
+  const title=active?.title||next?.title||'Этапы ещё не добавлены';
+  c.querySelector('.project-stage-head strong').textContent=count?done+' / '+count:'—';
+  c.querySelector('.project-stage-title').textContent=title;
+  c.querySelector('.project-stage-track span').style.width=(count?Math.round(done/count*100):0)+'%';
+ }
+ function edit(item){
+  $('[data-stage-id]').value=item.id; $('[data-stage-project]').value=projectId; $('[data-stage-title]').value=item.title||'';
+  $('[data-stage-start]').value=date(item.startsAt); $('[data-stage-end]').value=date(item.endsAt);
+  $('[data-stage-status]').value=item.status||'planned'; $('[data-stage-payment]').value=Number(item.paymentMilestone||0)||'';
+  $('[data-stage-form-title]').textContent='Редактирование этапа'; $('[data-stage-submit]').innerHTML='<i class="bi bi-check2"></i> Сохранить изменения'; $('[data-stage-cancel]').hidden=false;
+  $('[data-stage-title]').focus({preventScroll:true});
+ }
+ async function send(form){
+  const r=await fetch('dashboard.php',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest'},body:new FormData(form),credentials:'same-origin'});
+  const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.message||'Не удалось сохранить этап.');
+  const items=await load();updateCard(items);reset();window.smetogramAlert(d.message,'success');
+ }
+ document.addEventListener('click',async e=>{
+  const open=e.target.closest('[data-stage-manage]');
+  if(open){
+   e.preventDefault();e.stopPropagation();projectId=Number(open.dataset.projectId||0);
+   const modalEl=$('#projectStageManager');$('#stageManagerTitle').textContent=open.dataset.projectName||'Этапы проекта';reset();
+   const list=$('[data-stage-list]');list.innerHTML='<div class="stage-manager-loading">Загружаем этапы…</div>';
+   bootstrap.Modal.getOrCreateInstance(modalEl).show();
+   try{await load();}catch(err){window.smetogramAlert(err.message,'error');}
+   return;
+  }
+  const editBtn=e.target.closest('[data-stage-edit]');
+  if(editBtn){try{const items=await load();const item=items.find(x=>String(x.id)===String(editBtn.dataset.stageEdit));if(item)edit(item);}catch(err){window.smetogramAlert(err.message,'error');}return;}
+  const del=e.target.closest('[data-stage-delete]');
+  if(del){e.preventDefault();window.smetogramConfirm('Удалить этот этап проекта?',async()=>{
+   try{const fd=new FormData();fd.append('csrf',$('[data-stage-form] input[name="csrf"]').value);fd.append('stage_action','delete');fd.append('project_id',projectId);fd.append('stage_id',del.dataset.stageDelete);const r=await fetch('dashboard.php',{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest'},body:fd,credentials:'same-origin'});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.message||'Не удалось удалить этап.');const items=await load();updateCard(items);window.smetogramAlert(d.message,'success');}catch(err){window.smetogramAlert(err.message,'error');}
+  });return;}
+  if(e.target.closest('[data-stage-cancel]'))reset();
+ });
+ document.addEventListener('submit',async e=>{
+  const form=e.target.closest('[data-stage-form]');if(!form)return;e.preventDefault();const b=$('[data-stage-submit]');b.disabled=true;
+  const action=form.querySelector('[data-stage-id]').value?'update':'add';form.querySelector('[name="stage_action"]').value=action;
+  try{await send(form);}catch(err){window.smetogramAlert(err.message,'error');}finally{b.disabled=false;}
+ });
+})();
