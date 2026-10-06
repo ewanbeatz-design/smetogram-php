@@ -242,6 +242,7 @@ try {
     foreach($moduleTables as $table=>$sql) {
         if(!$tableExists($pdo,$table)) $pdo->exec($sql);
     }
+    $addColumn($pdo,'smetogram_payments','stageId',"BIGINT UNSIGNED NULL");
     $addColumn($pdo,'projectdocuments','versionNo',"INT NOT NULL DEFAULT 1");
     $addColumn($pdo,'projectdocuments','createdBy',"BIGINT UNSIGNED NULL");
     $addColumn($pdo,'projectdocuments','updatedAt',"TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
