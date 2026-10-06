@@ -1538,5 +1538,6 @@ html,body{min-height:100%;margin:0}
   .smetogram-confirm-actions button{width:100%}
 }
 
-/* Hide legacy Bootstrap alert after it has been converted to the global toast. */
+/* Bootstrap alerts are converted to Smetogram toasts by app.js. Hide them from the first paint so they never flash. */
+.alert{display:none!important}
 .alert.smetogram-alert-hidden{display:none!important}
