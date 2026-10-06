@@ -76,6 +76,21 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS smetogram_rooms (
     INDEX(project_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+/* Room photos are stored separately from measurements. */
+$pdo->exec("CREATE TABLE IF NOT EXISTS smetogram_room_photos (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    room_id BIGINT UNSIGNED NOT NULL,
+    project_id BIGINT UNSIGNED NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
+    original_name VARCHAR(255) NOT NULL,
+    stored_name VARCHAR(255) NOT NULL,
+    mime VARCHAR(80) NOT NULL,
+    size_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    path VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX(room_id), INDEX(project_id), INDEX(user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         check_csrf();
@@ -230,6 +245,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $q->execute([$stageId, $projectId]);
             $notice = 'Этап отправлен на приёмку.';
             $notifyProject('acceptance','Этап отправлен на приёмку','Требуется проверка.','workspace.php?view=acceptance&id='.$projectId);
+        } elseif ($action === 'upload_room_photo') {
+            if (!$project) throw new RuntimeException('Сначала откройте проект.');
+            $roomId=(int)($_POST['room_id']??0);
+            $rq=$pdo->prepare('SELECT id,name FROM smetogram_rooms WHERE id=? AND project_id=? LIMIT 1');
+            $rq->execute([$roomId,$projectId]);
+            $room=$rq->fetch();
+            if(!$room) throw new RuntimeException('Комната не найдена.');
+            if(empty($_FILES['room_photo']) || $_FILES['room_photo']['error']!==UPLOAD_ERR_OK) throw new RuntimeException('Не удалось загрузить фотографию.');
+            $file=$_FILES['room_photo'];
+            if((int)$file['size']>15*1024*1024) throw new RuntimeException('Максимальный размер фотографии — 15 МБ.');
+            $mime=(new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+            $allowed=['image/jpeg','image/png','image/webp','image/heic','image/heif'];
+            if(!in_array($mime,$allowed,true)) throw new RuntimeException('Можно загружать только фотографии JPG, PNG, WebP или HEIC.');
+            $dir=__DIR__.'/uploads/room-photos/'.$projectId.'/'.$roomId;
+            if(!is_dir($dir) && !mkdir($dir,0755,true) && !is_dir($dir)) throw new RuntimeException('Не удалось создать папку для фотографий.');
+            $ext=strtolower(pathinfo((string)$file['name'],PATHINFO_EXTENSION));
+            if($ext==='') $ext=$mime==='image/png'?'png':'jpg';
+            $stored=bin2hex(random_bytes(16)).'.'.$ext;
+            $path=$dir.'/'.$stored;
+            if(!move_uploaded_file($file['tmp_name'],$path)) throw new RuntimeException('Не удалось сохранить фотографию.');
+            $rel='uploads/room-photos/'.$projectId.'/'.$roomId.'/'.$stored;
+            $q=$pdo->prepare('INSERT INTO smetogram_room_photos(room_id,project_id,user_id,original_name,stored_name,mime,size_bytes,path) VALUES(?,?,?,?,?,?,?,?)');
+            $q->execute([$roomId,$projectId,$user['id'],(string)$file['name'],$stored,$mime,(int)$file['size'],$rel]);
+            $notice='Фотография комнаты добавлена.';
+        } elseif ($action === 'delete_room_photo') {
+            if (!$project) throw new RuntimeException('Сначала откройте проект.');
+            $photoId=(int)($_POST['photo_id']??0);
+            $q=$pdo->prepare('SELECT * FROM smetogram_room_photos WHERE id=? AND project_id=? LIMIT 1');
+            $q->execute([$photoId,$projectId]);
+            $photo=$q->fetch();
+            if(!$photo) throw new RuntimeException('Фотография не найдена.');
+            if(!is_admin($user) && (int)$photo['user_id']!==(int)$user['id'] && empty($canManageProject)) throw new RuntimeException('Недостаточно прав для удаления фотографии.');
+            $filePath=__DIR__.'/'.$photo['path'];
+            if(is_file($filePath)) @unlink($filePath);
+            $pdo->prepare('DELETE FROM smetogram_room_photos WHERE id=?')->execute([$photoId]);
+            $notice='Фотография удалена.';
         } elseif ($action === 'add_room') {
             if (!$project) throw new RuntimeException('Сначала откройте проект.');
             $name = trim((string)($_POST['name'] ?? 'Комната'));
@@ -710,9 +761,13 @@ require __DIR__ . '/includes/app_header.php';
 
     <?php elseif ($view === 'measurements'): ?>
         <?php
-        $q = $pdo->prepare('SELECT * FROM smetogram_rooms WHERE user_id=? AND project_id=? ORDER BY id DESC');
-        $q->execute([$user['id'], $projectId]);
+        $q = $pdo->prepare('SELECT * FROM smetogram_rooms WHERE project_id=? ORDER BY id DESC');
+        $q->execute([$projectId]);
         $rooms = $q->fetchAll();
+        $roomPhotos = [];
+        $pq = $pdo->prepare('SELECT * FROM smetogram_room_photos WHERE project_id=? ORDER BY id DESC');
+        $pq->execute([$projectId]);
+        foreach ($pq->fetchAll() as $photo) $roomPhotos[(int)$photo['room_id']][] = $photo;
         ?>
         <div class="module-grid">
             <div class="module-panel">
@@ -720,11 +775,39 @@ require __DIR__ . '/includes/app_header.php';
                 <?php if (!$rooms): ?><div class="empty-state">Замеров пока нет. Добавьте первую комнату.</div><?php else: ?>
                     <?php foreach ($rooms as $room): ?>
                         <?php $area=(float)$room['length_m']*(float)$room['width_m']; $walls=2*((float)$room['length_m']+(float)$room['width_m'])*(float)$room['height_m']; ?>
-                        <div class="document-row">
-                            <div class="member-avatar"><i class="bi bi-rulers"></i></div>
-                            <div><strong><?= e($room['name']) ?></strong><span><?= e((string)$room['length_m']) ?> × <?= e((string)$room['width_m']) ?> × <?= e((string)$room['height_m']) ?> м · стены <?= number_format($walls,1,',',' ') ?> м²</span></div>
-                            <em><?= number_format($area,1,',',' ') ?> м²</em>
-                            <form method="post" class="ms-2"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="delete_room"><input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>"><button class="icon-button" type="submit" title="Удалить"><i class="bi bi-trash3"></i></button></form>
+                        <div class="room-photo-card">
+                            <div class="document-row room-measure-row">
+                                <div class="member-avatar"><i class="bi bi-rulers"></i></div>
+                                <div><strong><?= e($room['name']) ?></strong><span><?= e((string)$room['length_m']) ?> × <?= e((string)$room['width_m']) ?> × <?= e((string)$room['height_m']) ?> м · стены <?= number_format($walls,1,',',' ') ?> м²</span></div>
+                                <em><?= number_format($area,1,',',' ') ?> м²</em>
+                                <form method="post" class="ms-2"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="delete_room"><input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>"><button class="icon-button" type="submit" title="Удалить"><i class="bi bi-trash3"></i></button></form>
+                            </div>
+                            <div class="room-photo-actions">
+                                <form method="post" enctype="multipart/form-data" class="room-photo-upload">
+                                    <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+                                    <input type="hidden" name="action" value="upload_room_photo">
+                                    <input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>">
+                                    <label class="outline-button room-camera-button"><i class="bi bi-camera"></i> Сфотографировать<input type="file" name="room_photo" accept="image/*" capture="environment" onchange="this.form.submit()"></label>
+                                </form>
+                                <form method="post" enctype="multipart/form-data" class="room-photo-upload">
+                                    <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>">
+                                    <input type="hidden" name="action" value="upload_room_photo">
+                                    <input type="hidden" name="room_id" value="<?= (int)$room['id'] ?>">
+                                    <label class="outline-button"><i class="bi bi-images"></i> Добавить фото<input type="file" name="room_photo" accept="image/*" onchange="this.form.submit()"></label>
+                                </form>
+                            </div>
+                            <?php if (!empty($roomPhotos[(int)$room['id']])): ?>
+                                <div class="room-photo-grid">
+                                <?php foreach ($roomPhotos[(int)$room['id']] as $photo): ?>
+                                    <div class="room-photo-thumb">
+                                        <a href="<?= e($photo['path']) ?>" data-fancybox="room-<?= (int)$room['id'] ?>" data-caption="<?= e($room['name']) ?>"><img src="<?= e($photo['path']) ?>" alt="<?= e($room['name']) ?>" loading="lazy"></a>
+                                        <form method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="delete_room_photo"><input type="hidden" name="photo_id" value="<?= (int)$photo['id'] ?>"><button type="submit" class="room-photo-delete" title="Удалить"><i class="bi bi-x"></i></button></form>
+                                    </div>
+                                <?php endforeach; ?>
+                                </div>
+                            <?php else: ?>
+                                <div class="room-photo-empty"><i class="bi bi-camera"></i><span>Фотографии комнаты ещё не добавлены</span></div>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
