@@ -75,7 +75,7 @@ $label=['draft'=>'Черновик','in_progress'=>'В работе','review'=>'
 $pageTitle=$project['name'];require __DIR__.'/includes/app_header.php';
 ?>
 <section class="page-wrap estimate-page">
-<div class="estimate-heading"><div><a href="dashboard.php" class="back-button"><i class="bi bi-arrow-left"></i> Все проекты</a><div class="estimate-title-row"><div class="project-symbol"><i class="bi bi-house"></i><i class="bi bi-check2"></i></div><div><div class="eyebrow">ПРОЕКТ / СМЕТА</div><h1><?=e($project['name'])?></h1><p><?=e($project['city'])?> <b>·</b> <?=e($project['clientName'])?> <b>·</b> <?=e($project['workType'])?></p></div></div></div><div class="heading-actions"><form method="post" data-ajax-estimate><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="status"><select class="status-select" name="status" onchange="estimateStatus(this.form)"><?php foreach(['draft'=>'Черновик','in_progress'=>'В работе','review'=>'На согласовании','completed'=>'Завершён','archived'=>'Архив'] as $v=>$t):?><option value="<?=$v?>" <?=$project['status']===$v?'selected':''?>><?=$t?></option><?php endforeach;?></select></form><a class="outline-button" href="export.php?id=<?=$id?>"><i class="bi bi-file-earmark-text"></i> Экспорт сметы</a><a class="outline-button" href="catalog.php?id=<?=$id?>"><i class="bi bi-journal-text"></i> Каталог</a><?php if($canEditCard): ?><button class="outline-button" type="button" data-bs-toggle="modal" data-bs-target="#editProjectModal"><i class="bi bi-pencil"></i> Редактировать</button><?php endif; ?><?php if($canDelete): ?><form method="post" class="d-inline" onsubmit="return confirm('Удалить эту смету и все её данные? Это действие нельзя отменить.')"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_project"><button class="danger-button" type="submit"><i class="bi bi-trash3"></i> Удалить смету</button></form><?php endif; ?><button class="primary-button" type="button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-grid-3x3-gap"></i> Готовая смета</button></div></div>
+<div class="estimate-heading"><div><a href="dashboard.php" class="back-button"><i class="bi bi-arrow-left"></i> Все проекты</a><div class="estimate-title-row"><div class="project-symbol"><i class="bi bi-house"></i><i class="bi bi-check2"></i></div><div><div class="eyebrow">ПРОЕКТ / СМЕТА</div><h1><?=e($project['name'])?></h1><p><?=e($project['city'])?> <b>·</b> <?=e($project['clientName'])?> <b>·</b> <?=e($project['workType'])?></p></div></div></div><div class="heading-actions"><form method="post" data-ajax-estimate><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="status"><select class="status-select" name="status" onchange="estimateStatus(this.form)"><?php foreach(['draft'=>'Черновик','in_progress'=>'В работе','review'=>'На согласовании','completed'=>'Завершён','archived'=>'Архив'] as $v=>$t):?><option value="<?=$v?>" <?=$project['status']===$v?'selected':''?>><?=$t?></option><?php endforeach;?></select></form><button class="outline-button" type="button" data-bs-toggle="modal" data-bs-target="#exportModal"><i class="bi bi-file-earmark-arrow-down"></i> Экспорт</button><a class="outline-button" href="catalog.php?id=<?=$id?>"><i class="bi bi-journal-text"></i> Каталог</a><?php if($canEditCard): ?><button class="outline-button" type="button" data-bs-toggle="modal" data-bs-target="#editProjectModal"><i class="bi bi-pencil"></i> Редактировать</button><?php endif; ?><?php if($canDelete): ?><form method="post" class="d-inline" onsubmit="return confirm('Удалить эту смету и все её данные? Это действие нельзя отменить.')"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_project"><button class="danger-button" type="submit"><i class="bi bi-trash3"></i> Удалить смету</button></form><?php endif; ?><button class="primary-button" type="button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-grid-3x3-gap"></i> Готовая смета</button></div></div>
 <div class="estimate-summary"><div><span>ИТОГО ПО СМЕТЕ</span><strong><?=number_format($estimateGrandTotal,0,',',' ')?> ₽</strong><small>включая НДС 20%</small></div><div class="summary-stats"><div><b><?=count($cats)?></b> категории</div><div><b><?=$itemsCount?></b> позиций</div><div><b><?=number_format(array_sum(array_map(fn($c)=>(float)$c['items']?0:0,$cats)),0)?></b> объём</div></div><div class="summary-actions"><button class="outline-button" type="button" onclick="document.querySelector('.estimate-controls').scrollIntoView({behavior:'smooth',block:'center'})"><i class="bi bi-calendar3"></i> Создать график</button><button class="icon-button darkish" type="button" title="Дополнительно"><i class="bi bi-three-dots"></i></button></div></div>
 <div class="estimate-controls" id="estimateCalcControls"><div><span class="control-label">МЕТОД РАСЧЁТА</span><select class="status-select" id="estimateMethod"><option value="resource">Ресурсный</option><option value="base-index">Базисно-индексный</option><option value="resource-index">Ресурсно-индексный</option></select></div><label class="check-control"><input id="winterCoeff" type="checkbox"> Зимнее удорожание <b>+12%</b></label><label class="check-control"><input id="tightCoeff" type="checkbox"> Стеснённые условия <b>+8%</b></label><label class="custom-coeff">Свой коэффициент<input id="customCoeff" min="0.1" max="5" step="0.01" type="number" value="1"></label></div><div class="estimate-toolbar"><div class="toolbar-tabs"><button type="button" class="active">Смета</button><button type="button">График <span>скоро</span></button><button type="button">Документы <span>скоро</span></button></div><div class="estimate-actions"><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-grid-3x3-gap"></i> Готовая смета</button><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#categoryModal"><i class="bi bi-plus-lg"></i> Добавить категорию</button></div></div>
 <div class="estimate-list">
@@ -368,6 +368,38 @@ document.addEventListener('DOMContentLoaded',()=>{
  modal?.addEventListener('hidden.bs.modal',resetWorkCatalog);
 });
 </script>
+<div class="modal fade export-choice-modal" id="exportModal" tabindex="-1" aria-hidden="true">
+ <div class="modal-dialog modal-dialog-centered">
+  <div class="modal-content">
+   <div class="modal-header">
+    <div><div class="eyebrow">ЭКСПОРТ ПРОЕКТА</div><h5 class="modal-title">Что скачать?</h5><p class="export-choice-subtitle">Выберите формат документа для проекта «<?=e($project['name'])?>».</p></div>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+   </div>
+   <div class="modal-body">
+    <div class="export-choice-grid">
+     <a class="export-choice-card" href="export.php?id=<?=$id?>">
+      <span class="export-choice-icon"><i class="bi bi-file-earmark-pdf"></i></span>
+      <span><strong>Смета</strong><small>Печатная версия · PDF</small></span><i class="bi bi-arrow-up-right"></i>
+     </a>
+     <a class="export-choice-card" href="export.php?id=<?=$id?>&format=csv">
+      <span class="export-choice-icon"><i class="bi bi-filetype-csv"></i></span>
+      <span><strong>CSV</strong><small>Для Excel и обработки данных</small></span><i class="bi bi-arrow-down"></i>
+     </a>
+     <a class="export-choice-card" href="export.php?id=<?=$id?>&format=ks2">
+      <span class="export-choice-icon"><i class="bi bi-file-earmark-text"></i></span>
+      <span><strong>КС-2</strong><small>Акт выполненных работ</small></span><i class="bi bi-arrow-down"></i>
+     </a>
+     <a class="export-choice-card" href="export.php?id=<?=$id?>&format=ks3">
+      <span class="export-choice-icon"><i class="bi bi-file-earmark-spreadsheet"></i></span>
+      <span><strong>КС-3</strong><small>Справка о стоимости работ</small></span><i class="bi bi-arrow-down"></i>
+     </a>
+    </div>
+   </div>
+   <div class="modal-footer"><button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button></div>
+  </div>
+ </div>
+</div>
+
 <div class="modal fade" id="editProjectModal" tabindex="-1" aria-hidden="true">
  <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
   <form method="post">
