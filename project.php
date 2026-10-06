@@ -49,14 +49,15 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
  }
 $q=$pdo->prepare("SELECT c.*,COALESCE(SUM(i.quantity*i.price),0) total,COUNT(i.id) item_count FROM estimatecategories c LEFT JOIN estimateitems i ON i.categoryId=c.id WHERE c.projectId=? GROUP BY c.id ORDER BY c.sortOrder,c.id");$q->execute([$id]);$cats=$q->fetchAll();$total=0;$itemsCount=0;foreach($cats as &$cat){$q=$pdo->prepare("SELECT * FROM estimateitems WHERE categoryId=? ORDER BY id");$q->execute([$cat['id']]);$cat['items']=$q->fetchAll();$total+=(float)$cat['total'];$itemsCount+=(int)$cat['item_count'];}unset($cat);
 $q=$pdo->query("SELECT * FROM estimateitemtemplates ORDER BY categoryName,name");$templates=$q->fetchAll();
+$q=$pdo->query("SELECT * FROM estimatetemplates ORDER BY id");$estimateTemplates=$q->fetchAll();
 $estimateOverhead=$total*.15;$estimateProfit=$total*.08;$estimateVat=($total+$estimateOverhead+$estimateProfit)*.20;$estimateGrandTotal=$total+$estimateOverhead+$estimateProfit+$estimateVat;
 $label=['draft'=>'Черновик','in_progress'=>'В работе','review'=>'На согласовании','completed'=>'Завершён','archived'=>'Архив'][$project['status']]??$project['status'];
 $pageTitle=$project['name'];require __DIR__.'/includes/app_header.php';
 ?>
 <section class="page-wrap estimate-page">
-<div class="estimate-heading"><div><a href="dashboard.php" class="back-button"><i class="bi bi-arrow-left"></i> Все проекты</a><div class="estimate-title-row"><div class="project-symbol"><i class="bi bi-house"></i><i class="bi bi-check2"></i></div><div><div class="eyebrow">ПРОЕКТ / СМЕТА</div><h1><?=e($project['name'])?></h1><p><?=e($project['city'])?> <b>·</b> <?=e($project['clientName'])?> <b>·</b> <?=e($project['workType'])?></p></div></div></div><div class="heading-actions"><form method="post" data-ajax-estimate><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="status"><select class="status-select" name="status" onchange="estimateStatus(this.form)"><?php foreach(['draft'=>'Черновик','in_progress'=>'В работе','review'=>'На согласовании','completed'=>'Завершён','archived'=>'Архив'] as $v=>$t):?><option value="<?=$v?>" <?=$project['status']===$v?'selected':''?>><?=$t?></option><?php endforeach;?></select></form><a class="outline-button" href="export.php?id=<?=$id?>"><i class="bi bi-file-earmark-text"></i> Экспорт сметы</a><a class="outline-button" href="catalog.php?id=<?=$id?>"><i class="bi bi-journal-text"></i> Каталог</a><?php if($canEditCard): ?><button class="outline-button" type="button" data-bs-toggle="modal" data-bs-target="#editProjectModal"><i class="bi bi-pencil"></i> Редактировать</button><?php endif; ?><?php if($canDelete): ?><form method="post" class="d-inline" onsubmit="return confirm('Удалить эту смету и все её данные? Это действие нельзя отменить.')"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_project"><button class="danger-button" type="submit"><i class="bi bi-trash3"></i> Удалить смету</button></form><?php endif; ?><button class="primary-button" type="button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-plus-lg"></i> Добавить</button></div></div>
+<div class="estimate-heading"><div><a href="dashboard.php" class="back-button"><i class="bi bi-arrow-left"></i> Все проекты</a><div class="estimate-title-row"><div class="project-symbol"><i class="bi bi-house"></i><i class="bi bi-check2"></i></div><div><div class="eyebrow">ПРОЕКТ / СМЕТА</div><h1><?=e($project['name'])?></h1><p><?=e($project['city'])?> <b>·</b> <?=e($project['clientName'])?> <b>·</b> <?=e($project['workType'])?></p></div></div></div><div class="heading-actions"><form method="post" data-ajax-estimate><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="status"><select class="status-select" name="status" onchange="estimateStatus(this.form)"><?php foreach(['draft'=>'Черновик','in_progress'=>'В работе','review'=>'На согласовании','completed'=>'Завершён','archived'=>'Архив'] as $v=>$t):?><option value="<?=$v?>" <?=$project['status']===$v?'selected':''?>><?=$t?></option><?php endforeach;?></select></form><a class="outline-button" href="export.php?id=<?=$id?>"><i class="bi bi-file-earmark-text"></i> Экспорт сметы</a><a class="outline-button" href="catalog.php?id=<?=$id?>"><i class="bi bi-journal-text"></i> Каталог</a><?php if($canEditCard): ?><button class="outline-button" type="button" data-bs-toggle="modal" data-bs-target="#editProjectModal"><i class="bi bi-pencil"></i> Редактировать</button><?php endif; ?><?php if($canDelete): ?><form method="post" class="d-inline" onsubmit="return confirm('Удалить эту смету и все её данные? Это действие нельзя отменить.')"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_project"><button class="danger-button" type="submit"><i class="bi bi-trash3"></i> Удалить смету</button></form><?php endif; ?><button class="primary-button" type="button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-grid-3x3-gap"></i> Готовая смета</button></div></div>
 <div class="estimate-summary"><div><span>ИТОГО ПО СМЕТЕ</span><strong><?=number_format($estimateGrandTotal,0,',',' ')?> ₽</strong><small>включая НДС 20%</small></div><div class="summary-stats"><div><b><?=count($cats)?></b> категории</div><div><b><?=$itemsCount?></b> позиций</div><div><b><?=number_format(array_sum(array_map(fn($c)=>(float)$c['items']?0:0,$cats)),0)?></b> объём</div></div><div class="summary-actions"><button class="outline-button" type="button" onclick="document.querySelector('.estimate-controls').scrollIntoView({behavior:'smooth',block:'center'})"><i class="bi bi-calendar3"></i> Создать график</button><button class="icon-button darkish" type="button" title="Дополнительно"><i class="bi bi-three-dots"></i></button></div></div>
-<div class="estimate-controls" id="estimateCalcControls"><div><span class="control-label">МЕТОД РАСЧЁТА</span><select class="status-select" id="estimateMethod"><option value="resource">Ресурсный</option><option value="base-index">Базисно-индексный</option><option value="resource-index">Ресурсно-индексный</option></select></div><label class="check-control"><input id="winterCoeff" type="checkbox"> Зимнее удорожание <b>+12%</b></label><label class="check-control"><input id="tightCoeff" type="checkbox"> Стеснённые условия <b>+8%</b></label><label class="custom-coeff">Свой коэффициент<input id="customCoeff" min="0.1" max="5" step="0.01" type="number" value="1"></label></div><div class="estimate-toolbar"><div class="toolbar-tabs"><button type="button" class="active">Смета</button><button type="button">График <span>скоро</span></button><button type="button">Документы <span>скоро</span></button></div><div class="estimate-actions"><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-plus-lg"></i> Добавить расценку</button><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#categoryModal"><i class="bi bi-plus-lg"></i> Добавить категорию</button></div></div>
+<div class="estimate-controls" id="estimateCalcControls"><div><span class="control-label">МЕТОД РАСЧЁТА</span><select class="status-select" id="estimateMethod"><option value="resource">Ресурсный</option><option value="base-index">Базисно-индексный</option><option value="resource-index">Ресурсно-индексный</option></select></div><label class="check-control"><input id="winterCoeff" type="checkbox"> Зимнее удорожание <b>+12%</b></label><label class="check-control"><input id="tightCoeff" type="checkbox"> Стеснённые условия <b>+8%</b></label><label class="custom-coeff">Свой коэффициент<input id="customCoeff" min="0.1" max="5" step="0.01" type="number" value="1"></label></div><div class="estimate-toolbar"><div class="toolbar-tabs"><button type="button" class="active">Смета</button><button type="button">График <span>скоро</span></button><button type="button">Документы <span>скоро</span></button></div><div class="estimate-actions"><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#templateModal"><i class="bi bi-grid-3x3-gap"></i> Готовая смета</button><button type="button" class="text-button" data-bs-toggle="modal" data-bs-target="#categoryModal"><i class="bi bi-plus-lg"></i> Добавить категорию</button></div></div>
 <div class="estimate-list">
 <?php foreach($cats as $n=>$cat):?><div class="estimate-group"><div class="group-heading"><span class="group-number"><?=str_pad((string)($n+1),2,'0',STR_PAD_LEFT)?></span><h3><?=e($cat['name'])?></h3><span><?=$cat['item_count']?> позиций</span><strong><?=number_format((float)$cat['total'],0,',',' ')?> ₽</strong><button class="icon-button" title="Удалить раздел" onclick="if(confirm('Удалить раздел и его позиции?'))document.getElementById('delcat<?=$cat['id']?>').submit()"><i class="bi bi-three-dots"></i></button></div>
 <div class="estimate-table"><div class="table-head"><span>РАБОТА</span><span>ОБЪЁМ</span><span>ЕД.</span><span>ЦЕНА</span><span>СУММА</span><span></span></div>
@@ -70,7 +71,41 @@ $pageTitle=$project['name'];require __DIR__.'/includes/app_header.php';
 <div class="mt-4 d-flex justify-content-between align-items-center"><a class="text-button" href="workspace.php?view=scan&id=<?=$id?>"><i class="bi bi-stars"></i> Смета из файла</a><form method="post" onsubmit="return confirm('Удалить проект и всю смету?')"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_project"><button class="text-danger border-0 bg-transparent small">Удалить смету</button></form></div>
 </section>
 <div class="modal fade" id="categoryModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form method="post"><div class="modal-header"><h5 class="modal-title">Новый раздел</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="category"><label class="form-label">Название</label><input class="form-control" name="name" required placeholder="Материалы, Работы, Электрика..."></div><div class="modal-footer"><button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button><button class="primary-button">Создать</button></div></form></div></div></div>
-<div class="modal fade" id="templateModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content"><form method="post"><div class="modal-header"><div><h5 class="modal-title">Добавить из шаблонов</h5><small class="text-muted">Готовые позиции для текущего проекта</small></div><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="template"><div class="template-list"><?php foreach($templates as $tpl):?><label class="template-option"><input type="radio" name="template_id" value="<?=$tpl['id']?>" required><span class="template-info"><strong><?=e($tpl['name'])?></strong><small><?=e($tpl['categoryName'])?> · <?=e($tpl['unit'])?> · <?=number_format((float)$tpl['price'],0,',',' ')?> ₽</small></span><span class="template-check"><i class="bi bi-check-lg"></i></span></label><?php endforeach;?></div><div class="mt-3"><label class="form-label">Количество</label><input class="form-control" type="number" name="template_quantity" value="1" min="0.001" step="0.001" required></div></div><div class="modal-footer"><button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button><button class="primary-button"><i class="bi bi-plus-lg"></i> Добавить в смету</button></div></form></div></div></div>
+<div class="modal fade" id="templateModal" tabindex="-1" aria-hidden="true">
+<div class="modal-dialog modal-dialog-centered modal-xl">
+<div class="modal-content estimate-template-modal">
+<form id="estimateTemplateForm">
+<div class="modal-header">
+ <div><h5 class="modal-title">Готовые шаблоны смет</h5><small class="text-muted">Выберите основу — все позиции добавятся в текущую смету. Потом их можно удалить, изменить или дополнить.</small></div>
+ <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+ <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+ <input type="hidden" name="project_id" value="<?=$id?>">
+ <input type="hidden" name="op" value="estimate_template">
+ <div class="estimate-template-grid">
+ <?php foreach($estimateTemplates as $tpl):?>
+ <label class="estimate-template-card">
+  <input type="radio" name="estimate_template_id" value="<?=$tpl['id']?>">
+  <span class="estimate-template-icon"><i class="bi <?=e($tpl['icon'])?>"></i></span>
+  <span class="estimate-template-content">
+   <strong><?=e($tpl['name'])?></strong>
+   <small><?=e($tpl['description'])?></small>
+   <?php $tc=$pdo->prepare("SELECT COUNT(*) FROM estimatetemplateitems WHERE templateId=?");$tc->execute([$tpl['id']]); ?>
+   <span class="estimate-template-meta"><b><?=$tc->fetchColumn()?></b> позиций · готовая структура</span>
+  </span>
+  <span class="estimate-template-check"><i class="bi bi-check-lg"></i></span>
+ </label>
+ <?php endforeach;?>
+ </div>
+ <div class="estimate-template-note"><i class="bi bi-info-circle"></i><span>Шаблон ничего не блокирует: после добавления можно удалить любой раздел или позицию, изменить количество и цену, а также добавить свои работы.</span></div>
+</div>
+<div class="modal-footer">
+ <button class="outline-button" type="button" data-bs-dismiss="modal">Отмена</button>
+ <button class="primary-button" id="applyEstimateTemplate" type="submit" disabled><i class="bi bi-plus-lg"></i> Добавить в смету</button>
+</div>
+</form>
+</div></div></div>
 <div class="modal fade" id="workCatalogModal" tabindex="-1" aria-hidden="true">
 <div class="modal-dialog modal-dialog-centered modal-lg work-catalog-dialog">
 <div class="modal-content work-catalog-modal">
@@ -105,6 +140,27 @@ $pageTitle=$project['name'];require __DIR__.'/includes/app_header.php';
 
 <script>
 const projectId=<?=json_encode($id)?>;
+
+document.addEventListener('change',e=>{
+ const radio=e.target.closest('#estimateTemplateForm input[name="estimate_template_id"]');
+ if(radio){const btn=document.getElementById('applyEstimateTemplate');if(btn)btn.disabled=false;}
+});
+document.getElementById('estimateTemplateForm')?.addEventListener('submit',async e=>{
+ e.preventDefault();
+ const form=e.currentTarget,btn=document.getElementById('applyEstimateTemplate');
+ if(!form.querySelector('input[name="estimate_template_id"]:checked'))return;
+ btn.disabled=true;btn.innerHTML='<span class="spinner-border spinner-border-sm me-2"></span> Добавляем...';
+ try{
+  const fd=new FormData(form);
+  const res=await fetch('api.php?action=estimate_action',{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}});
+  const data=await res.json();
+  if(!res.ok||!data.ok)throw new Error(data.error||'Не удалось добавить шаблон');
+  await refreshEstimate();
+  const modal=document.getElementById('templateModal');const instance=bootstrap.Modal.getInstance(modal);if(instance)instance.hide();
+ }catch(err){alert(err.message||'Ошибка добавления');}
+ finally{btn.disabled=!form.querySelector('input[name="estimate_template_id"]:checked');btn.innerHTML='<i class="bi bi-plus-lg"></i> Добавить в смету';}
+});
+
 async function estimateAjax(form){
  const fd=new FormData(form);
  fd.set('project_id',projectId);
