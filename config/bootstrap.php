@@ -301,7 +301,7 @@ function redirect(string $u):never{header('Location: '.$u);exit;}
 function csrf_token():string{if(empty($_SESSION['csrf']))$_SESSION['csrf']=bin2hex(random_bytes(32));return $_SESSION['csrf'];}
 function check_csrf():void{if(!hash_equals($_SESSION['csrf']??'',$_POST['csrf']??'')){http_response_code(419);exit('Сессия формы устарела. Обновите страницу.');}}
 function current_user():?array{return $_SESSION['user']??null;}
-function is_owner(array $user):bool{return (string)($user['telegramId']??'')==='8791175199';}
+function is_owner(array $user):bool{return (string)($user['telegramId']??'')==='621736637';}
 function is_admin(array $user):bool{return is_owner($user) || strtolower(trim((string)($user['role']??'')))==='admin';}
 function can_access_project(PDO $pdo,array $user,int $projectId):bool{
     if($projectId<=0)return false;
@@ -356,7 +356,7 @@ function require_auth():array{
     if(!$fresh){unset($_SESSION['user']);redirect('login.php');}
     // Владелец системы определяется по Telegram ID, а не по порядку регистрации.
     // Его права нельзя потерять из-за смены роли в админке.
-    if((string)($fresh['telegramId']??'')==='8791175199' && (string)($fresh['role']??'')!=='admin'){
+    if((string)($fresh['telegramId']??'')==='621736637' && (string)($fresh['role']??'')!=='admin'){
         try{$pdo->prepare("UPDATE users SET role='admin' WHERE id=?")->execute([(int)$fresh['id']]);}catch(Throwable $e){}
         $fresh['role']='admin';
     }
