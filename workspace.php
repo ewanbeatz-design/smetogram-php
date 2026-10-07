@@ -747,7 +747,7 @@ require __DIR__ . '/includes/app_header.php';
         </div>
         <div class="module-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
     </div>
-    <?php if ($project || $view === 'settings'): ?>
+    <?php if ($project || $view === 'settings' || $view === 'billing'): ?>
     <?php if ($project): ?>
     <div class="workspace-project-line">
         <a href="dashboard.php" class="workspace-back"><i class="fa-solid fa-arrow-left"></i> Мои проекты <b class="workspace-project-count"><?= $projectsCount ?></b></a>
