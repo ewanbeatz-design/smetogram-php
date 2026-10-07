@@ -59,7 +59,16 @@ viewBox="0 0 3440 504.4"
  </defs>
  <g id="Слой_x0020_1">
   <metadata id="CorelCorpID_0Corel-Layer"/>
-  <text x="-16.47" y="258.23"  class="fil0 fnt0">сметоgram</text>
-  <text x="506.96" y="477.12"  class="fil0 fnt1">разработка смет за 5 минут</text>
+  <g id="smetogram-icon" aria-label="Знак сметы и замеров">
+    <rect x="26" y="68" width="366" height="366" rx="86" fill="#3B31C1"/>
+    <path d="M112 126h150l76 76v188H112z" fill="none" stroke="#fff" stroke-width="24" stroke-linejoin="round"/>
+    <path d="M262 126v76h76" fill="none" stroke="#fff" stroke-width="24" stroke-linejoin="round"/>
+    <path d="M145 254h109M145 298h85M145 342h58" fill="none" stroke="#fff" stroke-width="20" stroke-linecap="round"/>
+    <path d="M260 252l58 58" fill="none" stroke="#fff" stroke-width="28" stroke-linecap="round"/>
+    <path d="M284 246l20 20M300 230l20 20M268 262l20 20" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round"/>
+    <circle cx="318" cy="314" r="16" fill="#fff"/>
+  </g>
+  <text x="458" y="258.23" class="fil0 fnt0">сметоgram</text>
+  <text x="486" y="477.12" class="fil0 fnt1">разработка смет за 5 минут</text>
  </g>
 </svg>
