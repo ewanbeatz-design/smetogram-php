@@ -903,6 +903,25 @@ require __DIR__ . '/includes/app_header.php';
         <?php
         $stages = [];
         if ($project) {
+            // Если этапы ещё не создавались из сметы, создаём их и для приёмки.
+            $cq=$pdo->prepare("SELECT c.id,c.name,COALESCE(SUM(i.quantity*i.price),0) total
+                FROM estimatecategories c
+                LEFT JOIN estimateitems i ON i.categoryId=c.id
+                WHERE c.projectId=?
+                GROUP BY c.id
+                ORDER BY c.sortOrder,c.id");
+            $cq->execute([$projectId]);
+            $estimateStages=$cq->fetchAll();
+            $existing=$pdo->prepare('SELECT id FROM scheduletasks WHERE projectId=? AND estimateCategoryId=? LIMIT 1');
+            $ins=$pdo->prepare('INSERT INTO scheduletasks(projectId,title,status,paymentMilestone,estimateCategoryId) VALUES(?,?,?,?,?)');
+            foreach($estimateStages as $es){
+                $total=(float)$es['total'];
+                if($total<=0) continue;
+                $existing->execute([$projectId,(int)$es['id']]);
+                if(!$existing->fetchColumn()){
+                    $ins->execute([$projectId,(string)$es['name'],'planned',$total,(int)$es['id']]);
+                }
+            }
             $sync=$pdo->prepare('SELECT id,title,paymentMilestone FROM scheduletasks WHERE projectId=? ORDER BY startsAt,id');
             $sync->execute([$projectId]);
             foreach($sync->fetchAll() as $task){
