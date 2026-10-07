@@ -193,7 +193,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Укажите корректный email заказчика.');
             }
 
-            $q = $pdo->prepare("SELECT id,role,joinedAt FROM projectmembers WHERE projectId=? AND role='client' ORDER BY id DESC");
+            $q = $pdo->prepare("SELECT id,role,joinedAt,inviteToken FROM projectmembers WHERE projectId=? AND role='client' ORDER BY id DESC");
             $q->execute([$projectId]);
             $clientMembers = $q->fetchAll();
             foreach ($clientMembers as $existingClient) {
@@ -203,8 +203,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $token = bin2hex(random_bytes(32));
-            $q = $pdo->prepare("INSERT INTO projectmembers (projectId,userId,invitedEmail,role,inviteToken,joinedAt) VALUES (?,?,?,'client',?,NULL)");
-            $q->execute([$projectId,null,$email !== '' ? $email : null,$token]);
+            $pendingClient = $clientMembers[0] ?? null;
+            if ($pendingClient && empty($pendingClient['joinedAt'])) {
+                $q = $pdo->prepare("UPDATE projectmembers SET invitedEmail=?,inviteToken=? WHERE id=? AND projectId=? AND role='client' AND joinedAt IS NULL");
+                $q->execute([$email !== '' ? $email : null,$token,(int)$pendingClient['id'],$projectId]);
+            } else {
+                $q = $pdo->prepare("INSERT INTO projectmembers (projectId,userId,invitedEmail,role,inviteToken,joinedAt) VALUES (?,?,?,'client',?,NULL)");
+                $q->execute([$projectId,null,$email !== '' ? $email : null,$token]);
+            }
 
             $notice = 'Приглашение заказчика создано. Скопируйте ссылку в блоке «Заказчик» и отправьте её ему.';
             $notifyProject('team','Создано приглашение заказчика',$email !== '' ? $email : 'Приглашение по ссылке','workspace.php?view=team&id='.$projectId);
