@@ -149,7 +149,7 @@
 .workspace-back:hover{color:var(--terra)}
 .workspace-project-name{font-size:11px;font-weight:800;color:var(--ink);padding-left:12px;border-left:1px solid #E2E8F0}
 .workspace-project-meta{font-size:9px;color:#94A3B8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.workspace-tabs{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:7px;margin:-1px 0 28px;padding:0 0 12px;border-bottom:1px solid #CBD5E1}
+.workspace-tabs{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:7px;margin:-1px 0 28px;padding:0 0 12px;border-bottom:1px solid #CBD5E1}
 .workspace-tabs a{position:relative;display:flex;align-items:center;justify-content:center;gap:7px;min-height:42px;padding:9px 8px;border:1px solid #E2E8F0;border-radius:10px;background:#fff;color:#64748B;text-decoration:none;font-size:10px;font-weight:700;white-space:nowrap;transition:.18s ease}
 .workspace-tabs a i{font-size:14px;flex:0 0 auto}
 .workspace-tabs a:hover{border-color:#CBD5E1;background:#F8FAFC;color:#334155;transform:translateY(-1px)}
