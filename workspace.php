@@ -184,6 +184,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $q->execute([$projectId, $title, $starts !== '' ? $starts . ' 00:00:00' : null, $ends !== '' ? $ends . ' 23:59:59' : null, 'planned', $payment]);
             $notice = 'Этап сохранён.';
             $notifyProject('schedule','Добавлен этап',$title,'workspace.php?view=schedule&id='.$projectId);
+        } elseif ($action === 'create_client_invite') {
+            if (!$project) throw new RuntimeException('Сначала откройте проект.');
+            if (empty($canManageProject)) throw new RuntimeException('Пригласить заказчика может только владелец проекта или главный администратор.');
+
+            $email = trim((string)($_POST['email'] ?? ''));
+            if ($email !== '' && !filter_var($email,FILTER_VALIDATE_EMAIL)) {
+                throw new RuntimeException('Укажите корректный email заказчика.');
+            }
+
+            $q = $pdo->prepare("SELECT id,role,joinedAt FROM projectmembers WHERE projectId=? AND role='client' ORDER BY id DESC");
+            $q->execute([$projectId]);
+            $clientMembers = $q->fetchAll();
+            foreach ($clientMembers as $existingClient) {
+                if (!empty($existingClient['joinedAt'])) {
+                    throw new RuntimeException('Заказчик уже подключён к этому проекту.');
+                }
+            }
+
+            $token = bin2hex(random_bytes(32));
+            $q = $pdo->prepare("INSERT INTO projectmembers (projectId,userId,invitedEmail,role,inviteToken,joinedAt) VALUES (?,?,?,'client',?,NULL)");
+            $q->execute([$projectId,null,$email !== '' ? $email : null,$token]);
+
+            $notice = 'Приглашение заказчика создано. Скопируйте ссылку в блоке «Заказчик» и отправьте её ему.';
+            $notifyProject('team','Создано приглашение заказчика',$email !== '' ? $email : 'Приглашение по ссылке','workspace.php?view=team&id='.$projectId);
         } elseif ($action === 'add_member') {
             if (!$project) throw new RuntimeException('Сначала откройте проект.');
             if (empty($canManageProject)) throw new RuntimeException('Назначать сотрудников может только владелец проекта или главный администратор.');
@@ -764,7 +788,12 @@ require __DIR__ . '/includes/app_header.php';
             <div class="module-panel">
                 <div class="panel-heading">
                     <div><h2>Участники</h2><p>Роли и контакты проекта.</p></div>
-                    <?php if ($project && !empty($canManageProject)): ?><button class="primary-button" data-bs-toggle="modal" data-bs-target="#memberModal"><i class="fa-solid fa-user-plus"></i> Назначить сотрудника</button><?php endif; ?>
+                    <?php if ($project && !empty($canManageProject)): ?>
+                        <div class="team-head-actions">
+                            <button class="outline-button" data-bs-toggle="modal" data-bs-target="#clientInviteModal"><i class="fa-solid fa-user-plus"></i> Пригласить заказчика</button>
+                            <button class="primary-button" data-bs-toggle="modal" data-bs-target="#memberModal"><i class="fa-solid fa-user-plus"></i> Назначить сотрудника</button>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <?php if (!$members): ?>
                     <div class="empty-state">Участников пока нет.</div>
@@ -774,6 +803,9 @@ require __DIR__ . '/includes/app_header.php';
                             <div class="member-avatar"><?= e(mb_strtoupper(mb_substr($member['role'], 0, 2))) ?></div>
                             <div><strong><?= e($member['userName'] ?: ($member['userUsername'] ? '@'.$member['userUsername'] : ($member['invitedEmail'] ?: ($member['invitedPhone'] ?: 'Участник')))) ?></strong><span><?= e(['owner'=>'Владелец','foreman'=>'Прораб','contractor'=>'Бригада','designer'=>'Дизайнер','client'=>'Заказчик'][$member['role']] ?? $member['role']) ?></span></div>
                             <em><?= e($member['joinedAt'] ? 'Активен' : 'Приглашён') ?></em>
+                            <?php if($member['role']==='client' && empty($member['joinedAt']) && !empty($member['inviteToken'] ?? '')): ?>
+                                <button type="button" class="outline-button client-invite-copy" data-url="<?=e('invite.php?token='.(string)$member['inviteToken'])?>" onclick="copyClientInvite(this)"><i class="fa-solid fa-link"></i> Скопировать ссылку</button>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -781,6 +813,33 @@ require __DIR__ . '/includes/app_header.php';
             <div class="module-panel"><h2>Права доступа</h2><div class="role-list"><p><b>Прораб</b><br><small>Смета, сроки, команда и приёмка</small></p><p><b>Бригада</b><br><small>Этапы и фото</small></p><p><b>Заказчик</b><br><small>Ход работ и приёмка</small></p></div></div>
         </div>
 
+        <?php if ($project): ?>
+        <div class="modal fade" id="clientInviteModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="post">
+                        <div class="modal-header">
+                            <div>
+                                <span class="settings-eyebrow">ДОСТУП К ПРОЕКТУ</span>
+                                <h5 class="modal-title">Пригласить заказчика</h5>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="panel-copy mb-3">Заказчик получит ссылку, войдёт через Telegram и сразу попадёт в этот проект. В приёмке он сможет проверять и принимать выполненные этапы.</p>
+                            <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                            <input type="hidden" name="action" value="create_client_invite">
+                            <label class="form-label">Email заказчика <span class="text-muted fw-normal">(необязательно)</span></label>
+                            <input class="form-control" type="email" name="email" placeholder="client@example.ru">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="outline-button" data-bs-dismiss="modal">Отмена</button>
+                            <button class="primary-button" type="submit"><i class="fa-solid fa-link"></i> Создать приглашение</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
         <?php if ($project): ?>
         <div class="modal fade" id="memberModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post">
             <div class="modal-header"><h5>Назначить сотрудника</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
@@ -1682,4 +1741,26 @@ require __DIR__ . '/includes/app_header.php';
     <?php endif; ?>
     <?php endif; ?>
 </section>
+<script>
+function copyClientInvite(button){
+    const url=button.dataset.url||'';
+    if(!url)return;
+    const absolute=new URL(url,window.location.href).href;
+    const done=()=>{
+        const old=button.innerHTML;
+        button.innerHTML='<i class="fa-solid fa-check"></i> Ссылка скопирована';
+        setTimeout(()=>{button.innerHTML=old},1800);
+    };
+    if(navigator.clipboard&&window.isSecureContext){
+        navigator.clipboard.writeText(absolute).then(done).catch(()=>fallbackClientInviteCopy(absolute,done));
+    }else{
+        fallbackClientInviteCopy(absolute,done);
+    }
+}
+function fallbackClientInviteCopy(text,done){
+    const input=document.createElement('textarea');
+    input.value=text;input.setAttribute('readonly','');input.style.position='fixed';input.style.opacity='0';
+    document.body.appendChild(input);input.select();document.execCommand('copy');input.remove();done();
+}
+</script>
 <?php require __DIR__ . '/includes/app_footer.php'; ?>
