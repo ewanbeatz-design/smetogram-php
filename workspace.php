@@ -1133,24 +1133,198 @@ require __DIR__ . '/includes/app_header.php';
 
     <?php elseif ($view === 'analytics'): ?>
         <?php
-        $total = 0.0;
-        $count = 0;
-        if ($project) {
-            $q = $pdo->prepare('SELECT COALESCE(SUM(i.quantity*i.price),0) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=?');
-            $q->execute([$projectId]);
-            $total = (float)$q->fetchColumn();
-            $q = $pdo->prepare('SELECT COUNT(*) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=?');
-            $q->execute([$projectId]);
-            $count = (int)$q->fetchColumn();
-        }
-        ?>
-        <div class="module-grid"><div class="module-panel"><div class="panel-heading"><div><h2>Показатели проекта</h2><p>Данные считаются напрямую из сметы.</p></div></div><div class="metric-grid">
-            <div class="metric-card"><div><span>Стоимость</span><strong><?= number_format($total,0,',',' ') ?> ₽</strong><small>текущий итог</small></div></div>
-            <div class="metric-card"><div><span>Позиции</span><strong><?= $count ?></strong><small>в смете</small></div></div>
-            <div class="metric-card"><div><span>Проект</span><strong><?= e($project['status'] ?? '—') ?></strong><small>текущий статус</small></div></div>
-        </div></div><div class="metric-stack"><div class="module-panel metric-mini"><span>Контроль бюджета</span><strong>100%</strong><small>Фактические данные сметы</small></div><div class="module-panel metric-mini"><span>Последнее изменение</span><strong><?= e($project['updatedAt'] ?? '—') ?></strong><small>из базы проекта</small></div></div></div>
+        $analytics = [
+            'estimateTotal'=>0.0,
+            'stageTotal'=>0.0,
+            'paidTotal'=>0.0,
+            'remainingTotal'=>0.0,
+            'itemCount'=>0,
+            'categoryCount'=>0,
+            'stageCount'=>0,
+            'stageDone'=>0,
+            'stageActive'=>0,
+            'acceptanceCount'=>0,
+            'acceptanceAccepted'=>0,
+        ];
+        $analyticsCategories = [];
+        $analyticsStages = [];
+        $analyticsProjects = [];
 
-    <?php elseif ($view === 'measurements'): ?>
+        if ($project) {
+            $q = $pdo->prepare('SELECT COALESCE(SUM(i.quantity*i.price),0),COUNT(i.id) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=?');
+            $q->execute([$projectId]);
+            [$analytics['estimateTotal'],$analytics['itemCount']] = $q->fetch(PDO::FETCH_NUM) ?: [0,0];
+
+            $q = $pdo->prepare('SELECT c.name,COALESCE(SUM(i.quantity*i.price),0) total,COUNT(i.id) itemCount FROM estimatecategories c LEFT JOIN estimateitems i ON i.categoryId=c.id WHERE c.projectId=? GROUP BY c.id,c.name ORDER BY total DESC,c.sortOrder,c.id');
+            $q->execute([$projectId]);
+            $analyticsCategories = $q->fetchAll();
+
+            $q = $pdo->prepare("SELECT st.id,st.title,st.status,st.startsAt,st.endsAt,COALESCE(st.paymentMilestone,0) plannedAmount,
+                COALESCE((SELECT CASE WHEN sp.type='stage' THEN sp.paidAmount WHEN sp.status='paid' THEN sp.amount ELSE 0 END
+                    FROM smetogram_payments sp WHERE sp.projectId=st.projectId AND sp.stageId=st.id AND sp.type='stage' ORDER BY sp.id DESC LIMIT 1),0) paidAmount
+                FROM scheduletasks st WHERE st.projectId=? ORDER BY st.startsAt IS NULL,st.startsAt,st.id");
+            $q->execute([$projectId]);
+            $analyticsStages = $q->fetchAll();
+
+            $analytics['stageCount']=count($analyticsStages);
+            foreach ($analyticsStages as $stage) {
+                $analytics['stageTotal'] += (float)$stage['plannedAmount'];
+                $analytics['paidTotal'] += (float)$stage['paidAmount'];
+                if ((string)$stage['status']==='done') $analytics['stageDone']++;
+                if ((string)$stage['status']==='in_progress') $analytics['stageActive']++;
+            }
+
+            $q = $pdo->prepare("SELECT COALESCE(SUM(CASE WHEN type='stage' THEN paidAmount WHEN status='paid' THEN amount ELSE 0 END),0)
+                FROM smetogram_payments WHERE projectId=?");
+            $q->execute([$projectId]);
+            $analytics['paidTotal'] = max($analytics['paidTotal'],(float)$q->fetchColumn());
+
+            $analytics['remainingTotal'] = max(0,$analytics['stageTotal']-$analytics['paidTotal']);
+
+            $q = $pdo->prepare('SELECT COUNT(*),SUM(CASE WHEN status IN (\'accepted\',\'approved\',\'done\') THEN 1 ELSE 0 END) FROM acceptancestages WHERE projectId=?');
+            $q->execute([$projectId]);
+            [$analytics['acceptanceCount'],$analytics['acceptanceAccepted']] = $q->fetch(PDO::FETCH_NUM) ?: [0,0];
+        } else {
+            $projectSql = "SELECT p.id,p.name,p.city,p.status,p.workType,p.deadline,
+                COALESCE((SELECT SUM(i.quantity*i.price) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id),0) estimateTotal,
+                COALESCE((SELECT COUNT(i.id) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id),0) itemCount,
+                COALESCE((SELECT COUNT(*) FROM scheduletasks st WHERE st.projectId=p.id),0) stageCount,
+                COALESCE((SELECT COUNT(*) FROM scheduletasks st WHERE st.projectId=p.id AND st.status='done'),0) stageDone,
+                COALESCE((SELECT SUM(st.paymentMilestone) FROM scheduletasks st WHERE st.projectId=p.id),0) stageTotal,
+                COALESCE((SELECT SUM(CASE WHEN sp.type='stage' THEN sp.paidAmount WHEN sp.status='paid' THEN sp.amount ELSE 0 END) FROM smetogram_payments sp WHERE sp.projectId=p.id),0) paidTotal
+                FROM projects p";
+            if (is_admin($user)) {
+                $q=$pdo->query($projectSql." ORDER BY p.updatedAt DESC");
+            } else {
+                $q=$pdo->prepare($projectSql." WHERE p.ownerId=? OR EXISTS(SELECT 1 FROM projectmembers pm WHERE pm.projectId=p.id AND pm.userId=?) ORDER BY p.updatedAt DESC");
+                $q->execute([(int)$user['id'],(int)$user['id']]);
+            }
+            $analyticsProjects=$q->fetchAll();
+            foreach ($analyticsProjects as $ap) {
+                $analytics['estimateTotal']+=(float)$ap['estimateTotal'];
+                $analytics['itemCount']+=(int)$ap['itemCount'];
+                $analytics['stageCount']+=(int)$ap['stageCount'];
+                $analytics['stageDone']+=(int)$ap['stageDone'];
+                $analytics['stageTotal']+=(float)$ap['stageTotal'];
+                $analytics['paidTotal']+=(float)$ap['paidTotal'];
+            }
+            $analytics['remainingTotal']=max(0,$analytics['stageTotal']-$analytics['paidTotal']);
+            $analytics['categoryCount']=count($analyticsProjects);
+        }
+
+        $statusLabels=['draft'=>'Черновик','in_progress'=>'В работе','review'=>'На согласовании','completed'=>'Завершён','archived'=>'Архив'];
+        $statusClasses=['draft'=>'analytics-status-muted','in_progress'=>'analytics-status-active','review'=>'analytics-status-review','completed'=>'analytics-status-done','archived'=>'analytics-status-muted'];
+        $stageProgress=$analytics['stageCount']>0?(int)round($analytics['stageDone']/$analytics['stageCount']*100):0;
+        $paymentProgress=$analytics['stageTotal']>0?(int)min(100,round($analytics['paidTotal']/$analytics['stageTotal']*100)):0;
+        $categoryMax=0.0;
+        foreach($analyticsCategories as $cat)$categoryMax=max($categoryMax,(float)$cat['total']);
+        ?>
+        <?php if (!$project): ?>
+            <div class="analytics-intro">
+                <div>
+                    <span class="analytics-kicker"><i class="fa-solid fa-chart-column"></i> Сводка по всем проектам</span>
+                    <h2>Что происходит с вашими проектами</h2>
+                    <p>Здесь собраны стоимость смет, этапы работ и оплаты по всем доступным проектам.</p>
+                </div>
+                <a class="outline-button" href="dashboard.php"><i class="fa-solid fa-table-cells-large"></i> К проектам</a>
+            </div>
+            <div class="analytics-stat-grid">
+                <div class="analytics-stat"><span>Сметы</span><strong><?=number_format($analytics['estimateTotal'],0,',',' ')?> ₽</strong><small><?=count($analyticsProjects)?> <?=count($analyticsProjects)===1?'проект':'проекта/проектов'?></small></div>
+                <div class="analytics-stat"><span>Оплачено</span><strong><?=number_format($analytics['paidTotal'],0,',',' ')?> ₽</strong><small>по зарегистрированным платежам</small></div>
+                <div class="analytics-stat"><span>Осталось по этапам</span><strong><?=number_format($analytics['remainingTotal'],0,',',' ')?> ₽</strong><small>план платежей минус оплаты</small></div>
+                <div class="analytics-stat"><span>Этапы</span><strong><?=$analytics['stageDone']?> / <?=$analytics['stageCount']?></strong><small>завершено</small></div>
+            </div>
+            <div class="module-panel analytics-projects-panel">
+                <div class="panel-heading"><div><h2>Проекты</h2><p>Нажмите на проект, чтобы открыть его подробную аналитику.</p></div></div>
+                <?php if(!$analyticsProjects): ?>
+                    <div class="empty-state">Проектов пока нет.</div>
+                <?php else: ?>
+                    <div class="analytics-project-list">
+                    <?php foreach($analyticsProjects as $ap):
+                        $apStageCount=(int)$ap['stageCount'];$apStageDone=(int)$ap['stageDone'];
+                        $apProgress=$apStageCount>0?(int)round($apStageDone/$apStageCount*100):0;
+                        $apPaid=(float)$ap['paidTotal'];$apStageTotal=(float)$ap['stageTotal'];
+                        $apPayment=$apStageTotal>0?(int)min(100,round($apPaid/$apStageTotal*100)):0;
+                        $apLabel=$statusLabels[$ap['status']]??$ap['status'];
+                    ?>
+                        <a class="analytics-project-row" href="workspace.php?view=analytics&id=<?=$ap['id']?>">
+                            <div class="analytics-project-main"><strong><?=e($ap['name'])?></strong><span><?=e($ap['city']?:'Город не указан')?> · <?=e($ap['workType'])?></span></div>
+                            <div class="analytics-project-number"><span>Смета</span><strong><?=number_format((float)$ap['estimateTotal'],0,',',' ')?> ₽</strong></div>
+                            <div class="analytics-project-progress"><span>Этапы <?=$apStageDone?> / <?=$apStageCount?></span><div><i style="width:<?=$apProgress?>%"></i></div></div>
+                            <div class="analytics-project-progress payment"><span>Оплачено <?=$apPayment?>%</span><div><i style="width:<?=$apPayment?>%"></i></div></div>
+                            <span class="analytics-status <?=$statusClasses[$ap['status']]??'analytics-status-muted'?>"><?=$apLabel?></span>
+                            <i class="fa-solid fa-chevron-right analytics-project-arrow"></i>
+                        </a>
+                    <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php else: ?>
+            <div class="analytics-intro">
+                <div>
+                    <span class="analytics-kicker"><i class="fa-solid fa-chart-column"></i> Аналитика проекта</span>
+                    <h2><?=e($project['name'])?></h2>
+                    <p>Здесь видно три главных вещи: сколько стоит проект, насколько выполнены этапы и сколько уже оплачено.</p>
+                </div>
+                <span class="analytics-status-pill <?=$statusClasses[$project['status']]??'analytics-status-muted'?>"><?=$statusLabels[$project['status']]??$project['status']?></span>
+            </div>
+
+            <div class="analytics-stat-grid">
+                <div class="analytics-stat"><span>Стоимость сметы</span><strong><?=number_format((float)$analytics['estimateTotal'],0,',',' ')?> ₽</strong><small><?=$analytics['itemCount']?> <?=($analytics['itemCount']===1?'позиция':'позиций')?> в смете</small></div>
+                <div class="analytics-stat"><span>Оплачено</span><strong><?=number_format((float)$analytics['paidTotal'],0,',',' ')?> ₽</strong><small><?=$paymentProgress?>% от плана платежей</small></div>
+                <div class="analytics-stat"><span>Осталось оплатить</span><strong><?=number_format((float)$analytics['remainingTotal'],0,',',' ')?> ₽</strong><small>по этапам с указанной суммой</small></div>
+                <div class="analytics-stat"><span>Выполнение</span><strong><?=$stageProgress?>%</strong><small><?=$analytics['stageDone']?> из <?=$analytics['stageCount']?> этапов завершено</small></div>
+            </div>
+
+            <div class="analytics-dashboard-grid">
+                <div class="module-panel analytics-panel-main">
+                    <div class="panel-heading"><div><h2>Выполнение работ</h2><p>Статус этапов из раздела «График работ».</p></div><a class="text-button" href="workspace.php?view=schedule&id=<?=$projectId?>">Открыть график <i class="fa-solid fa-arrow-right"></i></a></div>
+                    <div class="analytics-big-progress"><div class="analytics-progress-head"><strong><?=$stageProgress?>%</strong><span><?=$analytics['stageDone']?> завершено · <?=$analytics['stageActive']?> в работе · <?=max(0,$analytics['stageCount']-$analytics['stageDone']-$analytics['stageActive'])?> запланировано</span></div><div class="analytics-progress-track"><i style="width:<?=$stageProgress?>%"></i></div></div>
+                    <?php if(!$analyticsStages): ?>
+                        <div class="analytics-empty-inline"><i class="fa-solid fa-calendar-plus"></i><span>Этапов ещё нет. Добавьте их в разделе «График работ».</span></div>
+                    <?php else: ?>
+                        <div class="analytics-stage-list">
+                        <?php foreach($analyticsStages as $stage):
+                            $sp=((string)$stage['status']==='done')?100:((string)$stage['status']==='in_progress'?50:0);
+                            $sl=['planned'=>'Запланировано','in_progress'=>'В работе','done'=>'Завершено','blocked'=>'Заблокировано'][$stage['status']]??$stage['status'];
+                        ?>
+                            <div class="analytics-stage-row">
+                                <div class="analytics-stage-dot <?=($stage['status']==='done'?'done':($stage['status']==='in_progress'?'active':''))?>"><i class="fa-solid fa-check"></i></div>
+                                <div class="analytics-stage-content"><strong><?=e($stage['title'])?></strong><span><?=e($sl)?> · <?=e($stage['startsAt']?date('d.m.Y',strtotime($stage['startsAt'])):'Без даты')?></span><div><i style="width:<?=$sp?>%"></i></div></div>
+                                <b><?=number_format((float)$stage['plannedAmount'],0,',',' ')?> ₽</b>
+                            </div>
+                        <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="module-panel analytics-finance-panel">
+                    <div class="panel-heading"><div><h2>Оплаты</h2><p>Фактические платежи проекта.</p></div></div>
+                    <div class="analytics-finance-value"><span>Оплачено</span><strong><?=number_format((float)$analytics['paidTotal'],0,',',' ')?> ₽</strong></div>
+                    <div class="analytics-progress-track payment"><i style="width:<?=$paymentProgress?>%"></i></div>
+                    <div class="analytics-finance-row"><span>План по этапам</span><strong><?=number_format((float)$analytics['stageTotal'],0,',',' ')?> ₽</strong></div>
+                    <div class="analytics-finance-row"><span>Осталось</span><strong><?=number_format((float)$analytics['remainingTotal'],0,',',' ')?> ₽</strong></div>
+                    <a class="outline-button analytics-link-button" href="workspace.php?view=payments&id=<?=$projectId?>">Открыть оплаты <i class="fa-solid fa-arrow-right"></i></a>
+                </div>
+            </div>
+
+            <div class="module-panel analytics-categories-panel">
+                <div class="panel-heading"><div><h2>Из чего состоит смета</h2><p>Стоимость разделов по текущим позициям сметы.</p></div><a class="text-button" href="project.php?id=<?=$projectId?>">Открыть смету <i class="fa-solid fa-arrow-right"></i></a></div>
+                <?php if(!$analyticsCategories): ?>
+                    <div class="analytics-empty-inline"><i class="fa-solid fa-file-circle-plus"></i><span>В смете пока нет разделов с позициями.</span></div>
+                <?php else: ?>
+                    <div class="analytics-category-list">
+                    <?php foreach($analyticsCategories as $cat): $catTotal=(float)$cat['total'];$catWidth=$categoryMax>0?(int)round($catTotal/$categoryMax*100):0; ?>
+                        <div class="analytics-category-row"><div><strong><?=e($cat['name'])?></strong><span><?=$cat['itemCount']?> <?=($cat['itemCount']==1?'позиция':'позиций')?></span></div><div class="analytics-category-bar"><i style="width:<?=$catWidth?>%"></i></div><strong><?=number_format($catTotal,0,',',' ')?> ₽</strong></div>
+                    <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <div class="analytics-note"><i class="fa-solid fa-circle-info"></i><div><strong>Как читать аналитику</strong><span>«Стоимость сметы» берётся из актуальных позиций. «Оплачено» — из зарегистрированных платежей. Выполнение считается по статусам этапов в «Графике работ».</span></div></div>
+        <?php endif; ?>
+
+<?php elseif ($view === 'measurements'): ?>
         <?php
         $q = $pdo->prepare('SELECT * FROM smetogram_rooms WHERE project_id=? ORDER BY id DESC');
         $q->execute([$projectId]);
