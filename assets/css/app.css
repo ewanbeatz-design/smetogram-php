@@ -1421,7 +1421,9 @@ html,body{min-height:100%;margin:0}
 @media(max-width:760px){.workspace-project-count{min-width:20px;height:20px;font-size:10px}}
 
 /* Ready-made estimate templates */
-.estimate-template-modal .modal-content{border:0;border-radius:22px;overflow:hidden;box-shadow:0 24px 70px rgba(15,23,42,.18)}
+.estimate-template-modal .modal-content{border:0;border-radius:22px;overflow:hidden;box-shadow:0 24px 70px rgba(15,23,42,.18);display:flex;flex-direction:column;max-height:calc(100vh - 32px)}
+.estimate-template-modal .modal-body{overflow-y:auto;min-height:0}
+.estimate-template-modal .modal-footer{flex:0 0 auto;background:#fff;position:relative;z-index:2}
 .estimate-template-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .estimate-template-card{position:relative;display:flex;align-items:flex-start;gap:14px;padding:18px;border:1px solid #E5E7EB;border-radius:16px;background:#fff;cursor:pointer;transition:.18s ease}
 .estimate-template-card:hover{border-color:#C7D2FE;background:#FAFAFF;transform:translateY(-1px)}
@@ -1441,7 +1443,12 @@ html,body{min-height:100%;margin:0}
 @media(max-width:700px){
  .estimate-template-grid{grid-template-columns:1fr}
  .estimate-template-card{padding:15px}
- .estimate-template-modal .modal-dialog{margin:10px}
+ .estimate-template-modal .modal-dialog{margin:10px 10px 78px}
+ .estimate-template-modal .modal-content{max-height:calc(100vh - 92px);border-radius:18px}
+ .estimate-template-modal .modal-body{overflow-y:auto;padding-bottom:14px}
+ .estimate-template-modal .modal-footer{padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));gap:8px}
+ .estimate-template-modal .modal-footer .outline-button,
+ .estimate-template-modal .modal-footer .primary-button{min-height:42px}
 }
 
 /* Ready estimate templates + custom alerts */
