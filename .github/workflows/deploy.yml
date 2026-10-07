@@ -52,7 +52,7 @@ jobs:
                 ],
                 'app' => [
                     'name' => 'Сметограм',
-                    'url' => 'https://сметограм.рф',
+                    'url' => 'https://xn--80aff1adjpdl.xn--p1ai',
                 ],
                 'ai' => [
                     'groq_api_key' => __GROQ_API_KEY__,
@@ -63,6 +63,10 @@ jobs:
                     'bot_token' => '${{secrets.TELEGRAM_BOT_TOKEN}}',
                     'client_id' => '${{secrets.TELEGRAM_CLIENT_ID}}',
                     'client_secret' => '${{secrets.TELEGRAM_CLIENT_SECRET}}',
+                ],
+                'yookassa' => [
+                    'shop_id' => '${{secrets.YOOKASSA_SHOP_ID}}',
+                    'secret_key' => '${{secrets.YOOKASSA_SECRET_KEY}}',
                 ],
             ];
             PHP
