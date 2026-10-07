@@ -38,11 +38,11 @@ if ($user && !empty($user['name'])) {
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
-<link href="/assets/css/app.css?v=20261007-usage-plan1" rel="stylesheet">
+<link href="/assets/css/app.css?v=20261008-logo1" rel="stylesheet">\n<link rel="icon" href="/logo.svg" type="image/svg+xml">
 </head><body>
 <div class="app-shell">
 <aside class="sidebar" id="appSidebar">
-  <div class="brand"><span class="brand-mark">S</span><span>сметограм</span></div>
+  <a class="brand" href="dashboard.php" aria-label="Сметограм"><img class="site-logo" src="/logo.svg" alt="Сметограм"></a>
   <button class="mobile-close" onclick="document.getElementById('appSidebar').classList.remove('sidebar-open')"><i class="fa-solid fa-xmark"></i></button>
   <div class="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
   <nav class="nav-list">
