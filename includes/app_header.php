@@ -65,12 +65,13 @@ if ($user && !empty($user['name'])) {
     <a class="nav-item <?=($view==='settings'?'active':'')?>" href="workspace.php?view=settings"><span class="nav-icon"><i class="fa-solid fa-sliders"></i></span><span class="nav-label">Настройки</span></a>
     <div class="notifications notification-wrap sidebar-notifications" id="notifications">
       <button class="nav-item notification-nav notification-toggle" type="button"><span class="nav-icon"><i class="fa-solid fa-bell"></i></span><span class="nav-label">Уведомления</span><span class="notification-badge" id="notificationBadge" hidden>0</span></button>
-      <div class="notifications-dropdown" id="notificationMenu"><div class="notifications-heading"><div><strong>Оповещения</strong><span>Изменения по вашим проектам</span></div><button class="notifications-read-all" type="button" id="readNotifications">Прочитать всё</button></div><div class="notifications-list" id="notificationList"><div class="notifications-empty"><strong>Нет новых оповещений</strong><span>Здесь появятся сообщения и изменения проекта.</span></div></div><div class="notifications-footer">Оповещения обновляются автоматически</div></div>
+      </div>
     </div>
   </nav>
   <div class="profile"><div class="avatar"><?=e($initials)?></div><div><strong><?=e($user['name']??'Пользователь')?></strong><span><?=e($user['email']??'')?></span></div><a href="logout.php" class="muted-icon" title="Выйти"><i class="fa-solid fa-arrow-right-from-bracket"></i></a></div>
 </aside>
 <div class="sidebar-backdrop" onclick="document.getElementById('appSidebar').classList.remove('sidebar-open')"></div>
+<div class="notifications-dropdown" id="notificationMenu"><div class="notifications-heading"><div><strong>Оповещения</strong><span>Изменения по вашим проектам</span></div><button class="notifications-read-all" type="button" id="readNotifications">Прочитать всё</button></div><div class="notifications-list" id="notificationList"><div class="notifications-empty"><strong>Нет новых оповещений</strong><span>Здесь появятся сообщения и изменения проекта.</span></div></div><div class="notifications-footer">Оповещения обновляются автоматически</div></div>
 <nav class="mobile-bottom-nav" aria-label="Основная навигация">
   <a class="<?=($view==='projects' && !$isProjectPage?'active':'')?>" href="dashboard.php">
     <i class="fa-solid fa-table-cells-large"></i><span>Проекты</span>
