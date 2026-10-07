@@ -565,6 +565,57 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
   })();
   initRoomFancybox();
 })();
+/* Global image lightbox: every real page image can be opened in Fancybox. */
+(function(){
+  if(window.__smetogramGlobalFancyboxReady)return;
+  window.__smetogramGlobalFancyboxReady=true;
+
+  function markImages(root){
+    (root||document).querySelectorAll?.('img').forEach(img=>{
+      if(img.dataset.fancyboxIgnore==='1') return;
+      img.classList.add('smetogram-fancybox-image');
+    });
+  }
+
+  function openImage(img){
+    if(!window.Fancybox || !img) return;
+    const src=img.currentSrc || img.src;
+    if(!src || src.startsWith('data:')) return;
+    window.Fancybox.show([{
+      src:src,
+      type:'image',
+      caption:img.getAttribute('data-caption') || img.alt || ''
+    }]);
+  }
+
+  function init(){
+    markImages(document);
+    document.addEventListener('click',e=>{
+      const img=e.target.closest?.('img');
+      if(!img || img.dataset.fancyboxIgnore==='1') return;
+      const linked=img.closest('a[data-fancybox]');
+      if(linked) return; // Room/acceptance galleries already use the configured Fancybox gallery.
+      e.preventDefault();
+      e.stopPropagation();
+      openImage(img);
+    },true);
+
+    new MutationObserver(mutations=>{
+      for(const mutation of mutations){
+        for(const node of mutation.addedNodes){
+          if(node.nodeType===1) markImages(node);
+        }
+      }
+    }).observe(document.body,{childList:true,subtree:true});
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',init,{once:true});
+  }else{
+    init();
+  }
+})();
+
 /* Convert Bootstrap alerts into the Smetogram toast style. */
 (function(){
   function convert(root){
