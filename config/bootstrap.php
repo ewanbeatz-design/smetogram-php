@@ -238,7 +238,20 @@ try {
             paymentId BIGINT UNSIGNED NOT NULL, eventType VARCHAR(40) NOT NULL,
             payloadJson LONGTEXT NULL, createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             INDEX(paymentId)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4,
+        'smetogram_acceptance_photos' => "CREATE TABLE smetogram_acceptance_photos (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            stage_id BIGINT UNSIGNED NOT NULL,
+            project_id BIGINT UNSIGNED NOT NULL,
+            user_id BIGINT UNSIGNED NOT NULL,
+            original_name VARCHAR(255) NOT NULL,
+            stored_name VARCHAR(255) NOT NULL,
+            mime VARCHAR(80) NOT NULL,
+            size_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            path VARCHAR(500) NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX(stage_id), INDEX(project_id), INDEX(user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""
     ];
     foreach($moduleTables as $table=>$sql) {
         if(!$tableExists($pdo,$table)) $pdo->exec($sql);
