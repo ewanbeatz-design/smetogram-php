@@ -31,6 +31,9 @@ jobs:
             fi
 
             git reset --hard HEAD || true
+            # logo.svg may have been uploaded manually on the server before it became tracked in Git.
+            # Remove that untracked copy so checkout can safely sync origin/main.
+            rm -f logo.svg
             git fetch origin main
             git checkout -B main origin/main
             git reset --hard origin/main
