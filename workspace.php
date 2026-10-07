@@ -432,6 +432,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user['name'] = $name;
             $user['email'] = $email;
             $notice = 'Профиль сохранён.';
+        } elseif ($action === 'change_password') {
+            $currentPassword = (string)($_POST['current_password'] ?? '');
+            $newPassword = (string)($_POST['new_password'] ?? '');
+            $confirmPassword = (string)($_POST['confirm_password'] ?? '');
+            if ($currentPassword === '' || $newPassword === '' || $confirmPassword === '') {
+                throw new RuntimeException('Заполните все поля пароля.');
+            }
+            if (mb_strlen($newPassword) < 8) {
+                throw new RuntimeException('Новый пароль должен содержать минимум 8 символов.');
+            }
+            if ($newPassword !== $confirmPassword) {
+                throw new RuntimeException('Пароли не совпадают.');
+            }
+            $uq = $pdo->prepare('SELECT password_hash FROM users WHERE id=? LIMIT 1');
+            $uq->execute([$user['id']]);
+            $storedHash = (string)$uq->fetchColumn();
+            $validCurrent = $storedHash !== '' && password_verify($currentPassword, $storedHash);
+            if (!$validCurrent) {
+                throw new RuntimeException('Текущий пароль указан неверно.');
+            }
+            $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
+            $pdo->prepare('UPDATE users SET password_hash=? WHERE id=?')->execute([$newHash, $user['id']]);
+            $notice = 'Пароль успешно изменён.';
         } elseif ($action === 'import_csv') {
             if (!$project) {
                 throw new RuntimeException('Сначала откройте проект.');
@@ -1195,10 +1218,69 @@ require __DIR__ . '/includes/app_header.php';
         </form></div></div></div>
 
     <?php elseif ($view === 'settings'): ?>
-        <div class="settings-layout"><div class="module-panel settings-nav"><a class="active" href="#">Профиль</a><a href="workspace.php?view=billing<?= $projectId ? '&id='.$projectId : '' ?>">Тариф и оплата</a></div><div class="module-panel">
-            <div class="panel-heading"><div><h2>Профиль</h2><p>Данные пользователя Сметограма.</p></div></div>
-            <form method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="save_profile"><div class="settings-fields"><label>Имя и фамилия<input name="name" value="<?= e($user['name'] ?? '') ?>"></label><label>Email<input type="email" name="email" value="<?= e($user['email'] ?? '') ?>"></label></div><div class="d-flex justify-content-end"><button class="primary-button" type="submit">Сохранить изменения</button></div></form>
-        </div></div>
+        <div class="settings-shell">
+            <aside class="settings-sidebar module-panel">
+                <div class="settings-sidebar-title"><span class="settings-avatar"><?=e($initials)?></span><div><strong><?=e($user['name'] ?: 'Пользователь')?></strong><small><?=e($user['email'] ?: 'Email не указан')?></small></div></div>
+                <nav class="settings-menu" aria-label="Настройки">
+                    <a class="active" href="#profile-settings"><i class="fa-regular fa-user"></i><span>Профиль</span></a>
+                    <a href="#security-settings"><i class="fa-solid fa-shield-halved"></i><span>Безопасность</span></a>
+                    <a href="#notifications-settings"><i class="fa-regular fa-bell"></i><span>Уведомления</span></a>
+                    <a href="workspace.php?view=billing<?= $projectId ? '&id='.$projectId : '' ?>"><i class="fa-regular fa-credit-card"></i><span>Тариф и оплата</span><i class="fa-solid fa-chevron-right menu-arrow"></i></a>
+                </nav>
+                <div class="settings-sidebar-note"><i class="fa-solid fa-circle-info"></i><span>Настройки аккаунта не влияют на ваши проекты и сметы.</span></div>
+            </aside>
+
+            <div class="settings-content">
+                <section class="settings-card module-panel" id="profile-settings">
+                    <div class="settings-card-head"><div><span class="settings-eyebrow">АККАУНТ</span><h2>Личные данные</h2><p>Имя и email, которые используются в вашем аккаунте.</p></div><span class="settings-status"><i class="fa-solid fa-circle-check"></i> Аккаунт активен</span></div>
+                    <form method="post">
+                        <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                        <input type="hidden" name="action" value="save_profile">
+                        <div class="settings-form-grid">
+                            <label class="settings-field"><span>Имя и фамилия</span><input name="name" value="<?=e($user['name'] ?? '')?>" autocomplete="name" placeholder="Иван Иванов"></label>
+                            <label class="settings-field"><span>Email</span><input type="email" name="email" value="<?=e($user['email'] ?? '')?>" autocomplete="email" placeholder="name@example.com"></label>
+                        </div>
+                        <div class="settings-form-foot"><small>Изменения сохраняются в вашем аккаунте.</small><button class="primary-button" type="submit"><i class="fa-solid fa-check"></i> Сохранить</button></div>
+                    </form>
+                </section>
+
+                <section class="settings-card module-panel" id="security-settings">
+                    <div class="settings-card-head"><div><span class="settings-eyebrow">БЕЗОПАСНОСТЬ</span><h2>Пароль</h2><p>Используйте пароль длиной не менее 8 символов.</p></div><span class="settings-security-icon"><i class="fa-solid fa-lock"></i></span></div>
+                    <?php $hasPassword = !empty($user['password_hash']); ?>
+                    <?php if ($hasPassword): ?>
+                    <form method="post">
+                        <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                        <input type="hidden" name="action" value="change_password">
+                        <div class="settings-form-grid settings-password-grid">
+                            <label class="settings-field"><span>Текущий пароль</span><input type="password" name="current_password" autocomplete="current-password" required></label>
+                            <div></div>
+                            <label class="settings-field"><span>Новый пароль</span><input type="password" name="new_password" minlength="8" autocomplete="new-password" required></label>
+                            <label class="settings-field"><span>Повторите новый пароль</span><input type="password" name="confirm_password" minlength="8" autocomplete="new-password" required></label>
+                        </div>
+                        <div class="settings-form-foot"><small>После смены пароля текущая сессия останется активной.</small><button class="outline-button" type="submit"><i class="fa-solid fa-key"></i> Изменить пароль</button></div>
+                    </form>
+                    <?php else: ?>
+                    <div class="settings-empty-security"><i class="fa-solid fa-shield-halved"></i><div><strong>Пароль ещё не установлен</strong><span>Для этого аккаунта используется вход через внешний сервис. Пароль можно будет добавить отдельно.</span></div></div>
+                    <?php endif; ?>
+                </section>
+
+                <section class="settings-card module-panel" id="notifications-settings">
+                    <div class="settings-card-head"><div><span class="settings-eyebrow">ОПОВЕЩЕНИЯ</span><h2>Уведомления</h2><p>Что показывать в рабочем пространстве.</p></div></div>
+                    <div class="settings-option"><div><span class="settings-option-icon"><i class="fa-regular fa-bell"></i></span><div><strong>Оповещения по проектам</strong><small>Новые сообщения, документы, платежи и изменения этапов.</small></div></div><span class="settings-option-state">Включены</span></div>
+                    <div class="settings-option"><div><span class="settings-option-icon"><i class="fa-solid fa-rotate"></i></span><div><strong>Автоматическое обновление</strong><small>Список оповещений проверяется автоматически каждые 10 секунд.</small></div></div><span class="settings-option-state">Активно</span></div>
+                </section>
+
+                <section class="settings-card module-panel settings-account-card">
+                    <div><div><span class="settings-eyebrow">АККАУНТ</span><h2>Ваш аккаунт</h2><p>Системная информация о профиле Сметограма.</p></div></div>
+                    <div class="settings-meta-grid">
+                        <div><span>ID пользователя</span><strong>#<?= (int)$user['id'] ?></strong></div>
+                        <div><span>Способ входа</span><strong><?=e($user['loginMethod'] ?? '—')?></strong></div>
+                        <div><span>Роль</span><strong><?=is_admin($user) ? 'Администратор' : 'Пользователь'?></strong></div>
+                        <div><span>Дата регистрации</span><strong><?=!empty($user['createdAt']) ? date('d.m.Y',strtotime((string)$user['createdAt'])) : '—'?></strong></div>
+                    </div>
+                </section>
+            </div>
+        </div>
 
     <?php elseif ($view === 'billing'): ?>
         <?php
