@@ -68,5 +68,14 @@ setcookie('telegram_oidc_verifier', '', ['expires'=>time()-3600,'path'=>'/','sec
  $pdo->beginTransaction();$q=$pdo->prepare('SELECT id,name,email FROM users WHERE telegramId=? LIMIT 1');$q->execute([$tid]);$user=$q->fetch();
  if($user){$u=$pdo->prepare('UPDATE users SET name=?,telegramUsername=?,loginMethod=?,lastSignedIn=CURRENT_TIMESTAMP WHERE id=?');$u->execute([$name,$username!==''?$username:null,'telegram',(int)$user['id']]);$uid=(int)$user['id'];}
  else{$base=$username!==''?preg_replace('/[^a-zA-Z0-9_]/','_',$username):'telegram_'.$tid;$base=trim((string)$base,'_')?:'telegram_'.$tid;$internal=$base;$n=1;$check=$pdo->prepare('SELECT id FROM users WHERE username=? LIMIT 1');while(true){$check->execute([$internal]);if(!$check->fetchColumn())break;$internal=$base.'_'.$n++;}$open='telegram_'.bin2hex(random_bytes(16));$ins=$pdo->prepare('INSERT INTO users(openId,name,email,loginMethod,role,password_hash,username,telegramId,telegramUsername,lastSignedIn) VALUES(?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)');$ins->execute([$open,$name,null,'telegram','user',null,$internal,$tid,$username!==''?$username:null]);$uid=(int)$pdo->lastInsertId();}
- $pdo->commit();session_regenerate_id(true);$_SESSION['user']=['id'=>$uid,'name'=>$name,'email'=>$user['email']??''];redirect('dashboard.php');
+ $pdo->commit();
+ $pendingInvite=(string)($_SESSION['pending_invite_token']??'');
+ $pendingInviteExpires=(int)($_SESSION['pending_invite_expires']??0);
+ session_regenerate_id(true);
+ $_SESSION['user']=['id'=>$uid,'name'=>$name,'email'=>$user['email']??''];
+ if($pendingInvite!=='' && $pendingInviteExpires>=time() && preg_match('/^[a-f0-9]{64}$/i',$pendingInvite)){
+   redirect('invite.php?token='.rawurlencode($pendingInvite));
+ }
+ unset($_SESSION['pending_invite_token'],$_SESSION['pending_invite_expires']);
+ redirect('dashboard.php');
 }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();$_SESSION['telegram_login_error']=$e->getMessage();redirect('login.php?telegram_error=1');}
