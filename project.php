@@ -213,6 +213,10 @@ document.getElementById('estimateTemplateForm')?.addEventListener('submit',async
  finally{btn.disabled=!form.querySelector('input[name="estimate_template_id"]:checked');btn.innerHTML='<i class="fa-solid fa-plus"></i> Добавить в смету';}
 });
 
+async function estimateStatus(form){
+ const ok=await estimateAjax(form);
+ if(!ok) return;
+}
 async function estimateAjax(form){
  const fd=new FormData(form);
  fd.set('project_id',projectId);
