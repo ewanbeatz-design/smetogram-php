@@ -1421,10 +1421,10 @@ html,body{min-height:100%;margin:0}
 @media(max-width:760px){.workspace-project-count{min-width:20px;height:20px;font-size:10px}}
 
 /* Ready estimate modal must sit above the mobile bottom navigation. */
-#templateModal{z-index:2000}
-#templateModal + .modal-backdrop,
-.modal-backdrop.show{z-index:1990}
-#templateModal .modal-dialog{position:relative;z-index:2001}
+#templateModal{z-index:2000 !important}
+#templateModal .modal-dialog{position:relative;z-index:2001 !important}
+/* Bootstrap inserts the backdrop as a separate body child, so the adjacent-sibling selector is unreliable. */
+body .modal-backdrop.show{z-index:1040 !important}
 \n/* Ready-made estimate templates */
 .estimate-template-modal .modal-content{border:0;border-radius:22px;overflow:hidden;box-shadow:0 24px 70px rgba(15,23,42,.18);display:flex;flex-direction:column;max-height:calc(100vh - 32px)}
 .estimate-template-modal .modal-body{overflow-y:auto;min-height:0}
