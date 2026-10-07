@@ -1795,3 +1795,128 @@ body .modal-backdrop.show{z-index:1040 !important}
   .settings-option-copy small,.settings-info-row small{font-size:8.5px}
   .settings-toggle-row{padding:12px 0}
 }
+
+/* Payments — compact mobile layout */
+@media(max-width:700px){
+  .payments-main-panel{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    padding:12px;
+    overflow:hidden;
+  }
+  .payments-main-panel .panel-heading{
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .payments-main-panel .panel-heading h2{
+    font-size:15px;
+  }
+  .payments-main-panel .panel-heading p{
+    font-size:9px;
+    line-height:1.45;
+  }
+  .payments-main-panel .panel-heading .outline-button{
+    flex:0 0 auto;
+    padding:8px 10px;
+    font-size:10px;
+  }
+  .payment-metrics{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:6px;
+    margin:14px 0 16px;
+    width:100%;
+  }
+  .payment-metrics .metric-card{
+    min-width:0;
+    width:100%;
+    padding:9px 7px;
+    border-radius:10px;
+    display:block;
+    text-align:center;
+    overflow:hidden;
+  }
+  .payment-metrics .metric-card span,
+  .payment-metrics .metric-card small{
+    font-size:7.5px;
+    line-height:1.25;
+    white-space:normal;
+  }
+  .payment-metrics .metric-card strong{
+    font-size:13px;
+    line-height:1.1;
+    margin:5px 0 3px;
+    letter-spacing:-.045em;
+    white-space:nowrap;
+  }
+  .payment-stage-list{
+    gap:10px;
+    margin-top:14px;
+  }
+  .payment-stage-card{
+    padding:11px;
+    border-radius:14px;
+  }
+  .payment-stage-card-head{
+    grid-template-columns:34px minmax(0,1fr);
+    gap:9px;
+  }
+  .payment-stage-title-wrap strong{
+    font-size:13px;
+    line-height:1.3;
+  }
+  .payment-stage-title-wrap span{
+    font-size:9px;
+  }
+  .payment-stage-card-head em{
+    grid-column:2;
+    font-size:9px;
+    margin-top:-4px;
+  }
+  .payment-stage-edit-grid{
+    gap:9px;
+    margin-top:12px;
+  }
+  .payment-stage-edit-grid label>span,
+  .payment-stage-stat>span{
+    font-size:9px;
+  }
+  .payment-input-wrap{
+    border-radius:9px;
+  }
+  .payment-input-wrap input{
+    padding:8px 9px;
+    font-size:11px;
+  }
+  .payment-input-wrap b{
+    padding-right:8px;
+    font-size:10px;
+  }
+  .payment-stage-stat{
+    padding:7px 0;
+  }
+  .payment-stage-stat strong{
+    font-size:13px;
+  }
+  .payment-stage-actions{
+    gap:7px;
+    margin-top:10px;
+  }
+  .payment-stage-actions>*{
+    min-height:38px;
+    padding:9px 10px;
+    font-size:10px;
+  }
+  .payment-stage-estimate{
+    font-size:9px;
+  }
+}
+@media(max-width:380px){
+  .payments-main-panel{padding:10px}
+  .payment-metrics{gap:4px}
+  .payment-metrics .metric-card{padding:8px 5px}
+  .payment-metrics .metric-card strong{font-size:11.5px}
+  .payment-metrics .metric-card span,
+  .payment-metrics .metric-card small{font-size:7px}
+}
+
