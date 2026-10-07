@@ -2406,7 +2406,7 @@ body .modal-backdrop.show{z-index:1040 !important}
 
 
 /* SVG site logo */
-.site-logo{display:block;width:auto;height:32px;max-width:180px;object-fit:contain;object-position:left center;flex:0 0 auto}
-.auth-site-logo{height:40px;max-width:220px}
-.app-nav .site-logo{height:34px;max-width:190px}
-@media(max-width:700px){.site-logo{height:28px;max-width:150px}.auth-site-logo{height:34px;max-width:190px}.app-nav .site-logo{height:30px;max-width:160px}}
+.site-logo{display:block;width:auto;height:34px;max-width:225px;object-fit:contain;object-position:left center;flex:0 0 auto}
+.auth-site-logo{height:42px;max-width:245px}
+.app-nav .site-logo{height:36px;max-width:225px}
+@media(max-width:700px){.site-logo{height:30px;max-width:185px}.auth-site-logo{height:36px;max-width:205px}.app-nav .site-logo{height:32px;max-width:185px}}
