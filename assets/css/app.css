@@ -2281,3 +2281,25 @@ body .modal-backdrop.show{z-index:1040 !important}
   .analytics-stage-row{grid-template-columns:23px minmax(0,1fr)}
   .analytics-stage-row>b{grid-column:2}
 }
+
+
+/* Acceptance: executor -> customer approval */
+.acceptance-stage-action{margin-top:14px}
+.acceptance-stage-wait{display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;border-radius:9px;background:#F8FAFC;color:#64748B;font-size:10px}
+.acceptance-stage-wait i{color:#6366F1}
+.acceptance-review-box{margin-top:15px;padding:13px;border:1px solid #C7D2FE;border-radius:11px;background:#F8FAFF}
+.acceptance-review-title{display:flex;align-items:center;gap:7px;flex-wrap:wrap;color:#4338CA;font-size:10px}
+.acceptance-review-title i{font-size:13px}
+.acceptance-review-title span{color:#818CF8;font-size:8px}
+.acceptance-review-actions{display:grid;grid-template-columns:auto minmax(240px,1fr);gap:9px;margin-top:11px}
+.acceptance-review-actions form{margin:0}
+.acceptance-reject-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px}
+.acceptance-reject-form .form-control{min-width:0;font-size:10px}
+.acceptance-stage-success{display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;border-radius:9px;background:#F0FDF4;color:#15803D;font-size:10px;font-weight:700}
+.acceptance-stage-success i{font-size:13px}
+@media(max-width:760px){
+  .acceptance-review-actions{grid-template-columns:1fr}
+  .acceptance-review-actions>form:first-child .primary-button{width:100%;justify-content:center}
+  .acceptance-reject-form{grid-template-columns:1fr}
+  .acceptance-reject-form .outline-button{width:100%;justify-content:center}
+}
