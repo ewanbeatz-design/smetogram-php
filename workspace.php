@@ -902,8 +902,10 @@ require __DIR__ . '/includes/app_header.php';
     <?php elseif ($view === 'acceptance'): ?>
         <?php
         $stages = [];
+        $photosByStage = [];
         if ($project) {
-            // Если этапы ещё не создавались из сметы, создаём их и для приёмки.
+            // Приёмка наследует этапы проекта. Этапы, созданные из разделов сметы,
+            // сначала попадают в график, а затем автоматически связываются с приёмкой.
             $cq=$pdo->prepare("SELECT c.id,c.name,COALESCE(SUM(i.quantity*i.price),0) total
                 FROM estimatecategories c
                 LEFT JOIN estimateitems i ON i.categoryId=c.id
@@ -912,6 +914,7 @@ require __DIR__ . '/includes/app_header.php';
                 ORDER BY c.sortOrder,c.id");
             $cq->execute([$projectId]);
             $estimateStages=$cq->fetchAll();
+
             $existing=$pdo->prepare('SELECT id FROM scheduletasks WHERE projectId=? AND estimateCategoryId=? LIMIT 1');
             $ins=$pdo->prepare('INSERT INTO scheduletasks(projectId,title,status,paymentMilestone,estimateCategoryId) VALUES(?,?,?,?,?)');
             foreach($estimateStages as $es){
@@ -922,6 +925,7 @@ require __DIR__ . '/includes/app_header.php';
                     $ins->execute([$projectId,(string)$es['name'],'planned',$total,(int)$es['id']]);
                 }
             }
+
             $sync=$pdo->prepare('SELECT id,title,paymentMilestone FROM scheduletasks WHERE projectId=? ORDER BY startsAt,id');
             $sync->execute([$projectId]);
             foreach($sync->fetchAll() as $task){
@@ -929,53 +933,149 @@ require __DIR__ . '/includes/app_header.php';
                 $chk->execute([$projectId,(int)$task['id']]);
                 if(!$chk->fetchColumn()){
                     $amount=(float)$task['paymentMilestone'];
-                    $pdo->prepare('INSERT INTO acceptancestages(projectId,scheduleTaskId,title,amount,status) VALUES(?,?,?,?,?)')->execute([$projectId,(int)$task['id'],$task['title'],$amount,'pending']);
+                    $pdo->prepare('INSERT INTO acceptancestages(projectId,scheduleTaskId,title,amount,status) VALUES(?,?,?,?,?)')
+                        ->execute([$projectId,(int)$task['id'],$task['title'],$amount,'pending']);
                 }
             }
-            $q=$pdo->prepare('SELECT * FROM acceptancestages WHERE projectId=? ORDER BY id ASC'); $q->execute([$projectId]); $stages=$q->fetchAll();
-            $photosByStage=[];
-            $pq=$pdo->prepare('SELECT * FROM smetogram_acceptance_photos WHERE project_id=? ORDER BY id DESC'); $pq->execute([$projectId]);
+
+            $q=$pdo->prepare('SELECT * FROM acceptancestages WHERE projectId=? ORDER BY id ASC');
+            $q->execute([$projectId]);
+            $stages=$q->fetchAll();
+
+            $pq=$pdo->prepare('SELECT * FROM smetogram_acceptance_photos WHERE project_id=? ORDER BY id DESC');
+            $pq->execute([$projectId]);
             foreach($pq->fetchAll() as $photo) $photosByStage[(int)$photo['stage_id']][]=$photo;
-        } else $photosByStage=[];
+        }
+
+        $acceptanceStatusLabels=[
+            'pending'=>'Ожидает сдачи',
+            'submitted'=>'На проверке',
+            'accepted'=>'Принят',
+            'rejected'=>'Есть замечания'
+        ];
         ?>
         <div class="module-grid">
             <div class="module-panel wide-panel">
-                <div class="panel-heading"><div><h2>Приёмка по этапам</h2><p>Этапы проекта подгружаются автоматически. Добавляйте фото фактически выполненных работ.</p></div></div>
-                <?php if (!$stages): ?><div class="empty-state">Этапов проекта пока нет. Добавьте этапы в графике.</div><?php else: ?>
+                <div class="panel-heading">
+                    <div>
+                        <h2>Приёмка по этапам</h2>
+                        <p>Этапы из сметы и графика подгружаются автоматически. Для каждого этапа можно сохранить фото выполненных работ.</p>
+                    </div>
+                    <?php if($project): ?>
+                        <button class="primary-button" type="button" data-bs-toggle="modal" data-bs-target="#acceptanceStageModal"><i class="fa-solid fa-plus"></i> Этап</button>
+                    <?php endif; ?>
+                </div>
+
+                <?php if (!$stages): ?>
+                    <div class="empty-state">Этапов проекта пока нет. Добавьте позиции в смету или этап в графике.</div>
+                <?php else: ?>
                     <div class="acceptance-stage-list">
-                    <?php foreach ($stages as $stage): $photos=$photosByStage[(int)$stage['id']]??[]; ?>
+                    <?php foreach ($stages as $stage):
+                        $photos=$photosByStage[(int)$stage['id']]??[];
+                        $status=(string)$stage['status'];
+                        $statusLabel=$acceptanceStatusLabels[$status]??$status;
+                        $isLinked=(int)($stage['scheduleTaskId']??0)>0;
+                    ?>
                         <article class="acceptance-stage-card">
                             <div class="acceptance-stage-head">
                                 <div class="member-avatar"><i class="fa-solid fa-clipboard-check"></i></div>
-                                <div><strong><?=e($stage['title'])?></strong><span><?=number_format((float)$stage['amount'],0,',',' ')?> ₽</span></div>
-                                <em><?=e($stage['status'])?></em>
+                                <div>
+                                    <strong><?=e($stage['title'])?></strong>
+                                    <span><?=number_format((float)$stage['amount'],0,',',' ')?> ₽ · <?= $isLinked ? 'этап проекта' : 'добавлен вручную' ?></span>
+                                </div>
+                                <em><?=e($statusLabel)?></em>
                             </div>
+
+                            <?php if(!empty($stage['comment'])): ?>
+                                <div class="acceptance-stage-comment"><?=nl2br(e($stage['comment']))?></div>
+                            <?php endif; ?>
+
                             <div class="acceptance-photo-actions">
                                 <form method="post" enctype="multipart/form-data" class="acceptance-photo-upload">
-                                    <input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="upload_acceptance_photo"><input type="hidden" name="stage_id" value="<?= (int)$stage['id'] ?>">
+                                    <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                                    <input type="hidden" name="action" value="upload_acceptance_photo">
+                                    <input type="hidden" name="stage_id" value="<?= (int)$stage['id'] ?>">
                                     <label class="outline-button"><i class="fa-solid fa-camera"></i> Сфотографировать<input hidden type="file" name="acceptance_photo" accept="image/*" capture="environment"></label>
                                 </form>
                                 <form method="post" enctype="multipart/form-data" class="acceptance-photo-upload">
-                                    <input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="upload_acceptance_photo"><input type="hidden" name="stage_id" value="<?= (int)$stage['id'] ?>">
+                                    <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                                    <input type="hidden" name="action" value="upload_acceptance_photo">
+                                    <input type="hidden" name="stage_id" value="<?= (int)$stage['id'] ?>">
                                     <label class="outline-button"><i class="fa-solid fa-images"></i> Из галереи<input hidden type="file" name="acceptance_photo" accept="image/*"></label>
                                 </form>
                             </div>
-                            <?php if($photos): ?><div class="acceptance-photo-grid">
-                                <?php foreach($photos as $photo): ?>
-                                <div class="acceptance-photo-thumb"><a href="<?=e($photo['path'])?>" data-fancybox="acceptance-<?=$stage['id']?>"><img src="<?=e($photo['path'])?>" alt="<?=e($photo['original_name'])?>"></a>
-                                    <form method="post" class="acceptance-photo-delete"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="delete_acceptance_photo"><input type="hidden" name="photo_id" value="<?= (int)$photo['id'] ?>"><button type="submit" class="icon-button" title="Удалить"><i class="fa-solid fa-trash-can"></i></button></form>
+
+                            <?php if($photos): ?>
+                                <div class="acceptance-photo-grid">
+                                    <?php foreach($photos as $photo): ?>
+                                        <div class="acceptance-photo-thumb">
+                                            <a href="<?=e($photo['path'])?>" data-fancybox="acceptance-<?=$stage['id']?>">
+                                                <img src="<?=e($photo['path'])?>" alt="<?=e($photo['original_name'])?>" loading="lazy">
+                                            </a>
+                                            <form method="post" class="acceptance-photo-delete">
+                                                <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                                                <input type="hidden" name="action" value="delete_acceptance_photo">
+                                                <input type="hidden" name="photo_id" value="<?= (int)$photo['id'] ?>">
+                                                <button type="submit" class="icon-button" title="Удалить"><i class="fa-solid fa-trash-can"></i></button>
+                                            </form>
+                                        </div>
+                                    <?php endforeach; ?>
                                 </div>
-                                <?php endforeach; ?>
-                            </div><?php else: ?><div class="acceptance-photo-empty"><i class="fa-solid fa-camera"></i> Фото пока нет</div><?php endif; ?>
-                            <?php if($stage['status']==='pending'): ?><form method="post" class="mt-3"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="submit_stage"><input type="hidden" name="stage_id" value="<?= (int)$stage['id'] ?>"><button class="primary-button" type="submit"><i class="fa-solid fa-paper-plane"></i> Сдать этап</button></form><?php endif; ?>
+                            <?php else: ?>
+                                <div class="acceptance-photo-empty"><i class="fa-solid fa-camera"></i> Фото пока нет</div>
+                            <?php endif; ?>
+
+                            <?php if($status==='pending'): ?>
+                                <form method="post" class="mt-3">
+                                    <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                                    <input type="hidden" name="action" value="submit_stage">
+                                    <input type="hidden" name="stage_id" value="<?= (int)$stage['id'] ?>">
+                                    <button class="primary-button" type="submit"><i class="fa-solid fa-paper-plane"></i> Сдать этап</button>
+                                </form>
+                            <?php endif; ?>
                         </article>
-                    <?php endforeach; ?></div>
+                    <?php endforeach; ?>
+                    </div>
                 <?php endif; ?>
             </div>
-            <div class="module-panel"><i class="fa-solid fa-shield-check fs-4 text-primary"></i><h2 class="mt-3">Контроль приёмки</h2><p class="panel-copy">Фото сохраняются отдельно у каждого этапа. Их можно снять камерой или выбрать из галереи.</p></div>
+
+            <div class="module-panel">
+                <i class="fa-solid fa-shield-check fs-4 text-primary"></i>
+                <h2 class="mt-3">Контроль приёмки</h2>
+                <p class="panel-copy">Фотографии хранятся отдельно у каждого этапа. На телефоне кнопка «Сфотографировать» сразу открывает камеру, а «Из галереи» — выбор существующих фото.</p>
+            </div>
         </div>
 
-    <?php elseif ($view === 'scan'): ?>
+        <?php if($project): ?>
+        <div class="modal fade" id="acceptanceStageModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="post">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Новый этап приёмки</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                            <input type="hidden" name="action" value="add_stage">
+                            <input class="form-control mb-3" name="title" required placeholder="Дополнительный этап">
+                            <div class="form-grid">
+                                <input class="form-control" name="amount" value="0" inputmode="decimal" placeholder="Сумма">
+                                <input class="form-control" name="holdback" value="0" inputmode="decimal" placeholder="Удержание">
+                            </div>
+                            <input type="hidden" name="schedule_task_id" value="0">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="outline-button" data-bs-dismiss="modal">Отмена</button>
+                            <button class="primary-button" type="submit"><i class="fa-solid fa-plus"></i> Создать этап</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+<?php elseif ($view === 'scan'): ?>
         <div class="module-grid">
             <div class="module-panel upload-panel">
                 <form method="post" enctype="multipart/form-data">
