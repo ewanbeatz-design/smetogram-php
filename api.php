@@ -109,7 +109,7 @@ if($action==='estimate_action'){
 }elseif($op==='status'){
   $allowed=['draft','in_progress','review','completed','archived'];$st=(string)($_POST['status']??'draft');
   if(!in_array($st,$allowed,true)){http_response_code(422);echo json_encode(['ok'=>false,'error'=>'Недопустимый статус'],JSON_UNESCAPED_UNICODE);exit;}
-  $q=$pdo->prepare("UPDATE projects SET status=? WHERE id=? AND ownerId=?");$q->execute([$st,$id,$user['id']]);
+  $q=$pdo->prepare("UPDATE projects SET status=? WHERE id=?");$q->execute([$st,$id]);
   $labels=['draft'=>'Черновик','in_progress'=>'В работе','review'=>'На согласовании','completed'=>'Завершён','archived'=>'Архив'];
   notify_project_users($pdo,$id,(int)$user['id'],'project','Изменён статус проекта',$labels[$st]??$st,'project.php?id='.$id);
  }else{http_response_code(422);echo json_encode(['ok'=>false,'error'=>'Неизвестное действие'],JSON_UNESCAPED_UNICODE);exit;}
