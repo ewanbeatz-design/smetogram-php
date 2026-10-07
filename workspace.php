@@ -51,45 +51,10 @@ if ($projectId > 0) {
     $canManageProject = can_manage_project($pdo,$user,$projectId);
 }
 
-$notifyProject = function(string $type, string $title, string $body = '', ?string $url = null) use ($pdo, $projectId, $user, $project): void {
+$notifyProject = function(string $type, string $title, string $body = '', ?string $url = null) use ($pdo, $projectId, $user): void {
     if ($projectId <= 0) return;
-    $recipients = [];
-    $ownerId = (int)($project['ownerId'] ?? 0);
-    if ($ownerId > 0 && $ownerId !== (int)$user['id']) $recipients[] = $ownerId;
-    $mq = $pdo->prepare('SELECT u.id FROM projectmembers m INNER JOIN users u ON LOWER(u.email)=LOWER(m.invitedEmail) WHERE m.projectId=? AND m.invitedEmail IS NOT NULL AND m.invitedEmail<>"" AND u.id<>?');
-    $mq->execute([$projectId, (int)$user['id']]);
-    foreach ($mq->fetchAll(PDO::FETCH_COLUMN) as $uid) $recipients[] = (int)$uid;
-    foreach (array_unique($recipients) as $uid) create_notification($pdo, $uid, $projectId, $type, $title, $body, $url);
+    notify_project_users($pdo, $projectId, (int)$user['id'], $type, $title, $body, $url);
 };
-
-/* Rooms are a PHP-only helper table and are safe to create on existing installations. */
-$pdo->exec("CREATE TABLE IF NOT EXISTS smetogram_rooms (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    user_id BIGINT UNSIGNED NOT NULL,
-    project_id BIGINT UNSIGNED NULL,
-    name VARCHAR(120) NOT NULL,
-    length_m DECIMAL(10,2) NOT NULL DEFAULT 0,
-    width_m DECIMAL(10,2) NOT NULL DEFAULT 0,
-    height_m DECIMAL(10,2) NOT NULL DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX(user_id),
-    INDEX(project_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-
-/* Room photos are stored separately from measurements. */
-$pdo->exec("CREATE TABLE IF NOT EXISTS smetogram_room_photos (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    room_id BIGINT UNSIGNED NOT NULL,
-    project_id BIGINT UNSIGNED NOT NULL,
-    user_id BIGINT UNSIGNED NOT NULL,
-    original_name VARCHAR(255) NOT NULL,
-    stored_name VARCHAR(255) NOT NULL,
-    mime VARCHAR(80) NOT NULL,
-    size_bytes BIGINT UNSIGNED NOT NULL DEFAULT 0,
-    path VARCHAR(500) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX(room_id), INDEX(project_id), INDEX(user_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
 /* Persistent account settings. */
 $pdo->exec("CREATE TABLE IF NOT EXISTS smetogram_user_settings (
