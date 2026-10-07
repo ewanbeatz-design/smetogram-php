@@ -126,11 +126,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($action === 'choose_plan') {
             $plan = (string)($_POST['plan'] ?? 'free');
-            if (!in_array($plan, ['free','project','brigade','studio'], true)) throw new RuntimeException('Неизвестный тариф.');
-            $expires = $plan === 'free' ? null : date('Y-m-d H:i:s', strtotime('+1 month'));
+            $plans = subscription_plans();
+            if (!isset($plans[$plan])) throw new RuntimeException('Неизвестный тариф.');
+            if ($plan !== 'free') throw new RuntimeException('Платный тариф оформляется через онлайн-оплату.');
+            if (user_project_count($pdo,(int)$user['id']) >= 1) throw new RuntimeException('Бесплатная смета уже использована. Для новых смет выберите платный тариф.');
             $q = $pdo->prepare('UPDATE users SET subscriptionPlan=?,subscriptionStatus=?,subscriptionStartedAt=?,subscriptionExpiresAt=? WHERE id=?');
-            $q->execute([$plan,'active',date('Y-m-d H:i:s'),$expires,$user['id']]);
-            $notice = 'Тариф выбран.';
+            $q->execute(['free','active',date('Y-m-d H:i:s'),null,$user['id']]);
+            $notice = 'Бесплатный тариф активирован.';
+        } elseif ($action === 'start_subscription_payment') {
+            $plan = (string)($_POST['plan'] ?? '');
+            $plans = subscription_plans();
+            if (!isset($plans[$plan]) || $plan === 'free') throw new RuntimeException('Выберите платный тариф.');
+            if (is_admin($user)) throw new RuntimeException('Для администратора подписка не требуется.');
+            $planData = $plans[$plan];
+            $amount = (float)$planData['price'];
+            if ($amount <= 0) throw new RuntimeException('Некорректная стоимость тарифа.');
+            if (!function_exists('curl_init')) throw new RuntimeException('На сервере не включён cURL, необходимый для онлайн-оплаты.');
+            $pdo->prepare('INSERT INTO smetogram_subscription_orders(userId,plan,amount,currency,status,provider) VALUES(?,?,?,?,?,?)')
+                ->execute([(int)$user['id'],$plan,$amount,'RUB','pending','yookassa']);
+            $orderId=(int)$pdo->lastInsertId();
+            try {
+                $appUrl=trim((string)($config['app']['url']??'https://xn--80aff1adjpdl.xn--p1ai'));
+                $returnUrl=rtrim($appUrl,'/').'/subscription-return.php?order_id='.$orderId;
+                $payment=yookassa_request('POST','/payments',[
+                    'amount'=>['value'=>number_format($amount,2,'.',''),'currency'=>'RUB'],
+                    'capture'=>true,
+                    'confirmation'=>['type'=>'redirect','return_url'=>$returnUrl],
+                    'description'=>'Сметограм: тариф '.$planData['name'].' на 1 месяц',
+                    'metadata'=>['order_id'=>(string)$orderId,'user_id'=>(string)$user['id'],'plan'=>$plan]
+                ]);
+                $confirmationUrl=(string)($payment['confirmation']['confirmation_url']??'');
+                $providerPaymentId=(string)($payment['id']??'');
+                if($confirmationUrl===''||$providerPaymentId==='') throw new RuntimeException('ЮKassa не вернула ссылку на оплату.');
+                $q=$pdo->prepare('UPDATE smetogram_subscription_orders SET providerPaymentId=?,confirmationUrl=? WHERE id=?');
+                $q->execute([$providerPaymentId,$confirmationUrl,$orderId]);
+                header('Location: '.$confirmationUrl);
+                exit;
+            } catch(Throwable $e) {
+                $pdo->prepare('UPDATE smetogram_subscription_orders SET status=? WHERE id=?')->execute(['failed',$orderId]);
+                throw $e;
+            }
         } elseif ($action === 'add_payment') {
             if (!$project) throw new RuntimeException('Сначала откройте проект.');
             $title=trim((string)($_POST['title']??'Платёж'));
@@ -1827,35 +1862,73 @@ require __DIR__ . '/includes/app_header.php';
 
     <?php elseif ($view === 'billing'): ?>
         <?php
-        $plans = [
-            'free' => ['Первый проект','0 ₽','навсегда','Один полноценный объект без карты'],
-            'project' => ['Проект','1 490 ₽','в месяц','Смета + дорожная карта + документы'],
-            'brigade' => ['Бригада','3 900 ₽','в месяц','До 5 объектов и командная работа'],
-            'studio' => ['Студия','7 900 ₽','в месяц','Безлимитные объекты и расширенные функции']
-        ];
+        $plans = subscription_plans();
         $uq = $pdo->prepare('SELECT subscriptionPlan,subscriptionStatus,subscriptionExpiresAt FROM users WHERE id=? LIMIT 1');
         $uq->execute([$user['id']]);
         $subscription = $uq->fetch() ?: [];
         $currentPlan = (string)($subscription['subscriptionPlan'] ?? 'free');
         if (!isset($plans[$currentPlan])) $currentPlan = 'free';
+        $projectCount = user_project_count($pdo,(int)$user['id']);
+        $currentLimit = $plans[$currentPlan]['limit'];
         ?>
         <div class="billing-hero module-panel">
-            <div><div class="eyebrow">ТАРИФ И ОПЛАТА</div><h2>Выберите режим работы</h2><p class="panel-copy">Тариф сохраняется в вашем аккаунте и применяется ко всем объектам.</p></div>
-            <div class="billing-current"><span>ТЕКУЩИЙ ТАРИФ</span><strong><?= e($plans[$currentPlan][0]) ?></strong><small>Активен<?= !empty($subscription['subscriptionExpiresAt']) ? ' · до '.date('d.m.Y',strtotime($subscription['subscriptionExpiresAt'])) : '' ?></small></div>
+            <div>
+                <div class="eyebrow">ПЛАН ИСПОЛЬЗОВАНИЯ</div>
+                <h2>1 смета бесплатно — дальше выбираете тариф</h2>
+                <p class="panel-copy">Бесплатная смета доступна один раз и не требует карты. Платные тарифы действуют 1 месяц после успешной оплаты.</p>
+            </div>
+            <div class="billing-current">
+                <span>ВАШ ПЛАН</span>
+                <strong><?= e(is_admin($user) ? 'Без ограничений' : $plans[$currentPlan]['name']) ?></strong>
+                <small><?=is_admin($user)?'Администратор':('Использовано смет: '.(int)$projectCount.($currentLimit===null?' · безлимит': ' из '.(int)$currentLimit))?></small>
+            </div>
         </div>
-        <div class="plans-grid billing-plans">
-            <?php foreach ($plans as $id => $plan): ?>
-                <div class="plan-card billing-card <?= $id === $currentPlan ? 'selected' : '' ?>">
-                    <?php if ($id === $currentPlan): ?><span class="plan-badge">ТЕКУЩИЙ</span><?php endif; ?>
-                    <span><?= e($plan[0]) ?></span><strong><?= e($plan[1]) ?></strong><small><?= e($plan[2]) ?></small><p><?= e($plan[3]) ?></p>
-                    <ul><li>Смета и рабочее пространство</li><li>Команда и документы</li><li>Чат и приёмка</li></ul>
-                    <form method="post"><input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="choose_plan"><input type="hidden" name="plan" value="<?= e($id) ?>"><button class="<?= $id === $currentPlan ? 'outline-button' : 'primary-button' ?>" type="submit"><?= $id === $currentPlan ? 'Текущий тариф' : 'Выбрать тариф' ?></button></form>
+
+        <div class="billing-free-note">
+            <div class="billing-free-icon"><i class="fa-solid fa-gift"></i></div>
+            <div><strong>1 смета бесплатно для каждого нового аккаунта</strong><span>Это именно бесплатный лимит: он не сбрасывается при выборе тарифа «Бесплатный» повторно.</span></div>
+            <?php if($projectCount===0 && !is_admin($user)): ?>
+                <form method="post"><input type="hidden" name="csrf" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="choose_plan"><input type="hidden" name="plan" value="free"><button class="outline-button" type="submit">Использовать бесплатно</button></form>
+            <?php endif; ?>
+        </div>
+
+        <div class="plans-grid billing-plans billing-paid-plans">
+            <?php foreach (['project','brigade','studio'] as $id): $plan=$plans[$id]; ?>
+                <div class="plan-card billing-card <?= $id === $currentPlan ? 'selected' : '' ?> <?= $id === 'brigade' ? 'featured' : '' ?>">
+                    <?php if ($id === 'brigade'): ?><span class="plan-popular">ПОПУЛЯРНЫЙ</span><?php endif; ?>
+                    <?php if ($id === $currentPlan && subscription_is_active($user)): ?><span class="plan-badge">ТЕКУЩИЙ</span><?php endif; ?>
+                    <span><?=e($plan['name'])?></span>
+                    <strong><?=number_format((float)$plan['price'],0,',',' ')?> ₽</strong>
+                    <small><?=e($plan['period'])?></small>
+                    <p><?=e($plan['description'])?></p>
+                    <ul>
+                        <li>Смета и рабочее пространство</li>
+                        <li>График, документы и команда</li>
+                        <li>Чат и приёмка</li>
+                    </ul>
+                    <form method="post">
+                        <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                        <input type="hidden" name="action" value="start_subscription_payment">
+                        <input type="hidden" name="plan" value="<?=e($id)?>">
+                        <button class="primary-button" type="submit"><i class="fa-solid fa-credit-card"></i> Оплатить <?=number_format((float)$plan['price'],0,',',' ')?> ₽</button>
+                    </form>
                 </div>
             <?php endforeach; ?>
         </div>
+
         <div class="billing-grid">
-            <div class="module-panel"><div class="panel-heading"><div><h2>Состав тарифов</h2><p>Функции Сметограма развиваются внутри рабочего пространства.</p></div></div><div class="billing-feature-list"><div><i class="fa-solid fa-calculator"></i><span><b>Смета</b><small>Разделы, позиции, цены, импорт и экспорт.</small></span></div><div><i class="fa-solid fa-table-columns"></i><span><b>Объект</b><small>График, замеры, команда, документы, чат и приёмка.</small></span></div><div><i class="fa-solid fa-wand-magic-sparkles"></i><span><b>ИИ</b><small>Распознавание файлов и подготовка черновика.</small></span></div></div></div>
-            <div class="module-panel"><div class="panel-heading"><div><h2>Оплата</h2><p>Без фиктивных списаний.</p></div></div><div class="billing-note"><i class="fa-solid fa-credit-card-2-front"></i><div><b>Онлайн-оплата</b><span>Выбор тарифа уже сохраняется. Эквайринг подключим отдельным шагом, когда будет выбран платёжный провайдер.</span></div></div></div>
+            <div class="module-panel">
+                <div class="panel-heading"><div><h2>Что входит</h2><p>Рабочие инструменты Сметограма без Excel-хаоса.</p></div></div>
+                <div class="billing-feature-list">
+                    <div><i class="fa-solid fa-calculator"></i><span><b>Сметы</b><small>Создание, каталог ФЕР / ТЕР / ГЭСН, импорт и экспорт.</small></span></div>
+                    <div><i class="fa-solid fa-table-columns"></i><span><b>Управление объектом</b><small>График, замеры, документы, команда и аналитика.</small></span></div>
+                    <div><i class="fa-solid fa-check-double"></i><span><b>Приёмка</b><small>Сдача этапов, проверка заказчиком, комментарии и повторная сдача.</small></span></div>
+                </div>
+            </div>
+            <div class="module-panel">
+                <div class="panel-heading"><div><h2>Оплата</h2><p>Платёж проходит через защищённую страницу ЮKassa.</p></div></div>
+                <div class="billing-note"><i class="fa-solid fa-shield-halved"></i><div><b>Безопасная оплата</b><span>Сметограм не видит данные банковской карты. Доступ к тарифу включается только после подтверждённого успешного платежа.</span></div></div>
+            </div>
         </div>
     <?php else: ?>
         <div class="module-panel"><div class="empty-state">Раздел не найден.</div></div>
