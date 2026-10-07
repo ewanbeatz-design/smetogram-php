@@ -502,6 +502,32 @@ function create_notification(PDO $pdo, int $userId, ?int $projectId, string $typ
     $q = $pdo->prepare('INSERT INTO smetogram_notifications (userId,projectId,type,title,body,url) VALUES (?,?,?,?,?,?)');
     $q->execute([$userId, $projectId, $type, $title, $body, $url]);
 }
+function notify_project_users(PDO $pdo, int $projectId, int $actorId, string $type, string $title, string $body = '', ?string $url = null): void {
+    if ($projectId <= 0) return;
+
+    $recipientIds = [];
+    $ownerQ = $pdo->prepare('SELECT ownerId FROM projects WHERE id=? LIMIT 1');
+    $ownerQ->execute([$projectId]);
+    $ownerId = (int)$ownerQ->fetchColumn();
+    if ($ownerId > 0 && $ownerId !== $actorId) $recipientIds[$ownerId] = true;
+
+    $memberQ = $pdo->prepare(
+        'SELECT DISTINCT CASE WHEN m.userId IS NOT NULL AND m.userId>0 THEN m.userId ELSE u.id END AS recipientId
+         FROM projectmembers m
+         LEFT JOIN users u ON u.email IS NOT NULL AND m.invitedEmail IS NOT NULL AND LOWER(u.email)=LOWER(m.invitedEmail)
+         WHERE m.projectId=?
+           AND (m.userId IS NOT NULL OR u.id IS NOT NULL)'
+    );
+    $memberQ->execute([$projectId]);
+    foreach ($memberQ->fetchAll(PDO::FETCH_COLUMN) as $recipientId) {
+        $recipientId = (int)$recipientId;
+        if ($recipientId > 0 && $recipientId !== $actorId) $recipientIds[$recipientId] = true;
+    }
+
+    foreach (array_keys($recipientIds) as $recipientId) {
+        create_notification($pdo, (int)$recipientId, $projectId, $type, $title, $body, $url);
+    }
+}
 
 function subscription_is_active(array $user):bool{
     if(is_admin($user))return true;
