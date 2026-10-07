@@ -187,21 +187,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'create_client_invite') {
             if (!$project) throw new RuntimeException('Сначала откройте проект.');
             if (empty($canManageProject)) throw new RuntimeException('Пригласить заказчика может только владелец проекта или главный администратор.');
-
             $email = trim((string)($_POST['email'] ?? ''));
-            if ($email !== '' && !filter_var($email,FILTER_VALIDATE_EMAIL)) {
-                throw new RuntimeException('Укажите корректный email заказчика.');
-            }
-
-            $q = $pdo->prepare("SELECT id,role,joinedAt,inviteToken FROM projectmembers WHERE projectId=? AND role='client' ORDER BY id DESC");
+            if ($email !== '' && !filter_var($email,FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Укажите корректный email заказчика.');
+            $q = $pdo->prepare("SELECT id,joinedAt FROM projectmembers WHERE projectId=? AND role='client' ORDER BY id DESC");
             $q->execute([$projectId]);
             $clientMembers = $q->fetchAll();
             foreach ($clientMembers as $existingClient) {
-                if (!empty($existingClient['joinedAt'])) {
-                    throw new RuntimeException('Заказчик уже подключён к этому проекту.');
-                }
+                if (!empty($existingClient['joinedAt'])) throw new RuntimeException('Заказчик уже подключён к этому проекту.');
             }
-
             $token = bin2hex(random_bytes(32));
             $pendingClient = $clientMembers[0] ?? null;
             if ($pendingClient && empty($pendingClient['joinedAt'])) {
@@ -211,8 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $q = $pdo->prepare("INSERT INTO projectmembers (projectId,userId,invitedEmail,role,inviteToken,joinedAt) VALUES (?,?,?,'client',?,NULL)");
                 $q->execute([$projectId,null,$email !== '' ? $email : null,$token]);
             }
-
-            $notice = 'Приглашение заказчика создано. Скопируйте ссылку в блоке «Заказчик» и отправьте её ему.';
+            $notice = 'Приглашение заказчика создано. Отправьте ему ссылку из карточки приглашения.';
             $notifyProject('team','Создано приглашение заказчика',$email !== '' ? $email : 'Приглашение по ссылке','workspace.php?view=team&id='.$projectId);
         } elseif ($action === 'add_member') {
             if (!$project) throw new RuntimeException('Сначала откройте проект.');
@@ -809,7 +801,7 @@ require __DIR__ . '/includes/app_header.php';
                             <div class="member-avatar"><?= e(mb_strtoupper(mb_substr($member['role'], 0, 2))) ?></div>
                             <div><strong><?= e($member['userName'] ?: ($member['userUsername'] ? '@'.$member['userUsername'] : ($member['invitedEmail'] ?: ($member['invitedPhone'] ?: 'Участник')))) ?></strong><span><?= e(['owner'=>'Владелец','foreman'=>'Прораб','contractor'=>'Бригада','designer'=>'Дизайнер','client'=>'Заказчик'][$member['role']] ?? $member['role']) ?></span></div>
                             <em><?= e($member['joinedAt'] ? 'Активен' : 'Приглашён') ?></em>
-                            <?php if($member['role']==='client' && empty($member['joinedAt']) && !empty($member['inviteToken'] ?? '')): ?>
+                            <?php if($member['role']==='client' && empty($member['joinedAt']) && !empty($member['inviteToken'])): ?>
                                 <button type="button" class="outline-button client-invite-copy" data-url="<?=e('invite.php?token='.(string)$member['inviteToken'])?>" onclick="copyClientInvite(this)"><i class="fa-solid fa-link"></i> Скопировать ссылку</button>
                             <?php endif; ?>
                         </div>
@@ -820,6 +812,23 @@ require __DIR__ . '/includes/app_header.php';
         </div>
 
         <?php if ($project): ?>
+        <div class="modal fade" id="memberModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post">
+            <div class="modal-header"><h5>Назначить сотрудника</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="add_member">
+                <?php if ($assignableUsers): ?>
+                <label class="form-label">Сотрудник с аккаунтом</label>
+                <select class="form-select mb-3" name="user_id"><option value="0">Выбрать сотрудника…</option><?php foreach ($assignableUsers as $employee): ?><option value="<?=$employee['id']?>"><?=e($employee['name'] ?: ($employee['username'] ? '@'.$employee['username'] : ($employee['email'] ?: 'Пользователь #'.$employee['id'])))?></option><?php endforeach; ?></select>
+                <div class="small text-muted mb-3">Или создайте приглашение для человека, у которого ещё нет аккаунта:</div>
+                <?php endif; ?>
+                <input class="form-control mb-3" type="email" name="email" placeholder="email@example.ru">
+                <input class="form-control mb-3" name="phone" placeholder="+7 999 000-00-00">
+                <select class="form-select" name="role"><option value="client">Заказчик</option><option value="foreman">Прораб</option><option value="contractor">Бригада</option><option value="designer">Дизайнер</option></select>
+            </div>
+            <div class="modal-footer"><button class="primary-button">Назначить сотрудника</button></div>
+        </form></div></div></div>
+        <?php endif; ?>
+
         <div class="modal fade" id="clientInviteModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -846,23 +855,6 @@ require __DIR__ . '/includes/app_header.php';
                 </div>
             </div>
         </div>
-        <?php if ($project): ?>
-        <div class="modal fade" id="memberModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><form method="post">
-            <div class="modal-header"><h5>Назначить сотрудника</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-            <div class="modal-body">
-                <input type="hidden" name="csrf" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="add_member">
-                <?php if ($assignableUsers): ?>
-                <label class="form-label">Сотрудник с аккаунтом</label>
-                <select class="form-select mb-3" name="user_id"><option value="0">Выбрать сотрудника…</option><?php foreach ($assignableUsers as $employee): ?><option value="<?=$employee['id']?>"><?=e($employee['name'] ?: ($employee['username'] ? '@'.$employee['username'] : ($employee['email'] ?: 'Пользователь #'.$employee['id'])))?></option><?php endforeach; ?></select>
-                <div class="small text-muted mb-3">Или создайте приглашение для человека, у которого ещё нет аккаунта:</div>
-                <?php endif; ?>
-                <input class="form-control mb-3" type="email" name="email" placeholder="email@example.ru">
-                <input class="form-control mb-3" name="phone" placeholder="+7 999 000-00-00">
-                <select class="form-select" name="role"><option value="client">Заказчик</option><option value="foreman">Прораб</option><option value="contractor">Бригада</option><option value="designer">Дизайнер</option></select>
-            </div>
-            <div class="modal-footer"><button class="primary-button">Назначить сотрудника</button></div>
-        </form></div></div></div>
-        <?php endif; ?>
 
     <?php elseif ($view === 'documents'): ?>
         <?php
@@ -1765,8 +1757,15 @@ function copyClientInvite(button){
 }
 function fallbackClientInviteCopy(text,done){
     const input=document.createElement('textarea');
-    input.value=text;input.setAttribute('readonly','');input.style.position='fixed';input.style.opacity='0';
-    document.body.appendChild(input);input.select();document.execCommand('copy');input.remove();done();
+    input.value=text;
+    input.setAttribute('readonly','');
+    input.style.position='fixed';
+    input.style.opacity='0';
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    input.remove();
+    done();
 }
 </script>
 <?php require __DIR__ . '/includes/app_footer.php'; ?>
