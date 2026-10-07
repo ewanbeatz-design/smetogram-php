@@ -206,6 +206,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $notice = 'Приглашение заказчика создано. Отправьте ему ссылку из карточки приглашения.';
             $notifyProject('team','Создано приглашение заказчика',$email !== '' ? $email : 'Приглашение по ссылке','workspace.php?view=team&id='.$projectId);
+        } elseif ($action === 'edit_member') {
+            if (!$project) throw new RuntimeException('Сначала откройте проект.');
+            if (empty($canManageProject)) throw new RuntimeException('Редактировать участников может только владелец проекта или главный администратор.');
+            $memberId = (int)($_POST['member_id'] ?? 0);
+            if ($memberId <= 0) throw new RuntimeException('Участник не найден.');
+            $q = $pdo->prepare('SELECT id,userId,role,invitedEmail,invitedPhone FROM projectmembers WHERE id=? AND projectId=? LIMIT 1');
+            $q->execute([$memberId,$projectId]);
+            $member = $q->fetch();
+            if (!$member) throw new RuntimeException('Участник не найден.');
+            if ($member['role'] === 'owner' || (int)$member['userId'] === (int)$project['ownerId']) {
+                throw new RuntimeException('Владельца проекта редактировать нельзя.');
+            }
+            $role = (string)($_POST['role'] ?? 'client');
+            $roles = ['client','foreman','contractor','designer'];
+            if (!in_array($role,$roles,true)) throw new RuntimeException('Недопустимая роль.');
+            $email = trim((string)($_POST['email'] ?? ''));
+            $phone = trim((string)($_POST['phone'] ?? ''));
+            if ($email !== '' && !filter_var($email,FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Укажите корректный email.');
+            $q = $pdo->prepare('UPDATE projectmembers SET invitedEmail=?, invitedPhone=?, role=? WHERE id=? AND projectId=?');
+            $q->execute([$email !== '' ? $email : null,$phone !== '' ? $phone : null,$role,$memberId,$projectId]);
+            $notice = 'Данные участника обновлены.';
+            $notifyProject('team','Изменён участник проекта','Изменены роль или контакты участника.','workspace.php?view=team&id='.$projectId);
+        } elseif ($action === 'delete_member') {
+            if (!$project) throw new RuntimeException('Сначала откройте проект.');
+            if (empty($canManageProject)) throw new RuntimeException('Удалять участников может только владелец проекта или главный администратор.');
+            $memberId = (int)($_POST['member_id'] ?? 0);
+            if ($memberId <= 0) throw new RuntimeException('Участник не найден.');
+            $q = $pdo->prepare('SELECT id,userId,role FROM projectmembers WHERE id=? AND projectId=? LIMIT 1');
+            $q->execute([$memberId,$projectId]);
+            $member = $q->fetch();
+            if (!$member) throw new RuntimeException('Участник не найден.');
+            if ($member['role'] === 'owner' || (int)$member['userId'] === (int)$project['ownerId']) {
+                throw new RuntimeException('Владельца проекта удалить нельзя.');
+            }
+            $q = $pdo->prepare('DELETE FROM projectmembers WHERE id=? AND projectId=?');
+            $q->execute([$memberId,$projectId]);
+            $notice = 'Участник удалён из проекта.';
+            $notifyProject('team','Участник удалён из проекта','Доступ участника к проекту отозван.','workspace.php?view=team&id='.$projectId);
         } elseif ($action === 'add_member') {
             if (!$project) throw new RuntimeException('Сначала откройте проект.');
             if (empty($canManageProject)) throw new RuntimeException('Назначать сотрудников может только владелец проекта или главный администратор.');
@@ -799,10 +837,32 @@ require __DIR__ . '/includes/app_header.php';
                     <?php foreach ($members as $member): ?>
                         <div class="member-row">
                             <div class="member-avatar"><?= e(mb_strtoupper(mb_substr($member['role'], 0, 2))) ?></div>
-                            <div><strong><?= e($member['userName'] ?: ($member['userUsername'] ? '@'.$member['userUsername'] : ($member['invitedEmail'] ?: ($member['invitedPhone'] ?: 'Участник')))) ?></strong><span><?= e(['owner'=>'Владелец','foreman'=>'Прораб','contractor'=>'Бригада','designer'=>'Дизайнер','client'=>'Заказчик'][$member['role']] ?? $member['role']) ?></span></div>
+                            <div>
+                                <strong><?= e($member['userName'] ?: ($member['userUsername'] ? '@'.$member['userUsername'] : ($member['invitedEmail'] ?: ($member['invitedPhone'] ?: 'Участник')))) ?></strong>
+                                <span><?= e(['owner'=>'Владелец','foreman'=>'Прораб','contractor'=>'Бригада','designer'=>'Дизайнер','client'=>'Заказчик'][$member['role']] ?? $member['role']) ?></span>
+                            </div>
                             <em><?= e($member['joinedAt'] ? 'Активен' : 'Приглашён') ?></em>
-                            <?php if($member['role']==='client' && empty($member['joinedAt']) && !empty($member['inviteToken'])): ?>
-                                <button type="button" class="outline-button client-invite-copy" data-url="<?=e('invite.php?token='.(string)$member['inviteToken'])?>" onclick="copyClientInvite(this)"><i class="fa-solid fa-link"></i> Скопировать ссылку</button>
+                            <?php if ($project && !empty($canManageProject) && $member['role'] !== 'owner' && (int)$member['userId'] !== (int)$project['ownerId']): ?>
+                                <div class="member-actions">
+                                    <?php if($member['role']==='client' && empty($member['joinedAt']) && !empty($member['inviteToken'])): ?>
+                                        <button type="button" class="outline-button client-invite-copy" data-url="<?=e('invite.php?token='.(string)$member['inviteToken'])?>" onclick="copyClientInvite(this)"><i class="fa-solid fa-link"></i> Ссылка</button>
+                                    <?php endif; ?>
+                                    <button type="button" class="outline-button member-edit-button"
+                                            data-member-id="<?= (int)$member['id'] ?>"
+                                            data-member-role="<?= e((string)$member['role']) ?>"
+                                            data-member-email="<?= e((string)($member['invitedEmail'] ?: ($member['userEmail'] ?? ''))) ?>"
+                                            data-member-phone="<?= e((string)($member['invitedPhone'] ?? '')) ?>"
+                                            data-member-name="<?= e((string)($member['userName'] ?: ($member['userUsername'] ? '@'.$member['userUsername'] : ($member['invitedEmail'] ?: ($member['invitedPhone'] ?: 'Участник'))))) ?>"
+                                            onclick="openMemberEdit(this)">
+                                        <i class="fa-solid fa-pen"></i> Изменить
+                                    </button>
+                                    <button type="button" class="danger-button member-delete-button"
+                                            data-member-id="<?= (int)$member['id'] ?>"
+                                            data-member-name="<?= e((string)($member['userName'] ?: ($member['userUsername'] ? '@'.$member['userUsername'] : ($member['invitedEmail'] ?: ($member['invitedPhone'] ?: 'Участник'))))) ?>"
+                                            onclick="openMemberDelete(this)">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
                             <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
@@ -850,6 +910,69 @@ require __DIR__ . '/includes/app_header.php';
                         <div class="modal-footer">
                             <button type="button" class="outline-button" data-bs-dismiss="modal">Отмена</button>
                             <button class="primary-button" type="submit"><i class="fa-solid fa-link"></i> Создать приглашение</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="memberEditModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="post">
+                        <div class="modal-header">
+                            <div>
+                                <span class="settings-eyebrow">УЧАСТНИК ПРОЕКТА</span>
+                                <h5 class="modal-title" id="memberEditTitle">Редактировать участника</h5>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                            <input type="hidden" name="action" value="edit_member">
+                            <input type="hidden" name="member_id" id="memberEditId" value="">
+                            <label class="form-label">Роль</label>
+                            <select class="form-select mb-3" name="role" id="memberEditRole">
+                                <option value="client">Заказчик</option>
+                                <option value="foreman">Прораб</option>
+                                <option value="contractor">Бригада</option>
+                                <option value="designer">Дизайнер</option>
+                            </select>
+                            <label class="form-label">Email</label>
+                            <input class="form-control mb-3" type="email" name="email" id="memberEditEmail" placeholder="email@example.ru">
+                            <label class="form-label">Телефон</label>
+                            <input class="form-control" name="phone" id="memberEditPhone" placeholder="+7 999 000-00-00">
+                            <div class="small text-muted mt-3">Для участника с активным аккаунтом имя и основной email берутся из его профиля. Здесь можно изменить роль и контакт проекта.</div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="outline-button" data-bs-dismiss="modal">Отмена</button>
+                            <button class="primary-button" type="submit"><i class="fa-solid fa-check"></i> Сохранить</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="memberDeleteModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form method="post">
+                        <div class="modal-header">
+                            <div>
+                                <span class="settings-eyebrow">ОТКЛЮЧЕНИЕ ДОСТУПА</span>
+                                <h5 class="modal-title">Удалить участника?</h5>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="panel-copy">Участник <strong id="memberDeleteName">—</strong> будет удалён из проекта и потеряет доступ к его рабочему пространству. Сам аккаунт пользователя останется без изменений.</p>
+                            <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                            <input type="hidden" name="action" value="delete_member">
+                            <input type="hidden" name="member_id" id="memberDeleteId" value="">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="outline-button" data-bs-dismiss="modal">Отмена</button>
+                            <button class="danger-button" type="submit"><i class="fa-solid fa-trash"></i> Удалить из проекта</button>
                         </div>
                     </form>
                 </div>
