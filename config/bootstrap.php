@@ -269,6 +269,24 @@ try {
     $addColumn($pdo,'smetogram_payments','stageId',"BIGINT UNSIGNED NULL");
     $addColumn($pdo,'smetogram_payments','paidAmount',"DECIMAL(14,2) NOT NULL DEFAULT 0");
     try { $pdo->exec("UPDATE smetogram_payments SET paidAmount=CASE WHEN status='paid' THEN amount ELSE 0 END WHERE type='stage' AND paidAmount=0"); } catch (Throwable $e) {}
+    if (!$tableExists($pdo,'smetogram_subscription_orders')) {
+        $pdo->exec("CREATE TABLE smetogram_subscription_orders (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            userId BIGINT UNSIGNED NOT NULL,
+            plan VARCHAR(32) NOT NULL,
+            amount DECIMAL(14,2) NOT NULL DEFAULT 0,
+            currency CHAR(3) NOT NULL DEFAULT 'RUB',
+            status VARCHAR(32) NOT NULL DEFAULT 'pending',
+            provider VARCHAR(32) NOT NULL DEFAULT 'yookassa',
+            providerPaymentId VARCHAR(120) NULL,
+            confirmationUrl VARCHAR(1000) NULL,
+            paidAt DATETIME NULL,
+            paymentPayload LONGTEXT NULL,
+            createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updatedAt TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX(userId), INDEX(status), INDEX(providerPaymentId)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    }
     if (!$tableExists($pdo,'smetogram_notifications')) {
         $pdo->exec("CREATE TABLE smetogram_notifications (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -529,6 +547,46 @@ function notify_project_users(PDO $pdo, int $projectId, int $actorId, string $ty
     }
 }
 
+function subscription_plans():array{
+    return [
+        'free'=>[
+            'name'=>'Бесплатный',
+            'price'=>0,
+            'period'=>'навсегда',
+            'limit'=>1,
+            'description'=>'1 полноценная смета без оплаты'
+        ],
+        'project'=>[
+            'name'=>'Проект',
+            'price'=>1490,
+            'period'=>'в месяц',
+            'limit'=>3,
+            'description'=>'До 3 смет + документы и рабочее пространство'
+        ],
+        'brigade'=>[
+            'name'=>'Бригада',
+            'price'=>3900,
+            'period'=>'в месяц',
+            'limit'=>5,
+            'description'=>'До 5 объектов + командная работа и приёмка'
+        ],
+        'studio'=>[
+            'name'=>'Студия',
+            'price'=>7900,
+            'period'=>'в месяц',
+            'limit'=>null,
+            'description'=>'Безлимитные сметы и расширенные возможности'
+        ]
+    ];
+}
+
+function subscription_project_limit(array $user):?int{
+    if(is_admin($user))return null;
+    $plan=trim((string)($user['subscriptionPlan']??'free'));
+    $plans=subscription_plans();
+    return array_key_exists($plan,$plans)?$plans[$plan]['limit']:1;
+}
+
 function subscription_is_active(array $user):bool{
     if(is_admin($user))return true;
     $plan=trim((string)($user['subscriptionPlan']??'free'));
@@ -543,10 +601,91 @@ function user_project_count(PDO $pdo,int $userId):int{
     return (int)$q->fetchColumn();
 }
 function can_create_project(PDO $pdo,array $user):bool{
-    return is_admin($user)||subscription_is_active($user)||user_project_count($pdo,(int)($user['id']??0))<1;
+    $limit=subscription_project_limit($user);
+    if($limit===null)return true;
+    return user_project_count($pdo,(int)($user['id']??0))<$limit && (subscription_is_active($user) || $limit===1);
 }
 function subscription_label(array $user):string{
+    if(is_admin($user))return 'Без ограничений';
     return subscription_is_active($user)?'Подписка активна':'Бесплатный доступ';
+}
+
+function yookassa_config():array{
+    global $config;
+    return [
+        'shop_id'=>trim((string)($config['yookassa']['shop_id']??'')),
+        'secret_key'=>trim((string)($config['yookassa']['secret_key']??'')),
+    ];
+}
+function yookassa_request(string $method,string $path,?array $payload=null):array{
+    $yk=yookassa_config();
+    if($yk['shop_id']===''||$yk['secret_key']==='')throw new RuntimeException('Онлайн-оплата пока не подключена. Добавьте YOOKASSA_SHOP_ID и YOOKASSA_SECRET_KEY.');
+    if(!function_exists('curl_init'))throw new RuntimeException('На сервере не включён cURL, необходимый для онлайн-оплаты.');
+    $ch=curl_init('https://api.yookassa.ru/v3'.(str_starts_with($path,'/')?$path:'/'.ltrim($path,'/')));
+    $headers=['Content-Type: application/json','Accept: application/json'];
+    curl_setopt_array($ch,[
+        CURLOPT_RETURNTRANSFER=>true,
+        CURLOPT_CUSTOMREQUEST=>strtoupper($method),
+        CURLOPT_USERPWD=>$yk['shop_id'].':'.$yk['secret_key'],
+        CURLOPT_HTTPAUTH=>CURLAUTH_BASIC,
+        CURLOPT_HTTPHEADER=>$headers,
+        CURLOPT_TIMEOUT=>20,
+        CURLOPT_CONNECTTIMEOUT=>8,
+    ]);
+    if($payload!==null){
+        curl_setopt($ch,CURLOPT_HTTPHEADER,array_merge($headers,['Idempotence-Key'=>bin2hex(random_bytes(16))]));
+        curl_setopt($ch,CURLOPT_POSTFIELDS,json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
+    }
+    $raw=curl_exec($ch);
+    $http=(int)curl_getinfo($ch,CURLINFO_HTTP_CODE);
+    $err=curl_error($ch);
+    curl_close($ch);
+    if($raw===false||$err!=='')throw new RuntimeException('Не удалось связаться с ЮKassa.');
+    $data=json_decode((string)$raw,true);
+    if($http<200||$http>=300||!is_array($data)){
+        $msg=is_array($data)?trim((string)($data['description']??$data['message']??'')):'';
+        throw new RuntimeException('ЮKassa не приняла платёж'.($msg!==''?': '.$msg.'.':'.'));
+    }
+    return $data;
+}
+
+function activate_subscription_order(PDO $pdo,int $orderId,array $payment):bool{
+    if($orderId<=0)return false;
+    $status=(string)($payment['status']??'');
+    $paid=!empty($payment['paid']);
+    if($status!=='succeeded'||!$paid)return false;
+    $metadata=$payment['metadata']??[];
+    if(!is_array($metadata))$metadata=[];
+    try{
+        $pdo->beginTransaction();
+        $q=$pdo->prepare('SELECT * FROM smetogram_subscription_orders WHERE id=? FOR UPDATE');
+        $q->execute([$orderId]);
+        $order=$q->fetch();
+        if(!$order){$pdo->rollBack();return false;}
+        if((string)$order['status']==='paid'){$pdo->commit();return true;}
+        if((string)($order['providerPaymentId']??'')!== (string)($payment['id']??'')){$pdo->rollBack();return false;}
+        if((string)($metadata['order_id']??'')!=='') {
+            if((int)$metadata['order_id']!==$orderId){$pdo->rollBack();return false;}
+        }
+        $paidValue=number_format((float)($payment['amount']['value']??0),2,'.','');
+        $orderValue=number_format((float)$order['amount'],2,'.','');
+        if($paidValue!==$orderValue||(string)($payment['amount']['currency']??'RUB')!=='RUB'){$pdo->rollBack();return false;}
+        $userQ=$pdo->prepare('SELECT * FROM users WHERE id=? FOR UPDATE');
+        $userQ->execute([(int)$order['userId']]);
+        $targetUser=$userQ->fetch();
+        if(!$targetUser){$pdo->rollBack();return false;}
+        $starts=new DateTimeImmutable('now');
+        $ends=$starts->modify('+1 month');
+        $uq=$pdo->prepare('UPDATE users SET subscriptionPlan=?,subscriptionStatus=?,subscriptionStartedAt=?,subscriptionExpiresAt=? WHERE id=?');
+        $uq->execute([(string)$order['plan'],'active',$starts->format('Y-m-d H:i:s'),$ends->format('Y-m-d H:i:s'),(int)$order['userId']]);
+        $oq=$pdo->prepare('UPDATE smetogram_subscription_orders SET status=?,paidAt=CURRENT_TIMESTAMP,paymentPayload=? WHERE id=?');
+        $oq->execute(['paid',json_encode($payment,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),$orderId]);
+        $pdo->commit();
+        return true;
+    }catch(Throwable $e){
+        if($pdo->inTransaction())$pdo->rollBack();
+        throw $e;
+    }
 }
 
 function require_auth():array{
