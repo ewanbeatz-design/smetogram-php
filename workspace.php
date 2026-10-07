@@ -1261,9 +1261,15 @@ require __DIR__ . '/includes/app_header.php';
 
             $analytics['remainingTotal'] = max(0,$analytics['stageTotal']-$analytics['paidTotal']);
 
-            $q = $pdo->prepare('SELECT COUNT(*),SUM(CASE WHEN status IN (\'accepted\',\'approved\',\'done\') THEN 1 ELSE 0 END) FROM acceptancestages WHERE projectId=?');
+            $q = $pdo->prepare("SELECT COUNT(*),SUM(CASE WHEN status='accepted' THEN 1 ELSE 0 END) FROM acceptancestages WHERE projectId=?");
             $q->execute([$projectId]);
             [$analytics['acceptanceCount'],$analytics['acceptanceAccepted']] = $q->fetch(PDO::FETCH_NUM) ?: [0,0];
+
+            // Для аналитики «Выполнение» завершённым считается этап,
+            // который принял заказчик в разделе «Приёмка».
+            if ((int)$analytics['acceptanceCount'] > 0) {
+                $analytics['stageDone'] = (int)$analytics['acceptanceAccepted'];
+            }
         } else {
             $projectSql = "SELECT p.id,p.name,p.city,p.status,p.workType,p.deadline,
                 COALESCE((SELECT SUM(i.quantity*i.price) FROM estimateitems i JOIN estimatecategories c ON c.id=i.categoryId WHERE c.projectId=p.id),0) estimateTotal,
@@ -1401,7 +1407,7 @@ require __DIR__ . '/includes/app_header.php';
                 <?php endif; ?>
             </div>
 
-            <div class="analytics-note"><i class="fa-solid fa-circle-info"></i><div><strong>Как читать аналитику</strong><span>«Стоимость сметы» берётся из актуальных позиций. «Оплачено» — из зарегистрированных платежей. Выполнение считается по статусам этапов в «Графике работ».</span></div></div>
+            <div class="analytics-note"><i class="fa-solid fa-circle-info"></i><div><strong>Как читать аналитику</strong><span>«Стоимость сметы» берётся из актуальных позиций. «Оплачено» — из зарегистрированных платежей. «Выполнение» показывает этапы, которые заказчик уже принял в разделе «Приёмка».</span></div></div>
         <?php endif; ?>
 
 <?php elseif ($view === 'measurements'): ?>
