@@ -570,6 +570,7 @@ require __DIR__ . '/includes/app_header.php';
         <span class="workspace-project-meta"><?= e(($project['city'] ?? '') . ' · ' . ($project['clientName'] ?? '')) ?></span>
     </div>
     <div class="workspace-tabs" aria-label="Разделы проекта">
+        <a href="project.php?id=<?= $projectId ?>" class="workspace-estimate-tab"><i class="fa-solid fa-calculator"></i> Смета</a>
         <a href="workspace.php?view=schedule&id=<?= $projectId ?>" class="<?= $view==='schedule'?'active':'' ?>"><i class="fa-solid fa-calendar-days"></i> График</a>
         <a href="workspace.php?view=measurements&id=<?= $projectId ?>" class="<?= $view==='measurements'?'active':'' ?>"><i class="fa-solid fa-ruler-combined"></i> Замеры</a>
         <a href="workspace.php?view=team&id=<?= $projectId ?>" class="<?= $view==='team'?'active':'' ?>"><i class="bi bi-people"></i> Команда</a>
