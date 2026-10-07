@@ -39,11 +39,11 @@ if ($user && !empty($user['name'])) {
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
 <link href="/assets/css/app.css?v=20261008-logo1" rel="stylesheet">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.svg?v=20261008-c" type="image/svg+xml">
 </head><body>
 <div class="app-shell">
 <aside class="sidebar" id="appSidebar">
-  <a class="brand" href="dashboard.php" aria-label="Сметограм"><img class="site-logo" src="/logo.svg" alt="Сметограм" data-fancybox-ignore="1"></a>
+  <a class="brand" href="dashboard.php" aria-label="Сметограм"><img class="site-logo" src="/logo.svg?v=20261008-icon1" alt="Сметограм" data-fancybox-ignore="1"></a>
   <button class="mobile-close" onclick="document.getElementById('appSidebar').classList.remove('sidebar-open')"><i class="fa-solid fa-xmark"></i></button>
   <div class="workspace-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
   <nav class="nav-list">
