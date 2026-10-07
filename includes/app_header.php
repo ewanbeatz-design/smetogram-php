@@ -63,10 +63,7 @@ if ($user && !empty($user['name'])) {
   <div class="trial-card"><div class="trial-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div><div><strong>Первый проект бесплатно</strong><span>Без карты и обязательств</span></div><i class="fa-solid fa-arrow-up-right-from-square"></i></div>
   <nav class="nav-list bottom-nav">
     <a class="nav-item <?=($view==='settings'?'active':'')?>" href="workspace.php?view=settings"><span class="nav-icon"><i class="fa-solid fa-sliders"></i></span><span class="nav-label">Настройки</span></a>
-    <div class="notifications notification-wrap sidebar-notifications" id="notifications">
-      <button class="nav-item notification-nav notification-toggle" type="button"><span class="nav-icon"><i class="fa-solid fa-bell"></i></span><span class="nav-label">Уведомления</span><span class="notification-badge" id="notificationBadge" hidden>0</span></button>
-      <div class="notifications-dropdown" id="notificationMenu"><div class="notifications-heading"><div><strong>Оповещения</strong><span>Изменения по вашим проектам</span></div><button class="notifications-read-all" type="button" id="readNotifications">Прочитать всё</button></div><div class="notifications-list" id="notificationList"><div class="notifications-empty"><strong>Нет новых оповещений</strong><span>Здесь появятся сообщения и изменения проекта.</span></div></div><div class="notifications-footer">Оповещения обновляются автоматически</div></div>
-    </div>
+    <!-- Уведомления теперь только в шапке -->
   </nav>
   <div class="profile"><div class="avatar"><?=e($initials)?></div><div><strong><?=e($user['name']??'Пользователь')?></strong><span><?=e($user['email']??'')?></span></div><a href="logout.php" class="muted-icon" title="Выйти"><i class="fa-solid fa-arrow-right-from-bracket"></i></a></div>
 </aside>
@@ -93,6 +90,7 @@ if ($user && !empty($user['name'])) {
   <button class="icon-button notification-toggle top-notification-toggle" type="button" title="Оповещения"><i class="fa-solid fa-bell"></i><span class="notification-badge" id="topNotificationBadge" hidden>0</span></button>
   <div class="top-avatar"><?=e($initials)?></div>
 </div>
+<div class="notifications-dropdown" id="notificationMenu"><div class="notifications-heading"><div><strong>Оповещения</strong><span>Изменения по вашим проектам</span></div><button class="notifications-read-all" type="button" id="readNotifications">Прочитать всё</button></div><div class="notifications-list" id="notificationList"><div class="notifications-empty"><strong>Нет новых оповещений</strong><span>Здесь появятся сообщения и изменения проекта.</span></div></div><div class="notifications-footer">Оповещения обновляются автоматически</div></div>
 <div class="global-search-backdrop" id="globalSearchBackdrop" hidden>
   <div class="global-search-panel" role="dialog" aria-modal="true" aria-labelledby="globalSearchTitle">
     <div class="global-search-input-wrap"><i class="fa-solid fa-magnifying-glass"></i><input id="globalSearchInput" autocomplete="off" placeholder="Поиск по проектам..." aria-label="Поиск"><button class="global-search-close" id="globalSearchClose" type="button" aria-label="Закрыть"><i class="fa-solid fa-xmark"></i></button></div>
