@@ -115,10 +115,25 @@ if($action==='estimate_action'){
 }
 if($action==='notifications'){
  $since=max(0,(int)($_GET['since']??0));
- $s=$pdo->prepare("SELECT id,projectId,type,title,body,url,isRead,createdAt FROM smetogram_notifications WHERE userId=? AND id>? ORDER BY id DESC LIMIT 30");
- $s->execute([$user['id'],$since]);$items=$s->fetchAll();
- $u=$pdo->prepare("SELECT COUNT(*) FROM smetogram_notifications WHERE userId=? AND isRead=0");
- $u->execute([$user['id']]);
+ $pdo->exec("CREATE TABLE IF NOT EXISTS smetogram_user_settings (user_id BIGINT UNSIGNED PRIMARY KEY,project_notifications TINYINT(1) NOT NULL DEFAULT 1,message_notifications TINYINT(1) NOT NULL DEFAULT 1,document_notifications TINYINT(1) NOT NULL DEFAULT 1,payment_notifications TINYINT(1) NOT NULL DEFAULT 1,acceptance_notifications TINYINT(1) NOT NULL DEFAULT 1,timezone VARCHAR(64) NOT NULL DEFAULT 'Europe/Moscow',date_format VARCHAR(32) NOT NULL DEFAULT 'd.m.Y',created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+ $pdo->prepare("INSERT IGNORE INTO smetogram_user_settings (user_id) VALUES (?)")->execute([(int)$user['id']]);
+ $sq=$pdo->prepare("SELECT project_notifications,message_notifications,document_notifications,payment_notifications,acceptance_notifications FROM smetogram_user_settings WHERE user_id=? LIMIT 1");$sq->execute([(int)$user['id']]);
+ $ns=$sq->fetch() ?: ['project_notifications'=>1,'message_notifications'=>1,'document_notifications'=>1,'payment_notifications'=>1,'acceptance_notifications'=>1];
+ $conditions=["userId=?","id>?"];$params=[(int)$user['id'],$since];
+ if(!(int)$ns['project_notifications']) $conditions[]="type NOT IN ('message','document','payment','acceptance','schedule')";
+ if(!(int)$ns['message_notifications']) $conditions[]="type<>'message'";
+ if(!(int)$ns['document_notifications']) $conditions[]="type<>'document'";
+ if(!(int)$ns['payment_notifications']) $conditions[]="type<>'payment'";
+ if(!(int)$ns['acceptance_notifications']) $conditions[]="type<>'acceptance'";
+ $where=implode(' AND ',$conditions);
+ $s=$pdo->prepare("SELECT id,projectId,type,title,body,url,isRead,createdAt FROM smetogram_notifications WHERE {$where} ORDER BY id DESC LIMIT 30");$s->execute($params);$items=$s->fetchAll();
+ $unreadConditions=["userId=?","isRead=0"];$unreadParams=[(int)$user['id']];
+ if(!(int)$ns['project_notifications']) $unreadConditions[]="type NOT IN ('message','document','payment','acceptance','schedule')";
+ if(!(int)$ns['message_notifications']) $unreadConditions[]="type<>'message'";
+ if(!(int)$ns['document_notifications']) $unreadConditions[]="type<>'document'";
+ if(!(int)$ns['payment_notifications']) $unreadConditions[]="type<>'payment'";
+ if(!(int)$ns['acceptance_notifications']) $unreadConditions[]="type<>'acceptance'";
+ $uw=implode(' AND ',$unreadConditions);$u=$pdo->prepare("SELECT COUNT(*) FROM smetogram_notifications WHERE {$uw}");$u->execute($unreadParams);
  echo json_encode(['items'=>$items,'unread'=>(int)$u->fetchColumn()],JSON_UNESCAPED_UNICODE);exit;
 }
 if($action==='read_notifications'){
