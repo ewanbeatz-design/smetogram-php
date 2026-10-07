@@ -636,7 +636,157 @@ require __DIR__ . '/includes/app_header.php';
         </div>
         <div class="module-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
     </div>
-    <?php if ($project && $view !== 'settings'): ?>
+    <?php if ($view === 'settings'): ?>
+        <?php
+        $subscriptionQ = $pdo->prepare('SELECT subscriptionPlan,subscriptionStatus,subscriptionExpiresAt FROM users WHERE id=? LIMIT 1');
+        $subscriptionQ->execute([(int)$user['id']]);
+        $subscription = $subscriptionQ->fetch() ?: [];
+        $planLabels = ['free'=>'Первый проект','project'=>'Проект','brigade'=>'Бригада','studio'=>'Студия'];
+        $currentPlanLabel = $planLabels[(string)($subscription['subscriptionPlan'] ?? 'free')] ?? 'Первый проект';
+        $allowedTimezones = [
+            'Europe/Moscow'=>'Москва (UTC+3)',
+            'Europe/Paris'=>'Париж (UTC+1/2)',
+            'Europe/London'=>'Лондон (UTC+0/1)',
+            'Asia/Yekaterinburg'=>'Екатеринбург (UTC+5)',
+            'Asia/Novosibirsk'=>'Новосибирск (UTC+7)',
+            'Asia/Krasnoyarsk'=>'Красноярск (UTC+7)',
+            'Asia/Irkutsk'=>'Иркутск (UTC+8)',
+            'Asia/Vladivostok'=>'Владивосток (UTC+10)'
+        ];
+        ?>
+        <div class="settings-shell">
+            <aside class="settings-sidebar module-panel">
+                <div class="settings-sidebar-title">
+                    <span class="settings-avatar"><?=e($initials)?></span>
+                    <div><strong><?=e($user['name'] ?: 'Пользователь')?></strong><small><?=e($user['email'] ?: 'Email не указан')?></small></div>
+                </div>
+                <nav class="settings-menu" aria-label="Разделы настроек">
+                    <a class="active" href="#profile-settings"><i class="fa-regular fa-user"></i><span>Профиль</span><i class="fa-solid fa-chevron-right menu-arrow"></i></a>
+                    <a href="#security-settings"><i class="fa-solid fa-shield-halved"></i><span>Безопасность</span><i class="fa-solid fa-chevron-right menu-arrow"></i></a>
+                    <a href="#notifications-settings"><i class="fa-regular fa-bell"></i><span>Уведомления</span><i class="fa-solid fa-chevron-right menu-arrow"></i></a>
+                    <a href="#regional-settings"><i class="fa-solid fa-globe"></i><span>Регион и формат</span><i class="fa-solid fa-chevron-right menu-arrow"></i></a>
+                    <a href="#billing-settings"><i class="fa-regular fa-credit-card"></i><span>Тариф</span><i class="fa-solid fa-chevron-right menu-arrow"></i></a>
+                </nav>
+                <div class="settings-sidebar-note"><i class="fa-solid fa-circle-info"></i><span>Изменения применяются к вашему аккаунту и не меняют данные проектов.</span></div>
+            </aside>
+
+            <div class="settings-content">
+                <section class="settings-card module-panel" id="profile-settings">
+                    <div class="settings-card-head">
+                        <div><span class="settings-eyebrow">АККАУНТ</span><h2>Личные данные</h2><p>Данные, которые используются в вашем профиле, команде и документах.</p></div>
+                        <span class="settings-status"><i class="fa-solid fa-circle-check"></i> Активен</span>
+                    </div>
+                    <form method="post">
+                        <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                        <input type="hidden" name="action" value="save_profile">
+                        <div class="settings-form-grid">
+                            <label class="settings-field"><span>Имя и фамилия</span><input name="name" value="<?=e($user['name'] ?? '')?>" autocomplete="name" placeholder="Иван Иванов"></label>
+                            <label class="settings-field"><span>Email</span><input type="email" name="email" value="<?=e($user['email'] ?? '')?>" autocomplete="email" placeholder="name@example.com"></label>
+                        </div>
+                        <div class="settings-form-foot"><small>Этот email используется для вашего аккаунта.</small><button class="primary-button" type="submit"><i class="fa-solid fa-check"></i> Сохранить профиль</button></div>
+                    </form>
+                </section>
+
+                <section class="settings-card module-panel" id="security-settings">
+                    <div class="settings-card-head">
+                        <div><span class="settings-eyebrow">БЕЗОПАСНОСТЬ</span><h2><?=!empty($user['password_hash']) ? 'Сменить пароль' : 'Установить пароль'?></h2><p><?=!empty($user['password_hash']) ? 'Для изменения потребуется текущий пароль.' : 'Добавьте пароль к аккаунту, если хотите входить без Telegram.'?></p></div>
+                        <span class="settings-security-icon"><i class="fa-solid fa-lock"></i></span>
+                    </div>
+                    <form method="post" class="settings-password-form">
+                        <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                        <input type="hidden" name="action" value="change_password">
+                        <?php if (!empty($user['password_hash'])): ?>
+                        <label class="settings-field"><span>Текущий пароль</span><input type="password" name="current_password" autocomplete="current-password" required placeholder="••••••••"></label>
+                        <?php endif; ?>
+                        <div class="settings-form-grid settings-password-grid">
+                            <label class="settings-field"><span>Новый пароль</span><input type="password" name="new_password" minlength="8" autocomplete="new-password" required placeholder="Не менее 8 символов"></label>
+                            <label class="settings-field"><span>Повторите новый пароль</span><input type="password" name="confirm_password" minlength="8" autocomplete="new-password" required placeholder="Повторите пароль"></label>
+                        </div>
+                        <div class="settings-form-foot"><small>Минимум 8 символов. Хранится в защищённом виде.</small><button class="outline-button" type="submit"><i class="fa-solid fa-key"></i> <?=!empty($user['password_hash']) ? 'Изменить пароль' : 'Установить пароль'?></button></div>
+                    </form>
+                </section>
+
+                <section class="settings-card module-panel" id="notifications-settings">
+                    <div class="settings-card-head">
+                        <div><span class="settings-eyebrow">ОПОВЕЩЕНИЯ</span><h2>Что показывать</h2><p>Управляйте типами событий, которые попадают в вашу ленту уведомлений.</p></div>
+                    </div>
+                    <form method="post">
+                        <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                        <input type="hidden" name="action" value="save_notifications">
+                        <label class="settings-toggle-row">
+                            <span class="settings-option-copy"><span class="settings-option-icon"><i class="fa-solid fa-layer-group"></i></span><span><strong>Оповещения проектов</strong><small>Главный переключатель ленты уведомлений.</small></span></span>
+                            <input class="settings-switch" type="checkbox" name="project_notifications" value="1" <?=!empty($userSettings['project_notifications'])?'checked':''?>>
+                        </label>
+                        <label class="settings-toggle-row">
+                            <span class="settings-option-copy"><span class="settings-option-icon"><i class="fa-regular fa-comments"></i></span><span><strong>Сообщения</strong><small>Новые сообщения в чатах проекта.</small></span></span>
+                            <input class="settings-switch" type="checkbox" name="message_notifications" value="1" <?=!empty($userSettings['message_notifications'])?'checked':''?>>
+                        </label>
+                        <label class="settings-toggle-row">
+                            <span class="settings-option-copy"><span class="settings-option-icon"><i class="fa-regular fa-file-lines"></i></span><span><strong>Документы</strong><small>Новые документы и загруженные файлы.</small></span></span>
+                            <input class="settings-switch" type="checkbox" name="document_notifications" value="1" <?=!empty($userSettings['document_notifications'])?'checked':''?>>
+                        </label>
+                        <label class="settings-toggle-row">
+                            <span class="settings-option-copy"><span class="settings-option-icon"><i class="fa-regular fa-credit-card"></i></span><span><strong>Платежи</strong><small>Создание и изменение платежей.</small></span></span>
+                            <input class="settings-switch" type="checkbox" name="payment_notifications" value="1" <?=!empty($userSettings['payment_notifications'])?'checked':''?>>
+                        </label>
+                        <label class="settings-toggle-row">
+                            <span class="settings-option-copy"><span class="settings-option-icon"><i class="fa-solid fa-clipboard-check"></i></span><span><strong>Приёмка</strong><small>Отправка этапов на проверку и изменения приёмки.</small></span></span>
+                            <input class="settings-switch" type="checkbox" name="acceptance_notifications" value="1" <?=!empty($userSettings['acceptance_notifications'])?'checked':''?>>
+                        </label>
+                        <div class="settings-info-row"><i class="fa-solid fa-rotate"></i><span><strong>Автообновление ленты</strong><small>Проверка новых уведомлений выполняется автоматически каждые 10 секунд.</small></span><b>Активно</b></div>
+                        <div class="settings-form-foot"><small>Снимите галочки с тех событий, которые не хотите видеть.</small><button class="primary-button" type="submit"><i class="fa-solid fa-check"></i> Сохранить уведомления</button></div>
+                    </form>
+                </section>
+
+                <section class="settings-card module-panel" id="regional-settings">
+                    <div class="settings-card-head">
+                        <div><span class="settings-eyebrow">РЕГИОН</span><h2>Регион и формат</h2><p>Настройки даты и времени для вашего аккаунта.</p></div>
+                    </div>
+                    <form method="post">
+                        <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                        <input type="hidden" name="action" value="save_regional">
+                        <div class="settings-form-grid">
+                            <label class="settings-field"><span>Часовой пояс</span>
+                                <select name="timezone">
+                                    <?php foreach($allowedTimezones as $tz=>$label): ?><option value="<?=e($tz)?>" <?=($userSettings['timezone']??'Europe/Moscow')===$tz?'selected':''?>><?=e($label)?></option><?php endforeach; ?>
+                                </select>
+                            </label>
+                            <label class="settings-field"><span>Формат даты</span>
+                                <select name="date_format">
+                                    <option value="d.m.Y" <?=($userSettings['date_format']??'d.m.Y')==='d.m.Y'?'selected':''?>>31.12.2026</option>
+                                    <option value="d/m/Y" <?=($userSettings['date_format']??'d.m.Y')==='d/m/Y'?'selected':''?>>31/12/2026</option>
+                                    <option value="Y-m-d" <?=($userSettings['date_format']??'d.m.Y')==='Y-m-d'?'selected':''?>>2026-12-31</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="settings-form-foot"><small>Применяется к настройкам аккаунта и новым интерфейсам.</small><button class="primary-button" type="submit"><i class="fa-solid fa-check"></i> Сохранить формат</button></div>
+                    </form>
+                </section>
+
+                <section class="settings-card module-panel" id="billing-settings">
+                    <div class="settings-card-head">
+                        <div><span class="settings-eyebrow">ТАРИФ</span><h2>Тариф и оплата</h2><p>Управление режимом работы аккаунта.</p></div>
+                        <span class="settings-status"><i class="fa-solid fa-circle"></i> <?=e($currentPlanLabel)?></span>
+                    </div>
+                    <div class="settings-billing-row">
+                        <div class="settings-billing-main"><span class="settings-option-icon"><i class="fa-regular fa-credit-card"></i></span><div><strong>Текущий тариф</strong><small><?=e($currentPlanLabel)?><?=!empty($subscription['subscriptionExpiresAt'])?' · до '.date('d.m.Y',strtotime((string)$subscription['subscriptionExpiresAt'])):' · без срока'?></small></div></div>
+                        <a class="outline-button" href="workspace.php?view=billing<?= $projectId ? '&id='.$projectId : '' ?>">Открыть тарифы <i class="fa-solid fa-arrow-right"></i></a>
+                    </div>
+                </section>
+
+                <section class="settings-card module-panel" id="account-settings">
+                    <div class="settings-card-head"><div><span class="settings-eyebrow">СИСТЕМА</span><h2>Информация об аккаунте</h2><p>Технические данные вашего профиля.</p></div></div>
+                    <div class="settings-meta-grid">
+                        <div><span>ID пользователя</span><strong>#<?= (int)$user['id'] ?></strong></div>
+                        <div><span>Способ входа</span><strong><?=e($user['loginMethod'] ?? '—')?></strong></div>
+                        <div><span>Роль</span><strong><?=is_admin($user) ? 'Администратор' : 'Пользователь'?></strong></div>
+                        <div><span>Дата регистрации</span><strong><?=!empty($user['createdAt']) ? date('d.m.Y',strtotime((string)$user['createdAt'])) : '—'?></strong></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+    <?php elseif ($project && $view !== 'settings'): ?>
     <div class="workspace-project-line">
         <a href="dashboard.php" class="workspace-back"><i class="fa-solid fa-arrow-left"></i> Мои проекты <b class="workspace-project-count"><?= $projectsCount ?></b></a>
         <span class="workspace-project-name"><?= e($project['name']) ?></span>
@@ -1267,7 +1417,7 @@ require __DIR__ . '/includes/app_header.php';
             <div class="modal-footer"><button class="primary-button" type="submit">Сохранить</button></div>
         </form></div></div></div>
 
-    <?php elseif ($view === 'settings'): ?>
+    <?php elseif ($view === 'settings' && false): ?>
         <?php
         $subscriptionQ = $pdo->prepare('SELECT subscriptionPlan,subscriptionStatus,subscriptionExpiresAt FROM users WHERE id=? LIMIT 1');
         $subscriptionQ->execute([(int)$user['id']]);
