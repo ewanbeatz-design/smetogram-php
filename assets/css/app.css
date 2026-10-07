@@ -1698,4 +1698,4 @@ html,body{min-height:100%;margin:0}
 
 
 /* Mobile notifications dropdown: always center it inside the viewport. */
-@media(max-width:700px){body .notifications-dropdown{position:fixed!important;top:70px!important;left:50%!important;right:auto!important;transform:translateX(-50%)!important;width:calc(100vw - 24px)!important;max-width:410px!important;box-sizing:border-box!important}}
+@media(max-width:700px){body .sidebar .notifications-dropdown{position:fixed!important;top:70px!important;left:calc(50vw - 135px)!important;right:auto!important;transform:none!important;width:calc(100vw - 24px)!important;max-width:410px!important;box-sizing:border-box!important}}
