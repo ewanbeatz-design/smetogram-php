@@ -251,7 +251,7 @@ try {
             path VARCHAR(500) NOT NULL,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             INDEX(stage_id), INDEX(project_id), INDEX(user_id)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
     ];
     foreach($moduleTables as $table=>$sql) {
         if(!$tableExists($pdo,$table)) $pdo->exec($sql);
