@@ -850,3 +850,115 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     }catch(err){window.smetogramAlert?.(err.message||'Не удалось сохранить.','error',4200);}finally{btn.disabled=false;}
   },true);
 })();
+
+/* Global phone + email input masks. */
+(function(){
+  if(window.__smetogramContactMasksReady)return;
+  window.__smetogramContactMasksReady=true;
+
+  const phoneSelector=[
+    'input[type="tel"]',
+    'input[name="phone"]',
+    'input[name="invitedPhone"]',
+    'input[name="clientPhone"]',
+    'input[id*="phone" i]',
+    'input[placeholder*="999" i]',
+    'input[placeholder*="телефон" i]'
+  ].join(',');
+
+  const emailSelector=[
+    'input[type="email"]',
+    'input[name="email"]',
+    'input[name="clientEmail"]',
+    'input[autocomplete="email"]',
+    'input[id*="email" i]'
+  ].join(',');
+
+  function setCaret(input,pos){
+    try{input.setSelectionRange(pos,pos);}catch(_){}
+  }
+
+  function applyPhoneMask(input){
+    if(input.dataset.smetogramPhoneMask==='1')return;
+    input.dataset.smetogramPhoneMask='1';
+    input.setAttribute('inputmode','tel');
+    input.setAttribute('autocomplete','tel');
+
+    const format=(raw)=>{
+      let digits=String(raw||'').replace(/\D/g,'');
+      if(!digits)return '+7 ';
+      if(digits[0]==='8')digits='7'+digits.slice(1);
+      if(digits[0]!=='7')digits='7'+digits;
+      digits=digits.slice(0,11);
+
+      let out='+7';
+      if(digits.length>1)out+=' ('+digits.slice(1,4);
+      if(digits.length>=4)out+=')';
+      if(digits.length>4)out+=' '+digits.slice(4,7);
+      if(digits.length>=7)out+='-'+digits.slice(7,9);
+      if(digits.length>=9)out+='-'+digits.slice(9,11);
+      return out;
+    };
+
+    input.value=format(input.value);
+    input.addEventListener('focus',()=>{if(!input.value.trim())input.value='+7 ';});
+    input.addEventListener('input',()=>{
+      const old=String(input.value||'');
+      const pos=input.selectionStart||old.length;
+      const digitsBefore=old.slice(0,pos).replace(/\D/g,'').length;
+      input.value=format(old);
+
+      let target=input.value.length;
+      let seen=1;
+      for(let i=2;i<input.value.length&&seen<digitsBefore;i++){
+        if(/\d/.test(input.value[i]))seen++;
+        target=i+1;
+      }
+      setCaret(input,Math.max(3,Math.min(target,input.value.length)));
+    });
+    input.addEventListener('blur',()=>{
+      const digits=String(input.value||'').replace(/\D/g,'');
+      if(digits.length<=1)input.value='';
+    });
+  }
+
+  function applyEmailMask(input){
+    if(input.dataset.smetogramEmailMask==='1')return;
+    input.dataset.smetogramEmailMask='1';
+    input.setAttribute('inputmode','email');
+    input.setAttribute('autocomplete','email');
+    input.setAttribute('spellcheck','false');
+    input.setAttribute('autocapitalize','none');
+
+    input.addEventListener('input',()=>{
+      const value=String(input.value||'')
+        .toLowerCase()
+        .replace(/\s+/g,'')
+        .replace(/[^a-z0-9@._+%-]/g,'');
+      if(input.value!==value)input.value=value;
+    });
+    input.addEventListener('blur',()=>{
+      input.value=String(input.value||'').trim().toLowerCase();
+    });
+  }
+
+  function scan(root=document){
+    root.querySelectorAll?.(phoneSelector).forEach(applyPhoneMask);
+    root.querySelectorAll?.(emailSelector).forEach(applyEmailMask);
+  }
+
+  scan();
+  document.addEventListener('DOMContentLoaded',()=>scan());
+
+  new MutationObserver(mutations=>{
+    for(const mutation of mutations){
+      mutation.addedNodes.forEach(node=>{
+        if(node.nodeType===1){
+          if(node.matches?.(phoneSelector))applyPhoneMask(node);
+          if(node.matches?.(emailSelector))applyEmailMask(node);
+          scan(node);
+        }
+      });
+    }
+  }).observe(document.body,{childList:true,subtree:true});
+})();
