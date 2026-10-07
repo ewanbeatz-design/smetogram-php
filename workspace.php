@@ -1715,7 +1715,7 @@ require __DIR__ . '/includes/app_header.php';
         $subscriptionQ = $pdo->prepare('SELECT subscriptionPlan,subscriptionStatus,subscriptionExpiresAt FROM users WHERE id=? LIMIT 1');
         $subscriptionQ->execute([(int)$user['id']]);
         $subscription = $subscriptionQ->fetch() ?: [];
-        $planLabels = ['free'=>'Первый проект','project'=>'Проект','brigade'=>'Бригада','studio'=>'Студия'];
+        $planLabels = ['free'=>'Бесплатный','project'=>'Проект','brigade'=>'Бригада','studio'=>'Студия'];
         $currentPlanLabel = $planLabels[(string)($subscription['subscriptionPlan'] ?? 'free')] ?? 'Первый проект';
         $allowedTimezones = [
             'Europe/Moscow'=>'Москва (UTC+3)',
