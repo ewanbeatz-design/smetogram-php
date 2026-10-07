@@ -918,15 +918,17 @@ require __DIR__ . '/includes/app_header.php';
             $existing=$pdo->prepare('SELECT id FROM scheduletasks WHERE projectId=? AND estimateCategoryId=? LIMIT 1');
             $ins=$pdo->prepare('INSERT INTO scheduletasks(projectId,title,status,paymentMilestone,estimateCategoryId) VALUES(?,?,?,?,?)');
             foreach($estimateStages as $es){
+                // Для приёмки нужен каждый раздел сметы, даже если его текущая сумма
+                // равна 0 (например, позиции ещё без количества). Такие этапы должны
+                // появляться в приёмке и ждать заполнения/актуализации суммы.
                 $total=(float)$es['total'];
-                if($total<=0) continue;
                 $existing->execute([$projectId,(int)$es['id']]);
                 if(!$existing->fetchColumn()){
                     $ins->execute([$projectId,(string)$es['name'],'planned',$total,(int)$es['id']]);
                 }
             }
 
-            $sync=$pdo->prepare('SELECT id,title,paymentMilestone FROM scheduletasks WHERE projectId=? ORDER BY startsAt,id');
+            $sync=$pdo->prepare('SELECT id,title,paymentMilestone,estimateCategoryId FROM scheduletasks WHERE projectId=? ORDER BY startsAt,id');
             $sync->execute([$projectId]);
             foreach($sync->fetchAll() as $task){
                 $chk=$pdo->prepare('SELECT id FROM acceptancestages WHERE projectId=? AND scheduleTaskId=? LIMIT 1');
