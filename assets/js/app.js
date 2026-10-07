@@ -113,19 +113,40 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
  const toggles=document.querySelectorAll('.notification-toggle');
  const menu=$('#notificationMenu'),list=$('#notificationList'),badge=$('#notificationBadge'),topBadge=$('#topNotificationBadge');
  let lastId=0;
+ let notificationsReady=false;
  function syncBadges(unread){
    const has=Number(unread)>0;
    [badge,topBadge].forEach(b=>{if(!b)return;b.hidden=!has;b.textContent=Number(unread)>99?'99+':String(unread)});
  }
+ function notificationIcon(type){
+   return type==='message'?'fa-comments':type==='document'?'fa-file-lines':type==='payment'?'fa-wallet':type==='acceptance'?'fa-check-circle':type==='schedule'?'fa-calendar-days':type==='team'?'fa-users':'fa-bell';
+ }
+ function showNotificationToast(n){
+   let toast=document.getElementById('notificationToast');
+   if(!toast){
+     toast=document.createElement('div');
+     toast.id='notificationToast';
+     toast.className='notification-toast';
+     document.body.appendChild(toast);
+   }
+   toast.innerHTML='<span class="notification-toast-icon"><i class="fa-solid '+notificationIcon(n.type)+'"></i></span><span class="notification-toast-copy"><strong>'+escapeHtml(n.title||'Новое оповещение')+'</strong><small>'+escapeHtml(n.body||'')+'</small></span><button type="button" class="notification-toast-close" aria-label="Закрыть"><i class="fa-solid fa-xmark"></i></button>';
+   toast.querySelector('.notification-toast-close')?.addEventListener('click',()=>toast.classList.remove('show'),{once:true});
+   requestAnimationFrame(()=>toast.classList.add('show'));
+   clearTimeout(toast._hideTimer);
+   toast._hideTimer=setTimeout(()=>toast.classList.remove('show'),6500);
+ }
  function loadNotifications(){
-   fetch('api.php?action=notifications&since='+lastId,{headers:{'X-Requested-With':'XMLHttpRequest'}}).then(r=>r.json()).then(d=>{
-     if(d.items&&d.items.length){
-       d.items.forEach(n=>{if(Number(n.id)>lastId)lastId=Number(n.id)});
-       const html=d.items.map(n=>'<a class="notification-row '+(!Number(n.isRead)?'unread':'')+'" href="'+String(n.url||'#').replace(/"/g,'%22')+'"><span class="notification-main"><span class="notification-icon"><i class="bi '+(n.type==='message'?'bi-chat':n.type==='document'?'bi-file-earmark-text':n.type==='payment'?'bi-wallet2':n.type==='acceptance'?'bi-check2-square':n.type==='schedule'?'bi-calendar3':'bi-bell')+'"></i></span><span class="notification-content"><strong>'+escapeHtml(n.title)+'</strong><span>'+escapeHtml(n.body||'')+'</span><small>'+escapeHtml(n.createdAt||'')+'</small></span></span><span class="notification-unread-dot"></span></a>').join('');
+   fetch('api.php?action=notifications&since='+lastId,{headers:{'X-Requested-With':'XMLHttpRequest'},cache:'no-store'}).then(r=>r.json()).then(d=>{
+     const items=Array.isArray(d.items)?d.items:[];
+     if(items.length){
+       items.forEach(n=>{if(Number(n.id)>lastId)lastId=Number(n.id)});
+       const html=items.map(n=>'<a class="notification-row '+(!Number(n.isRead)?'unread':'')+'" href="'+String(n.url||'#').replace(/"/g,'%22')+'"><span class="notification-main"><span class="notification-icon"><i class="fa-solid '+notificationIcon(n.type)+'"></i></span><span class="notification-content"><strong>'+escapeHtml(n.title)+'</strong><span>'+escapeHtml(n.body||'')+'</span><small>'+escapeHtml(n.createdAt||'')+'</small></span></span><span class="notification-unread-dot"></span></a>').join('');
        if(list?.querySelector('.notifications-empty'))list.innerHTML='';
        list?.insertAdjacentHTML('afterbegin',html);
+       if(notificationsReady && Number(items[0]?.id||0)>0) showNotificationToast(items[0]);
      }
      syncBadges(d.unread||0);
+     notificationsReady=true;
    }).catch(()=>{});
  }
  toggles.forEach(t=>t.addEventListener('click',e=>{
