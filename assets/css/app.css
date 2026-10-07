@@ -2303,3 +2303,13 @@ body .modal-backdrop.show{z-index:1040 !important}
   .acceptance-reject-form{grid-template-columns:1fr}
   .acceptance-reject-form .outline-button{width:100%;justify-content:center}
 }
+
+
+/* Customer invitation */
+.team-head-actions{display:flex;gap:8px;flex-wrap:wrap}
+.client-invite-copy{white-space:nowrap;padding:7px 10px;font-size:9px}
+@media(max-width:760px){
+  .team-head-actions{width:100%;display:grid;grid-template-columns:1fr}
+  .team-head-actions .primary-button,.team-head-actions .outline-button{width:100%;justify-content:center}
+  .member-row .client-invite-copy{margin-left:45px}
+}
