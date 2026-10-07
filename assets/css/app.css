@@ -2313,3 +2313,25 @@ body .modal-backdrop.show{z-index:1040 !important}
   .team-head-actions .primary-button,.team-head-actions .outline-button{width:100%;justify-content:center}
   .member-row .client-invite-copy{margin-left:45px}
 }
+
+/* Team member management */
+.member-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-left:auto}
+.member-actions .outline-button,.member-actions .danger-button{min-height:32px;padding:7px 9px;font-size:9px}
+.member-actions .danger-button{min-width:32px}
+.member-edit-button i,.member-delete-button i{font-size:9px}
+#memberEditModal .modal-content,#memberDeleteModal .modal-content{border:0;border-radius:18px;overflow:hidden;box-shadow:0 24px 70px rgba(15,23,42,.18)}
+#memberEditModal .modal-header,#memberDeleteModal .modal-header{border-bottom:1px solid #EEF2F7;padding:17px 18px}
+#memberEditModal .modal-body,#memberDeleteModal .modal-body{padding:18px}
+#memberEditModal .modal-footer,#memberDeleteModal .modal-footer{border-top:1px solid #EEF2F7;padding:12px 18px;gap:7px}
+#memberEditModal .form-label{font-size:10px;font-weight:700;color:#475569;margin-bottom:6px}
+#memberEditModal .form-control,#memberEditModal .form-select{min-height:40px;border-radius:9px;font-size:11px}
+@media(max-width:760px){
+  .member-row{align-items:flex-start;flex-wrap:wrap}
+  .member-row>div:nth-child(2){min-width:calc(100% - 46px)}
+  .member-row>em{margin-left:45px;margin-top:-4px}
+  .member-actions{width:calc(100% - 45px);margin-left:45px;justify-content:flex-start}
+  .member-actions .outline-button,.member-actions .danger-button{min-height:36px}
+  #memberEditModal .modal-dialog,#memberDeleteModal .modal-dialog{margin:10px}
+  #memberEditModal .modal-footer,#memberDeleteModal .modal-footer{flex-wrap:wrap}
+  #memberEditModal .modal-footer>* ,#memberDeleteModal .modal-footer>*{flex:1 1 140px;justify-content:center}
+}
