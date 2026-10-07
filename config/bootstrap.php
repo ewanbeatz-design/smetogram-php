@@ -238,7 +238,7 @@ try {
             paymentId BIGINT UNSIGNED NOT NULL, eventType VARCHAR(40) NOT NULL,
             payloadJson LONGTEXT NULL, createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             INDEX(paymentId)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4,
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
         'smetogram_acceptance_photos' => "CREATE TABLE smetogram_acceptance_photos (
             id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             stage_id BIGINT UNSIGNED NOT NULL,
