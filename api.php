@@ -120,7 +120,7 @@ if($action==='notifications'){
  $sq=$pdo->prepare("SELECT project_notifications,message_notifications,document_notifications,payment_notifications,acceptance_notifications FROM smetogram_user_settings WHERE user_id=? LIMIT 1");$sq->execute([(int)$user['id']]);
  $ns=$sq->fetch() ?: ['project_notifications'=>1,'message_notifications'=>1,'document_notifications'=>1,'payment_notifications'=>1,'acceptance_notifications'=>1];
  $conditions=["userId=?","id>?"];$params=[(int)$user['id'],$since];
- if(!(int)$ns['project_notifications']) $conditions[]="type NOT IN ('message','document','payment','acceptance','schedule')";
+ if(!(int)$ns['project_notifications']) $conditions[]="1=0";
  if(!(int)$ns['message_notifications']) $conditions[]="type<>'message'";
  if(!(int)$ns['document_notifications']) $conditions[]="type<>'document'";
  if(!(int)$ns['payment_notifications']) $conditions[]="type<>'payment'";
@@ -128,7 +128,7 @@ if($action==='notifications'){
  $where=implode(' AND ',$conditions);
  $s=$pdo->prepare("SELECT id,projectId,type,title,body,url,isRead,createdAt FROM smetogram_notifications WHERE {$where} ORDER BY id DESC LIMIT 30");$s->execute($params);$items=$s->fetchAll();
  $unreadConditions=["userId=?","isRead=0"];$unreadParams=[(int)$user['id']];
- if(!(int)$ns['project_notifications']) $unreadConditions[]="type NOT IN ('message','document','payment','acceptance','schedule')";
+ if(!(int)$ns['project_notifications']) $unreadConditions[]="1=0";
  if(!(int)$ns['message_notifications']) $unreadConditions[]="type<>'message'";
  if(!(int)$ns['document_notifications']) $unreadConditions[]="type<>'document'";
  if(!(int)$ns['payment_notifications']) $unreadConditions[]="type<>'payment'";
