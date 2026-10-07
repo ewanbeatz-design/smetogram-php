@@ -439,29 +439,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $notice = $added > 0
                 ? 'Замеры помещения добавлены в смету. Количество уже заполнено — осталось указать расценки.'
                 : 'Эти замеры уже есть в смете.';
-        } elseif ($action === 'save_settings') {
-            $allowedTimezones = ['Europe/Moscow','Europe/Paris','Europe/London','Asia/Yekaterinburg','Asia/Novosibirsk','Asia/Krasnoyarsk','Asia/Irkutsk','Asia/Vladivostok'];
-            $allowedDateFormats = ['d.m.Y','d/m/Y','Y-m-d'];
-            $timezone = (string)($_POST['timezone'] ?? 'Europe/Moscow');
-            $dateFormat = (string)($_POST['date_format'] ?? 'd.m.Y');
-            if (!in_array($timezone, $allowedTimezones, true)) $timezone = 'Europe/Moscow';
-            if (!in_array($dateFormat, $allowedDateFormats, true)) $dateFormat = 'd.m.Y';
-
-            $q = $pdo->prepare('UPDATE smetogram_user_settings SET project_notifications=?,message_notifications=?,document_notifications=?,payment_notifications=?,acceptance_notifications=?,timezone=?,date_format=? WHERE user_id=?');
+        } elseif ($action === 'save_notifications') {
+            $q = $pdo->prepare('UPDATE smetogram_user_settings SET project_notifications=?,message_notifications=?,document_notifications=?,payment_notifications=?,acceptance_notifications=? WHERE user_id=?');
             $q->execute([
                 isset($_POST['project_notifications']) ? 1 : 0,
                 isset($_POST['message_notifications']) ? 1 : 0,
                 isset($_POST['document_notifications']) ? 1 : 0,
                 isset($_POST['payment_notifications']) ? 1 : 0,
                 isset($_POST['acceptance_notifications']) ? 1 : 0,
-                $timezone,
-                $dateFormat,
                 (int)$user['id']
             ]);
             $settingsQ = $pdo->prepare("SELECT * FROM smetogram_user_settings WHERE user_id=? LIMIT 1");
             $settingsQ->execute([(int)$user['id']]);
             $userSettings = $settingsQ->fetch() ?: $userSettings;
-            $notice = 'Настройки сохранены.';
+            $notice = 'Настройки уведомлений сохранены.';
+        } elseif ($action === 'save_regional') {
+            $allowedTimezones = ['Europe/Moscow','Europe/Paris','Europe/London','Asia/Yekaterinburg','Asia/Novosibirsk','Asia/Krasnoyarsk','Asia/Irkutsk','Asia/Vladivostok'];
+            $allowedDateFormats = ['d.m.Y','d/m/Y','Y-m-d'];
+            $timezone = (string)($_POST['timezone'] ?? 'Europe/Moscow');
+            $dateFormat = (string)($_POST['date_format'] ?? 'd.m.Y');
+            if (!in_array($timezone, $allowedTimezones, true)) $timezone = 'Europe/Moscow';
+            if (!in_array($dateFormat, $allowedDateFormats, true)) $dateFormat = 'd.m.Y';
+            $q = $pdo->prepare('UPDATE smetogram_user_settings SET timezone=?,date_format=? WHERE user_id=?');
+            $q->execute([$timezone,$dateFormat,(int)$user['id']]);
+            $settingsQ = $pdo->prepare("SELECT * FROM smetogram_user_settings WHERE user_id=? LIMIT 1");
+            $settingsQ->execute([(int)$user['id']]);
+            $userSettings = $settingsQ->fetch() ?: $userSettings;
+            $notice = 'Региональные настройки сохранены.';
         } elseif ($action === 'save_profile') {
             $name = trim((string)($_POST['name'] ?? ''));
             $email = strtolower(trim((string)($_POST['email'] ?? '')));
@@ -1339,7 +1343,7 @@ require __DIR__ . '/includes/app_header.php';
                     </div>
                     <form method="post">
                         <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
-                        <input type="hidden" name="action" value="save_settings">
+                        <input type="hidden" name="action" value="save_notifications">
                         <label class="settings-toggle-row">
                             <span class="settings-option-copy"><span class="settings-option-icon"><i class="fa-solid fa-layer-group"></i></span><span><strong>Оповещения проектов</strong><small>Главный переключатель ленты уведомлений.</small></span></span>
                             <input class="settings-switch" type="checkbox" name="project_notifications" value="1" <?=!empty($userSettings['project_notifications'])?'checked':''?>>
@@ -1371,7 +1375,7 @@ require __DIR__ . '/includes/app_header.php';
                     </div>
                     <form method="post">
                         <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
-                        <input type="hidden" name="action" value="save_settings">
+                        <input type="hidden" name="action" value="save_regional">
                         <div class="settings-form-grid">
                             <label class="settings-field"><span>Часовой пояс</span>
                                 <select name="timezone">
