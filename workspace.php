@@ -1878,6 +1878,39 @@ function copyClientInvite(button){
         fallbackClientInviteCopy(absolute,done);
     }
 }
+function openMemberEdit(button){
+    const id=button.dataset.memberId||'';
+    const role=button.dataset.memberRole||'client';
+    const email=button.dataset.memberEmail||'';
+    const phone=button.dataset.memberPhone||'';
+    const name=button.dataset.memberName||'Участник';
+    const idInput=document.getElementById('memberEditId');
+    const roleInput=document.getElementById('memberEditRole');
+    const emailInput=document.getElementById('memberEditEmail');
+    const phoneInput=document.getElementById('memberEditPhone');
+    const title=document.getElementById('memberEditTitle');
+    if(idInput)idInput.value=id;
+    if(roleInput)roleInput.value=role;
+    if(emailInput)emailInput.value=email;
+    if(phoneInput)phoneInput.value=phone;
+    if(title)title.textContent='Редактировать: '+name;
+    const modal=document.getElementById('memberEditModal');
+    if(modal&&window.bootstrap){
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+    }
+}
+function openMemberDelete(button){
+    const id=button.dataset.memberId||'';
+    const name=button.dataset.memberName||'Участник';
+    const idInput=document.getElementById('memberDeleteId');
+    const nameEl=document.getElementById('memberDeleteName');
+    if(idInput)idInput.value=id;
+    if(nameEl)nameEl.textContent=name;
+    const modal=document.getElementById('memberDeleteModal');
+    if(modal&&window.bootstrap){
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+    }
+}
 function fallbackClientInviteCopy(text,done){
     const input=document.createElement('textarea');
     input.value=text;
