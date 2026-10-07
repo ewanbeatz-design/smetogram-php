@@ -2378,3 +2378,28 @@ body .modal-backdrop.show{z-index:1040 !important}
   .auth-clean-bottom a{font-size:10px}
   .auth-clean-caption{bottom:13px;font-size:7px}
 }
+
+/* Usage plans — 1 free estimate + 3 paid tiers */
+.billing-free-note{display:flex;align-items:center;gap:13px;margin:0 0 15px;padding:13px 15px;border:1px solid #C7D2FE;border-radius:13px;background:#F8FAFF}
+.billing-free-icon{width:36px;height:36px;flex:0 0 36px;display:grid;place-items:center;border-radius:10px;background:#EEF2FF;color:#4F46E5}
+.billing-free-note>div:nth-child(2){min-width:0;flex:1}
+.billing-free-note strong,.billing-free-note span{display:block}
+.billing-free-note strong{font-size:11px;color:#334155}
+.billing-free-note span{margin-top:3px;color:#7C879A;font-size:9px;line-height:1.45}
+.billing-free-note form{margin-left:auto}
+.billing-free-note .outline-button{min-height:37px;padding:8px 12px;font-size:10px}
+.billing-paid-plans{grid-template-columns:repeat(3,minmax(0,1fr))}
+.billing-paid-plans .billing-card{min-height:355px;border-color:#E2E8F0}
+.billing-paid-plans .billing-card.featured{border-color:#A5B4FC;box-shadow:0 12px 30px rgba(79,70,229,.10);transform:translateY(-2px)}
+.billing-paid-plans .billing-card>span:first-of-type{font-size:12px;font-weight:750;color:#334155}
+.plan-popular{position:absolute;top:14px;right:14px;padding:5px 7px;border-radius:999px;background:#EEF2FF;color:#4338CA;font-size:7px!important;font-weight:800!important;letter-spacing:.08em}
+.billing-paid-plans .billing-card strong{font:600 25px/1.1 'IBM Plex Mono',monospace;letter-spacing:-.045em;color:#111827}
+.billing-paid-plans .billing-card p{min-height:43px}
+@media(max-width:1050px){.billing-paid-plans{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){
+  .billing-free-note{align-items:flex-start;flex-wrap:wrap}
+  .billing-free-note form{width:100%;margin-left:49px}
+  .billing-free-note .outline-button{width:100%}
+  .billing-paid-plans{grid-template-columns:1fr}
+  .billing-paid-plans .billing-card.featured{transform:none}
+}
