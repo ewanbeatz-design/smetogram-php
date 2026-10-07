@@ -121,6 +121,7 @@ if (isset($_GET['chat_poll']) && (string)$_GET['chat_poll'] === '1' && $projectI
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $isAjaxPost = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
     $ajaxChatPayload = null;
+    $ajaxPhotoPayload = null;
     try {
         check_csrf();
         $action = (string)($_POST['action'] ?? '');
@@ -296,6 +297,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if(!move_uploaded_file($file['tmp_name'],$path)) throw new RuntimeException('Не удалось сохранить фотографию.');
             $rel='uploads/acceptance-photos/'.$projectId.'/'.$stageId.'/'.$stored;
             $pdo->prepare('INSERT INTO smetogram_acceptance_photos(stage_id,project_id,user_id,original_name,stored_name,mime,size_bytes,path) VALUES(?,?,?,?,?,?,?,?)')->execute([$stageId,$projectId,$user['id'],(string)$file['name'],$stored,$mime,(int)$file['size'],$rel]);
+            $photoId=(int)$pdo->lastInsertId();
+            $ajaxPhotoPayload=['id'=>$photoId,'stageId'=>$stageId,'path'=>$rel,'originalName'=>(string)$file['name']];
             $notice='Фото приёмки добавлено.';
         } elseif ($action === 'delete_acceptance_photo') {
             if (!$project) throw new RuntimeException('Сначала откройте проект.');
@@ -513,7 +516,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'ok' => $error === '',
-            'message' => $error !== '' ? $error : $notice
+            'message' => $error !== '' ? $error : $notice,
+            'photo' => $error === '' ? $ajaxPhotoPayload : null
         ], JSON_UNESCAPED_UNICODE);
         exit;
     }
