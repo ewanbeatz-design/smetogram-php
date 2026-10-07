@@ -51,6 +51,15 @@ if ($projectId > 0) {
     $canManageProject = can_manage_project($pdo,$user,$projectId);
 }
 
+$isProjectClient = false;
+$projectMemberRole = '';
+if ($projectId > 0) {
+    $rq = $pdo->prepare('SELECT role FROM projectmembers WHERE projectId=? AND userId=? LIMIT 1');
+    $rq->execute([$projectId,(int)$user['id']]);
+    $projectMemberRole = (string)($rq->fetchColumn() ?: '');
+    $isProjectClient = $projectMemberRole === 'client';
+}
+
 $notifyProject = function(string $type, string $title, string $body = '', ?string $url = null) use ($pdo, $projectId, $user): void {
     if ($projectId <= 0) return;
     notify_project_users($pdo, $projectId, (int)$user['id'], $type, $title, $body, $url);
@@ -261,11 +270,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$project) {
                 throw new RuntimeException('Сначала откройте проект.');
             }
+            if ($isProjectClient) {
+                throw new RuntimeException('Заказчик не сдаёт этап. Этап должен сдать исполнитель.');
+            }
             $stageId = (int)($_POST['stage_id'] ?? 0);
-            $q = $pdo->prepare("UPDATE acceptancestages SET status='submitted',submittedAt=CURRENT_TIMESTAMP WHERE id=? AND projectId=?");
+            $sq = $pdo->prepare("SELECT id,status,title FROM acceptancestages WHERE id=? AND projectId=? LIMIT 1");
+            $sq->execute([$stageId,$projectId]);
+            $stage = $sq->fetch();
+            if (!$stage) throw new RuntimeException('Этап приёмки не найден.');
+            if (!in_array((string)$stage['status'], ['pending','rejected'], true)) {
+                throw new RuntimeException('Этот этап сейчас нельзя отправить на проверку.');
+            }
+            $q = $pdo->prepare("UPDATE acceptancestages SET status='submitted',submittedAt=CURRENT_TIMESTAMP,acceptedAt=NULL,comment=NULL WHERE id=? AND projectId=?");
             $q->execute([$stageId, $projectId]);
-            $notice = 'Этап отправлен на приёмку.';
-            $notifyProject('acceptance','Этап отправлен на приёмку','Требуется проверка.','workspace.php?view=acceptance&id='.$projectId);
+            $notice = 'Этап отправлен заказчику на проверку.';
+            $notifyProject('acceptance','Этап отправлен на проверку','Заказчику необходимо проверить выполненные работы.','workspace.php?view=acceptance&id='.$projectId);
+        } elseif ($action === 'accept_stage' || $action === 'reject_stage') {
+            if (!$project) {
+                throw new RuntimeException('Сначала откройте проект.');
+            }
+            if (!$isProjectClient) {
+                throw new RuntimeException('Проверять и принимать этап может только заказчик.');
+            }
+
+            $stageId = (int)($_POST['stage_id'] ?? 0);
+            $sq = $pdo->prepare('SELECT id,status,title FROM acceptancestages WHERE id=? AND projectId=? LIMIT 1');
+            $sq->execute([$stageId,$projectId]);
+            $stage = $sq->fetch();
+            if (!$stage) throw new RuntimeException('Этап приёмки не найден.');
+            if ((string)$stage['status'] !== 'submitted') {
+                throw new RuntimeException('Этап ещё не отправлен на проверку.');
+            }
+
+            if ($action === 'accept_stage') {
+                $q = $pdo->prepare("UPDATE acceptancestages SET status='accepted',acceptedAt=CURRENT_TIMESTAMP WHERE id=? AND projectId=?");
+                $q->execute([$stageId,$projectId]);
+                $notice = 'Этап принят заказчиком.';
+                $notifyProject('acceptance','Этап принят заказчиком',(string)$stage['title'],'workspace.php?view=acceptance&id='.$projectId);
+            } else {
+                $comment = trim((string)($_POST['comment'] ?? ''));
+                if ($comment === '') {
+                    throw new RuntimeException('Напишите замечание, чтобы вернуть этап на доработку.');
+                }
+                $q = $pdo->prepare("UPDATE acceptancestages SET status='rejected',comment=?,acceptedAt=NULL WHERE id=? AND projectId=?");
+                $q->execute([$comment,$stageId,$projectId]);
+                $notice = 'Этап возвращён на доработку.';
+                $notifyProject('acceptance','Этап возвращён на доработку',$comment,'workspace.php?view=acceptance&id='.$projectId);
+            }
         } elseif ($action === 'upload_acceptance_photo') {
             if (!$project) throw new RuntimeException('Сначала откройте проект.');
             $stageId=(int)($_POST['stage_id']??0);
@@ -993,8 +1044,8 @@ require __DIR__ . '/includes/app_header.php';
 
         $acceptanceStatusLabels=[
             'pending'=>'Ожидает сдачи',
-            'submitted'=>'На проверке',
-            'accepted'=>'Принят',
+            'submitted'=>'На проверке заказчиком',
+            'accepted'=>'Принят заказчиком',
             'rejected'=>'Есть замечания'
         ];
         ?>
@@ -1003,7 +1054,7 @@ require __DIR__ . '/includes/app_header.php';
                 <div class="panel-heading">
                     <div>
                         <h2>Приёмка по этапам</h2>
-                        <p>Этапы из сметы и графика подгружаются автоматически. Для каждого этапа можно сохранить фото выполненных работ.</p>
+                        <p>Исполнитель сдаёт этап → заказчик проверяет фото и результат → принимает или возвращает на доработку.</p>
                     </div>
                     <?php if($project): ?>
                         <button class="primary-button" type="button" data-bs-toggle="modal" data-bs-target="#acceptanceStageModal"><i class="fa-solid fa-plus"></i> Этап</button>
@@ -1069,13 +1120,42 @@ require __DIR__ . '/includes/app_header.php';
                                 <div class="acceptance-photo-empty"><i class="fa-solid fa-camera"></i> Фото пока нет</div>
                             <?php endif; ?>
 
-                            <?php if($status==='pending'): ?>
-                                <form method="post" class="mt-3">
-                                    <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
-                                    <input type="hidden" name="action" value="submit_stage">
-                                    <input type="hidden" name="stage_id" value="<?= (int)$stage['id'] ?>">
-                                    <button class="primary-button" type="submit"><i class="fa-solid fa-paper-plane"></i> Сдать этап</button>
-                                </form>
+                            <?php if($status==='pending' || $status==='rejected'): ?>
+                                <?php if(!$isProjectClient): ?>
+                                    <form method="post" class="acceptance-stage-action">
+                                        <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                                        <input type="hidden" name="action" value="submit_stage">
+                                        <input type="hidden" name="stage_id" value="<?= (int)$stage['id'] ?>">
+                                        <button class="primary-button" type="submit"><i class="fa-solid fa-paper-plane"></i> <?= $status==='rejected' ? 'Сдать повторно' : 'Сдать этап' ?></button>
+                                    </form>
+                                <?php else: ?>
+                                    <div class="acceptance-stage-wait"><i class="fa-solid fa-hourglass-half"></i> Ожидает сдачи исполнителем</div>
+                                <?php endif; ?>
+                            <?php elseif($status==='submitted'): ?>
+                                <?php if($isProjectClient): ?>
+                                    <div class="acceptance-review-box">
+                                        <div class="acceptance-review-title"><i class="fa-solid fa-user-check"></i><strong>Требуется ваша проверка</strong><span>Вы — заказчик проекта</span></div>
+                                        <div class="acceptance-review-actions">
+                                            <form method="post">
+                                                <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                                                <input type="hidden" name="action" value="accept_stage">
+                                                <input type="hidden" name="stage_id" value="<?= (int)$stage['id'] ?>">
+                                                <button class="primary-button" type="submit"><i class="fa-solid fa-circle-check"></i> Принять этап</button>
+                                            </form>
+                                            <form method="post" class="acceptance-reject-form">
+                                                <input type="hidden" name="csrf" value="<?=e(csrf_token())?>">
+                                                <input type="hidden" name="action" value="reject_stage">
+                                                <input type="hidden" name="stage_id" value="<?= (int)$stage['id'] ?>">
+                                                <input class="form-control" name="comment" required placeholder="Например: доделать плинтус в спальне">
+                                                <button class="outline-button" type="submit"><i class="fa-solid fa-rotate-left"></i> Вернуть на доработку</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="acceptance-stage-wait"><i class="fa-solid fa-user-clock"></i> Этап на проверке у заказчика</div>
+                                <?php endif; ?>
+                            <?php elseif($status==='accepted'): ?>
+                                <div class="acceptance-stage-success"><i class="fa-solid fa-circle-check"></i> Заказчик принял этап</div>
                             <?php endif; ?>
                         </article>
                     <?php endforeach; ?>
@@ -1086,7 +1166,7 @@ require __DIR__ . '/includes/app_header.php';
             <div class="module-panel">
                 <i class="fa-solid fa-shield-check fs-4 text-primary"></i>
                 <h2 class="mt-3">Контроль приёмки</h2>
-                <p class="panel-copy">Фотографии хранятся отдельно у каждого этапа. На телефоне кнопка «Сфотографировать» сразу открывает камеру, а «Из галереи» — выбор существующих фото.</p>
+                <p class="panel-copy">Порядок простой: исполнитель сдаёт этап, он появляется у заказчика как «На проверке», после чего заказчик принимает его или оставляет замечание для доработки.</p>
             </div>
         </div>
 
