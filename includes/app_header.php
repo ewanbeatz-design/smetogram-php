@@ -38,7 +38,7 @@ if ($user && !empty($user['name'])) {
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
-<link href="/assets/css/app.css?v=20261007-notify1" rel="stylesheet">
+<link href="/assets/css/app.css?v=20261007-analytics1" rel="stylesheet">
 </head><body>
 <div class="app-shell">
 <aside class="sidebar" id="appSidebar">
@@ -53,7 +53,7 @@ if ($user && !empty($user['name'])) {
     <a class="nav-item <?=($view==='scan'?'active':'')?>" href="workspace.php?view=scan<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="fa-solid fa-file-arrow-up"></i></span><span class="nav-label">Смета из файла</span></a>
     <a class="nav-item <?=($view==='measurements'?'active':'')?>" href="workspace.php?view=measurements<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="fa-solid fa-ruler-combined"></i></span><span class="nav-label">Замеры</span></a>
     <a class="nav-item <?=($view==='schedule'?'active':'')?>" href="workspace.php?view=schedule<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="fa-solid fa-calendar-days"></i></span><span class="nav-label">График работ</span></a>
-    <a class="nav-item <?=($view==='analytics'?'active':'')?>" href="workspace.php?view=analytics<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="fa-solid fa-chart-column"></i></span><span class="nav-label">Графики</span></a>
+    <a class="nav-item <?=($view==='analytics'?'active':'')?>" href="workspace.php?view=analytics<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="fa-solid fa-chart-column"></i></span><span class="nav-label">Аналитика</span></a>
     <a class="nav-item <?=($view==='team'?'active':'')?>" href="workspace.php?view=team<?=($projectId?'&id='.$projectId:'')?>"><span class="nav-icon"><i class="fa-solid fa-users"></i></span><span class="nav-label">Команда</span></a>
     <?php if (is_admin($user)): ?>
     <a class="nav-item <?=($pageTitle==='Сотрудники и доступ'?'active':'')?>" href="admin.php"><span class="nav-icon"><i class="fa-solid fa-user-gear"></i></span><span class="nav-label">Сотрудники</span><span class="nav-count">∞</span></a>
