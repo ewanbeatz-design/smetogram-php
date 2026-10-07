@@ -1701,52 +1701,66 @@ html,body{min-height:100%;margin:0}
 .settings-shell{display:grid;grid-template-columns:250px minmax(0,1fr);gap:18px;align-items:start}
 .settings-sidebar{padding:18px;position:sticky;top:18px}
 .settings-sidebar-title{display:flex;align-items:center;gap:11px;padding:4px 4px 18px;border-bottom:1px solid #EEF2F7}
-.settings-avatar{width:42px;height:42px;flex:0 0 42px;border-radius:12px;display:grid;place-items:center;background:#EEF2FF;color:#4F46E5;font-size:13px;font-weight:800}
+.settings-avatar{width:44px;height:44px;flex:0 0 44px;border-radius:13px;display:grid;place-items:center;background:#EEF2FF;color:#4F46E5;font-size:13px;font-weight:800}
 .settings-sidebar-title div{min-width:0;display:grid;gap:3px}
 .settings-sidebar-title strong{font-size:12px;color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .settings-sidebar-title small{font-size:9px;color:#94A3B8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .settings-menu{display:grid;gap:4px;padding:14px 0}
-.settings-menu a{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;color:#64748B;text-decoration:none;font-size:11px;font-weight:700;transition:.15s}
+.settings-menu a{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:11px;color:#64748B;text-decoration:none;font-size:11px;font-weight:700;transition:background .15s ease,color .15s ease,transform .15s ease}
 .settings-menu a i:first-child{width:17px;text-align:center;font-size:13px}
-.settings-menu a:hover{background:#F8FAFC;color:#334155}
+.settings-menu a:hover{background:#F8FAFC;color:#334155;transform:translateX(2px)}
 .settings-menu a.active{background:#EEF2FF;color:#4338CA}
-.settings-menu .menu-arrow{margin-left:auto;font-size:9px;color:#94A3B8}
-.settings-sidebar-note{display:flex;gap:9px;padding:12px;background:#F8FAFC;border:1px solid #EEF2F7;border-radius:10px;color:#94A3B8;font-size:9px;line-height:1.5}
+.settings-menu .menu-arrow{margin-left:auto;font-size:8px;color:#A7B0BB}
+.settings-sidebar-note{display:flex;gap:9px;padding:12px;background:#F8FAFC;border:1px solid #EEF2F7;border-radius:11px;color:#94A3B8;font-size:9px;line-height:1.5}
 .settings-sidebar-note i{color:#818CF8;margin-top:1px}
 .settings-content{display:grid;gap:16px;min-width:0}
-.settings-card{padding:22px 24px}
+.settings-card{padding:22px 24px;scroll-margin-top:20px}
 .settings-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:20px}
 .settings-eyebrow{display:block;color:#94A3B8;font-size:9px;font-weight:800;letter-spacing:.12em;margin-bottom:5px}
 .settings-card-head h2{margin:0;color:#0F172A;font-size:18px;letter-spacing:-.02em}
-.settings-card-head p{margin:5px 0 0;color:#94A3B8;font-size:10px}
+.settings-card-head p{margin:5px 0 0;color:#94A3B8;font-size:10px;line-height:1.55}
 .settings-status{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;padding:7px 10px;border-radius:999px;background:#F0FDF4;color:#15803D;font-size:9px;font-weight:800}
 .settings-status i{font-size:7px}
 .settings-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .settings-password-grid{grid-template-columns:1fr 1fr}
-.settings-field{display:grid;gap:7px}
+.settings-field{display:grid;gap:7px;min-width:0}
 .settings-field>span{font-size:10px;font-weight:800;color:#475569}
-.settings-field input{width:100%;height:42px;border:1px solid #CBD5E1;border-radius:9px;padding:0 12px;background:#fff;color:#0F172A;font-size:11px;outline:0;transition:.15s}
-.settings-field input:focus{border-color:#818CF8;box-shadow:0 0 0 3px #6366F11A}
+.settings-field input,.settings-field select{width:100%;height:42px;border:1px solid #CBD5E1;border-radius:10px;padding:0 12px;background:#fff;color:#0F172A;font-size:11px;outline:0;transition:border-color .15s ease,box-shadow .15s ease}
+.settings-field select{padding-right:32px;cursor:pointer}
+.settings-field input:focus,.settings-field select:focus{border-color:#818CF8;box-shadow:0 0 0 3px #6366F11A}
 .settings-form-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:20px;padding-top:16px;border-top:1px solid #F1F5F9}
-.settings-form-foot small{color:#94A3B8;font-size:9px}
-.settings-security-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:#F8FAFC;color:#64748B}
-.settings-empty-security{display:flex;align-items:center;gap:13px;padding:15px;border:1px dashed #CBD5E1;border-radius:11px;background:#FAFAFA}
-.settings-empty-security>i{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;background:#EEF2FF;color:#6366F1}
-.settings-empty-security div{display:grid;gap:3px}
-.settings-empty-security strong{font-size:11px;color:#334155}
-.settings-empty-security span{font-size:9px;color:#94A3B8}
-.settings-option{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:15px 0;border-top:1px solid #F1F5F9}
-.settings-option:first-of-type{border-top:0}
-.settings-option>div{display:flex;align-items:center;gap:11px}
-.settings-option-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:#F8FAFC;color:#64748B}
-.settings-option div div{display:grid;gap:3px}
-.settings-option strong{font-size:11px;color:#334155}
-.settings-option small{font-size:9px;color:#94A3B8}
-.settings-option-state{padding:5px 9px;border-radius:999px;background:#F0FDF4;color:#15803D;font-size:8px;font-weight:800;white-space:nowrap}
-.settings-meta-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
-.settings-meta-grid div{padding:12px;border:1px solid #EEF2F7;border-radius:10px;background:#FAFBFC;display:grid;gap:5px}
+.settings-form-foot small{color:#94A3B8;font-size:9px;line-height:1.45}
+.settings-security-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;background:#F8FAFC;color:#64748B}
+.settings-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0;border-top:1px solid #F1F5F9;cursor:pointer}
+.settings-toggle-row:first-of-type{border-top:0}
+.settings-option-copy{display:flex;align-items:center;gap:11px;min-width:0}
+.settings-option-copy>span:last-child{display:grid;gap:3px;min-width:0}
+.settings-option-icon{width:35px;height:35px;flex:0 0 35px;display:grid;place-items:center;border-radius:10px;background:#F8FAFC;color:#64748B}
+.settings-option-copy strong,.settings-info-row strong{font-size:11px;color:#334155}
+.settings-option-copy small,.settings-info-row small{font-size:9px;color:#94A3B8;line-height:1.45}
+.settings-switch{appearance:none;width:42px;height:24px;flex:0 0 42px;margin:0;border-radius:99px;background:#D7DEE8;border:0;position:relative;cursor:pointer;transition:background .18s ease}
+.settings-switch::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(15,23,42,.2);transition:transform .18s ease}
+.settings-switch:checked{background:#4F46E5}
+.settings-switch:checked::after{transform:translateX(18px)}
+.settings-switch:focus-visible{outline:3px solid #6366F133;outline-offset:2px}
+.settings-info-row{display:flex;align-items:center;gap:11px;padding:13px 0;margin-top:4px;border-top:1px solid #F1F5F9}
+.settings-info-row>i{width:35px;height:35px;display:grid;place-items:center;border-radius:10px;background:#F8FAFC;color:#64748B}
+.settings-info-row>span{display:grid;gap:3px;min-width:0}
+.settings-info-row b{margin-left:auto;padding:6px 9px;border-radius:999px;background:#F0FDF4;color:#15803D;font-size:8px;white-space:nowrap}
+.settings-billing-row{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px;border:1px solid #EEF2F7;border-radius:12px;background:#FAFBFC}
+.settings-billing-main{display:flex;align-items:center;gap:11px;min-width:0}
+.settings-billing-main>div{display:grid;gap:3px}
+.settings-billing-main strong{font-size:11px;color:#334155}
+.settings-billing-main small{font-size:9px;color:#94A3B8}
+.settings-meta-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.settings-meta-grid div{padding:13px;border:1px solid #EEF2F7;border-radius:11px;background:#FAFBFC;display:grid;gap:5px;min-width:0}
 .settings-meta-grid span{font-size:8px;color:#94A3B8;font-weight:700}
 .settings-meta-grid strong{font-size:10px;color:#334155;word-break:break-word}
+@media(max-width:900px){
+  .settings-shell{grid-template-columns:210px minmax(0,1fr);gap:14px}
+  .settings-sidebar{padding:14px}
+  .settings-card{padding:19px 18px}
+}
 @media(max-width:760px){
   .settings-shell{grid-template-columns:1fr;gap:12px}
   .settings-sidebar{position:static;padding:14px}
@@ -1754,14 +1768,30 @@ html,body{min-height:100%;margin:0}
   .settings-menu{display:flex;overflow-x:auto;padding:10px 0 0;gap:5px;scrollbar-width:none}
   .settings-menu::-webkit-scrollbar{display:none}
   .settings-menu a{flex:0 0 auto;padding:9px 11px}
+  .settings-menu a:hover{transform:none}
   .settings-menu a span{white-space:nowrap}
+  .settings-menu .menu-arrow{display:none}
   .settings-sidebar-note{display:none}
   .settings-card{padding:18px 15px}
   .settings-card-head{margin-bottom:17px;gap:10px}
   .settings-card-head h2{font-size:16px}
+  .settings-card-head p{font-size:9px}
   .settings-status{font-size:8px;padding:6px 8px}
   .settings-form-grid,.settings-password-grid{grid-template-columns:1fr}
+  .settings-password-form>.settings-field{margin-bottom:16px}
   .settings-form-foot{align-items:stretch;flex-direction:column}
   .settings-form-foot button{width:100%;justify-content:center}
+  .settings-toggle-row{gap:10px}
+  .settings-option-copy{align-items:flex-start}
+  .settings-option-copy>span:last-child{padding-top:1px}
+  .settings-info-row{align-items:flex-start}
+  .settings-info-row b{margin-top:5px}
+  .settings-billing-row{align-items:stretch;flex-direction:column}
+  .settings-billing-row .outline-button{width:100%;justify-content:center}
   .settings-meta-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:420px){
+  .settings-meta-grid{grid-template-columns:1fr}
+  .settings-option-copy small,.settings-info-row small{font-size:8.5px}
+  .settings-toggle-row{padding:12px 0}
 }
