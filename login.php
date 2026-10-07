@@ -34,8 +34,7 @@ $telegramNonce = (string)($_SESSION['telegram_login_nonce'] ?? '');
   <main class="auth-clean-card">
     <div class="auth-clean-top">
       <a class="auth-clean-brand" href="index.php" aria-label="Сметограм">
-        <span class="brand-mark">S</span>
-        <span>сметограм</span>
+        <img class="site-logo auth-site-logo" src="/logo.svg?v=20261008-icon1" alt="Сметограм" data-fancybox-ignore="1">
       </a>
       <span class="auth-clean-label">АВТОРИЗАЦИЯ</span>
     </div>
