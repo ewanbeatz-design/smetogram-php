@@ -637,6 +637,7 @@ require __DIR__ . '/includes/app_header.php';
         <div class="module-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
     </div>
     <?php if ($project || $view === 'settings'): ?>
+    <?php if ($project): ?>
     <div class="workspace-project-line">
         <a href="dashboard.php" class="workspace-back"><i class="fa-solid fa-arrow-left"></i> Мои проекты <b class="workspace-project-count"><?= $projectsCount ?></b></a>
         <span class="workspace-project-name"><?= e($project['name']) ?></span>
@@ -652,7 +653,9 @@ require __DIR__ . '/includes/app_header.php';
         <a href="workspace.php?view=payments&id=<?= $projectId ?>" class="<?= $view==='payments'?'active':'' ?>"><i class="fa-solid fa-wallet"></i> Оплаты</a>
         <a href="workspace.php?view=acceptance&id=<?= $projectId ?>" class="<?= $view==='acceptance'?'active':'' ?>"><i class="fa-solid fa-check-circle"></i> Приёмка</a>
         <a href="workspace.php?view=analytics&id=<?= $projectId ?>" class="<?= $view==='analytics'?'active':'' ?>"><i class="fa-solid fa-chart-column"></i> Аналитика</a>
-    </div>   <?php if ($error !== ''): ?>
+    </div>
+    <?php endif; ?>
+    <?php if ($error !== ''): ?>
         <div class="alert alert-danger"><?= e($error) ?></div>
     <?php endif; ?>
     <?php if ($notice !== ''): ?>
