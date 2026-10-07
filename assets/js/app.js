@@ -296,8 +296,20 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
       buttons?.forEach(b=>{b.classList.remove('is-uploading');b.style.pointerEvents='';});
       input.value='';
       if(xhr.status>=200&&xhr.status<300&&data?.ok){
+        const photo=data.photo;
+        const stageCard=form.closest('.acceptance-stage-card');
+        if(photo&&stageCard){
+          let grid=stageCard.querySelector('.acceptance-photo-grid');
+          stageCard.querySelector('.acceptance-photo-empty')?.remove();
+          if(!grid){ grid=document.createElement('div'); grid.className='acceptance-photo-grid'; stageCard.querySelector('.acceptance-photo-actions')?.after(grid); }
+          const thumb=document.createElement('div'); thumb.className='acceptance-photo-thumb';
+          const link=document.createElement('a'); link.href=photo.path; link.dataset.fancybox='acceptance-'+photo.stageId;
+          const img=document.createElement('img'); img.src=photo.path; img.alt=photo.originalName||'Фото приёмки'; img.loading='lazy'; link.appendChild(img);
+          const del=document.createElement('form'); del.method='post'; del.className='acceptance-photo-delete';
+          del.innerHTML='<input type="hidden" name="csrf" value="'+(document.querySelector("input[name=csrf]")?.value||"")+'"><input type="hidden" name="action" value="delete_acceptance_photo"><input type="hidden" name="photo_id" value="'+photo.id+'"><button type="submit" class="icon-button" title="Удалить"><i class="fa-solid fa-trash-can"></i></button>';
+          thumb.append(link,del); grid.prepend(thumb);
+        }
         window.smetogramAlert?.('Фото приёмки добавлено.','success',2600);
-        window.location.reload();
       }else{
         window.smetogramAlert?.(data?.message||'Не удалось загрузить фотографию.','error',4200);
       }
