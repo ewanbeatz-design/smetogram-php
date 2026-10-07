@@ -37,10 +37,6 @@ if(!current_user()){
 }
 
 $user=current_user();
-if((int)$user['id']===(int)($invite['projectId']??0)){
-    exit('Некорректное приглашение.');
-}
-
 $mq=$pdo->prepare('SELECT id FROM projectmembers WHERE projectId=? AND userId=? LIMIT 1');
 $mq->execute([(int)$invite['projectId'],(int)$user['id']]);
 if($mq->fetchColumn()){
