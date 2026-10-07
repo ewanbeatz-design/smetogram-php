@@ -168,7 +168,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
 (function(){
   function initRoomFancybox(){
     if(window.Fancybox){
-      window.Fancybox.bind('[data-fancybox^="room-"]',{
+      window.Fancybox.bind('[data-fancybox^="room-"],[data-fancybox^="acceptance-"]',{
         Thumbs:{autoStart:false},
         Toolbar:{
           display:{
