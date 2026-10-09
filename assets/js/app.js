@@ -887,9 +887,13 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     const normalizeDigits=(raw)=>{
       let digits=String(raw||'').replace(/\D/g,'');
       if(!digits)return '';
-      if(digits[0]==='8'&&digits.length>=11)digits='7'+digits.slice(1);
-      else if(digits[0]!=='7')digits='7'+digits;
-      return digits.slice(0,11);
+      const rawValue=String(raw||'');
+      if(/^\s*\+7/.test(rawValue)){
+        digits=digits.slice(1);
+      }else if(digits[0]==='8'||digits[0]==='7'){
+        digits=digits.slice(1);
+      }
+      return ('7'+digits).slice(0,11);
     };
 
     const format=(raw)=>{
