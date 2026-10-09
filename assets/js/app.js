@@ -884,40 +884,56 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     input.setAttribute('inputmode','tel');
     input.setAttribute('autocomplete','tel');
 
-    const format=(raw)=>{
-      let digits=String(raw||'').replace(/\D/g,'');
-      if(!digits)return '+7 ';
-      if(digits[0]==='8')digits='7'+digits.slice(1);
-      if(digits[0]!=='7')digits='7'+digits;
-      digits=digits.slice(0,11);
+    const normalizeDigits=(raw)=>{
+      let digits=String(raw||'').replace(/\\D/g,'');
+      if(!digits)return '';
+      if(digits[0]==='8'&&digits.length>=11)digits='7'+digits.slice(1);
+      else if(digits[0]!=='7')digits='7'+digits;
+      return digits.slice(0,11);
+    };
 
+    const format=(raw)=>{
+      const digits=normalizeDigits(raw);
+      if(!digits)return '';
+      const subscriber=digits[0]==='7'?digits.slice(1):digits;
       let out='+7';
-      if(digits.length>1)out+=' ('+digits.slice(1,4);
-      if(digits.length>=4)out+=')';
-      if(digits.length>4)out+=' '+digits.slice(4,7);
-      if(digits.length>=7)out+='-'+digits.slice(7,9);
-      if(digits.length>=9)out+='-'+digits.slice(9,11);
+      if(subscriber.length)out+=' ('+subscriber.slice(0,3);
+      if(subscriber.length>=3)out+=')';
+      if(subscriber.length>3)out+=' '+subscriber.slice(3,6);
+      if(subscriber.length>=6)out+='-'+subscriber.slice(6,8);
+      if(subscriber.length>=8)out+='-'+subscriber.slice(8,10);
       return out;
     };
 
+    const caretAfterDigits=(value,count)=>{
+      if(count<=0)return Math.min(3,value.length);
+      let seen=0;
+      for(let i=3;i<value.length;i++){
+        if(/\\d/.test(value[i])){
+          seen++;
+          if(seen>=count)return i+1;
+        }
+      }
+      return value.length;
+    };
+
     input.value=format(input.value);
-    input.addEventListener('focus',()=>{if(!input.value.trim())input.value='+7 ';});
+    input.addEventListener('focus',()=>{
+      if(!input.value.trim())input.value='+7 ';
+      if(input.value==='+7')input.value='+7 ';
+    });
     input.addEventListener('input',()=>{
       const old=String(input.value||'');
-      const pos=input.selectionStart||old.length;
-      const digitsBefore=old.slice(0,pos).replace(/\D/g,'').length;
-      input.value=format(old);
-
-      let target=input.value.length;
-      let seen=1;
-      for(let i=2;i<input.value.length&&seen<digitsBefore;i++){
-        if(/\d/.test(input.value[i]))seen++;
-        target=i+1;
-      }
-      setCaret(input,Math.max(3,Math.min(target,input.value.length)));
+      const pos=input.selectionStart??old.length;
+      const digitsBefore=old.slice(0,pos).replace(/\\D/g,'').length;
+      const hasCountryPrefix=/^\\s*\\+?7/.test(old);
+      const subscriberBefore=Math.max(0,digitsBefore-(hasCountryPrefix?1:0));
+      const formatted=format(old);
+      input.value=formatted;
+      setCaret(input,caretAfterDigits(formatted,subscriberBefore));
     });
     input.addEventListener('blur',()=>{
-      const digits=String(input.value||'').replace(/\D/g,'');
+      const digits=String(input.value||'').replace(/\\D/g,'');
       if(digits.length<=1)input.value='';
     });
   }
