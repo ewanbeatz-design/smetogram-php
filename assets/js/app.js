@@ -808,7 +808,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     if(!res.ok||!data?.ok)throw new Error(data?.message||'Не удалось сохранить оплату.');
     if(card){
       const total=Number(data.amount ?? (card.querySelector('[data-stage-amount]') ? card.querySelector('[data-stage-amount]').value : 0));
-      const paid=Number(data.paidAmount??card.querySelector('[data-stage-paid]')?.textContent.replace(/\\D/g,'')??0);
+      const paid=Number(data.paidAmount??card.querySelector('[data-stage-paid]')?.textContent.replace(/\D/g,'')??0);
       const remaining=Math.max(0,total-paid),percent=total>0?Math.min(100,Math.round(paid/total*100)):0;
       const amountInput=card.querySelector('[data-stage-amount]');if(amountInput&&action==='amount')amountInput.value=money(total).replace(' ₽','');
       const paidEl=card.querySelector('[data-stage-paid]');if(paidEl)paidEl.textContent=money(paid);
@@ -885,7 +885,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     input.setAttribute('autocomplete','tel');
 
     const normalizeDigits=(raw)=>{
-      let digits=String(raw||'').replace(/\\D/g,'');
+      let digits=String(raw||'').replace(/\D/g,'');
       if(!digits)return '';
       if(digits[0]==='8'&&digits.length>=11)digits='7'+digits.slice(1);
       else if(digits[0]!=='7')digits='7'+digits;
@@ -909,7 +909,7 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
       if(count<=0)return Math.min(3,value.length);
       let seen=0;
       for(let i=3;i<value.length;i++){
-        if(/\\d/.test(value[i])){
+        if(/\d/.test(value[i])){
           seen++;
           if(seen>=count)return i+1;
         }
@@ -925,15 +925,15 @@ document.addEventListener('input',e=>{const i=e.target.closest('[data-money]');i
     input.addEventListener('input',()=>{
       const old=String(input.value||'');
       const pos=input.selectionStart??old.length;
-      const digitsBefore=old.slice(0,pos).replace(/\\D/g,'').length;
-      const hasCountryPrefix=/^\\s*\\+?7/.test(old);
+      const digitsBefore=old.slice(0,pos).replace(/\D/g,'').length;
+      const hasCountryPrefix=/^\s*\+?7/.test(old);
       const subscriberBefore=Math.max(0,digitsBefore-(hasCountryPrefix?1:0));
       const formatted=format(old);
       input.value=formatted;
       setCaret(input,caretAfterDigits(formatted,subscriberBefore));
     });
     input.addEventListener('blur',()=>{
-      const digits=String(input.value||'').replace(/\\D/g,'');
+      const digits=String(input.value||'').replace(/\D/g,'');
       if(digits.length<=1)input.value='';
     });
   }
